@@ -1,0 +1,80 @@
+# Compiled output
+/dist
+/tmp
+/out-tsc
+/bazel-out
+
+# Node
+/node_modules
+npm-debug.log
+yarn-error.log
+
+# Angular
+/.angular/cache
+.sass-cache/
+/connect.lock
+/libpeerconnection.log
+testem.log
+/typings
+
+# Cloudflare Workers / Wrangler
+.wrangler/
+.dev.vars
+
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+
+# Testing
+/coverage
+__screenshots__/
+
+# IDEs and editors
+.idea
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/*
+
+# Personal dotfiles (shell, editor, tools)
+.bash_profile
+.bashrc
+.zshrc
+.zprofile
+.profile
+.gitconfig
+.ripgreprc
+idea-notes.md
+
+# MCP configuration (may contain tokens)
+.mcp.json
+
+# 10x-cli placeholder device files (not real content)
+.claude/agents
+.claude/commands
+.claude/hooks
+.claude/settings.json
+.claude/settings.local.json
+.agents/agents
+.agents/commands
+.agents/hooks
+.agents/settings.json
+
+# System / special files
+.gitmodules
+
+# System files
+.DS_Store
+Thumbs.db
