@@ -8,3 +8,10 @@
 - **Problem**: Using Polish in project artifacts makes the codebase inconsistent and unprofessional. Past incident: PR body and commit message were written in Polish before the rule was established.
 - **Rule**: Never use Polish in source files, commit messages, PR titles, PR bodies, or any other project artifact committed to the repository. Polish is only permitted in Claude Code console/chat communication with the user.
 - **Applies to**: all
+
+## Always use SSH for git remote operations
+
+- **Context**: Any git push, fetch, or remote URL change in this repository
+- **Problem**: HTTPS authentication fails with "could not read Username" — no interactive credential prompt is available in this environment
+- **Rule**: Always use SSH remote URL (`git@github.com:mswiac/MarketPulse.git`). Before any push or fetch, verify the remote is set to SSH, not HTTPS, via `git remote -v`.
+- **Applies to**: all
