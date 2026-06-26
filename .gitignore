@@ -61,6 +61,9 @@ idea-notes.md
 # MCP configuration (may contain tokens)
 .mcp.json
 
+# Claude Code auto-memory (machine-generated, user-specific)
+.claude/projects/
+
 # 10x-cli placeholder device files (not real content)
 .claude/agents
 .claude/commands
