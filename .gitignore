@@ -64,6 +64,11 @@ idea-notes.md
 # Claude Code auto-memory (machine-generated, user-specific)
 .claude/projects/
 
+# Claude Code toolkit (local, auto-managed — not project source)
+.claude/skills/
+.claude/prompts/
+.claude/.10x-cli-manifest.json
+
 # 10x-cli placeholder device files (not real content)
 .claude/agents
 .claude/commands
