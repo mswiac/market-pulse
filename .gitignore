@@ -61,20 +61,8 @@ idea-notes.md
 # MCP configuration (may contain tokens)
 .mcp.json
 
-# Claude Code auto-memory (machine-generated, user-specific)
-.claude/projects/
-
-# Claude Code toolkit (local, auto-managed — not project source)
-.claude/skills/
-.claude/prompts/
-.claude/.10x-cli-manifest.json
-
-# 10x-cli placeholder device files (not real content)
-.claude/agents
-.claude/commands
-.claude/hooks
-.claude/settings.json
-.claude/settings.local.json
+# Claude Code workspace — all contents are local/auto-managed
+.claude/
 .agents/agents
 .agents/commands
 .agents/hooks
