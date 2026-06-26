@@ -263,22 +263,22 @@ CREATE TABLE IF NOT EXISTS users (
 
 #### Automated
 
-- [x] 2.1 `tsc --noEmit -p tsconfig.worker.json` passes
-- [x] 2.2 `npx wrangler deploy --dry-run` exits 0
+- [x] 2.1 `tsc --noEmit -p tsconfig.worker.json` passes — 4df0e2e
+- [x] 2.2 `npx wrangler deploy --dry-run` exits 0 — 4df0e2e
 
 #### Manual
 
-- [ ] 2.3 `npm run worker:dev` starts without error
-- [ ] 2.4 `curl http://localhost:8787/health` returns `{"ok":true}` HTTP 200
+- [x] 2.3 `npm run worker:dev` starts without error — 4df0e2e
+- [x] 2.4 `curl http://localhost:8787/health` returns `{"ok":true}` HTTP 200 — 4df0e2e
 
 ### Phase 3: D1 Migration
 
 #### Automated
 
-- [ ] 3.1 `npm run migrate:local` exits 0
+- [x] 3.1 `npm run migrate:local` exits 0
 
 #### Manual
 
-- [ ] 3.2 `npm run migrate:remote` exits 0
-- [ ] 3.3 `npm run deploy` exits 0
-- [ ] 3.4 `GET /health` on live Cloudflare URL returns `{"ok":true}` HTTP 200
+- [x] 3.2 `npm run migrate:remote` exits 0
+- [x] 3.3 `npm run deploy` exits 0
+- [x] 3.4 `GET /health` on live Cloudflare URL returns `{"ok":true}` HTTP 200
