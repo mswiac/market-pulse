@@ -251,20 +251,20 @@ CREATE TABLE IF NOT EXISTS users (
 
 #### Automated
 
-- [x] 1.0 `npm install` completes with three new packages in package-lock.json
-- [x] 1.1 `npm run build` passes with no errors after tsconfig.app.json change
-- [x] 1.2 `tsc --noEmit -p tsconfig.worker.json` passes with zero errors
+- [x] 1.0 `npm install` completes with three new packages in package-lock.json — 178e9cd
+- [x] 1.1 `npm run build` passes with no errors after tsconfig.app.json change — 178e9cd
+- [x] 1.2 `tsc --noEmit -p tsconfig.worker.json` passes with zero errors — 178e9cd
 
 #### Manual
 
-- [x] 1.3 `wrangler d1 create marketpulse-db` succeeds; database_id filled in wrangler.toml
+- [x] 1.3 `wrangler d1 create marketpulse-db` succeeds; database_id filled in wrangler.toml — 178e9cd
 
 ### Phase 2: Worker Entry Point
 
 #### Automated
 
-- [ ] 2.1 `tsc --noEmit -p tsconfig.worker.json` passes
-- [ ] 2.2 `npx wrangler deploy --dry-run` exits 0
+- [x] 2.1 `tsc --noEmit -p tsconfig.worker.json` passes
+- [x] 2.2 `npx wrangler deploy --dry-run` exits 0
 
 #### Manual
 
