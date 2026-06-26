@@ -1,7 +1,7 @@
 ---
 change_id: backend-scaffold
 title: Backend scaffold: Hono Worker + D1 binding + users table
-status: implementing
+status: implemented
 created: 2026-06-26
 updated: 2026-06-26
 archived_at: null

@@ -275,10 +275,10 @@ CREATE TABLE IF NOT EXISTS users (
 
 #### Automated
 
-- [x] 3.1 `npm run migrate:local` exits 0
+- [x] 3.1 `npm run migrate:local` exits 0 — 6abf431
 
 #### Manual
 
-- [x] 3.2 `npm run migrate:remote` exits 0
-- [x] 3.3 `npm run deploy` exits 0
-- [x] 3.4 `GET /health` on live Cloudflare URL returns `{"ok":true}` HTTP 200
+- [x] 3.2 `npm run migrate:remote` exits 0 — 6abf431
+- [x] 3.3 `npm run deploy` exits 0 — 6abf431
+- [x] 3.4 `GET /health` on live Cloudflare URL returns `{"ok":true}` HTTP 200 — 6abf431
