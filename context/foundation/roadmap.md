@@ -29,7 +29,7 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 
 | ID   | Change ID             | Outcome (user can …)                                      | Prerequisites  | PRD refs                        | Status   |
 |------|-----------------------|-----------------------------------------------------------|----------------|---------------------------------|----------|
-| F-01 | backend-scaffold      | (foundation) Hono Worker + D1 binding + users table       | —              | Access Control, NFR (isolation) | ready    |
+| F-01 | backend-scaffold      | (foundation) Hono Worker + D1 binding + users table       | —              | Access Control, NFR (isolation) | done     |
 | F-01a | users-email-schema   | (foundation) users table: email as sole identifier        | F-01           | FR-001, FR-002                  | done     |
 | F-02 | market-data-pipeline  | (foundation) cron fetches Stooq closes + calculates RSI   | F-01           | NFR (daily evaluation), BL      | proposed |
 | S-01 | auth-and-registration | register, log in, and log out                             | F-01a          | FR-001, FR-002, FR-003          | proposed |
@@ -73,7 +73,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Nothing can be deployed or exercised until this lands. Scope is deliberately minimal — a health-check route and a single table — so the first Workers deployment risk surfaces early rather than inside a large slice.
-- **Status:** ready
+- **Status:** done
 
 ### F-01a: Users table schema — email as login identifier
 
@@ -204,4 +204,5 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Done
 
+- **F-01: (foundation) Hono Worker entry point wired to D1 with the `users` table schema landed; Worker deploys to the Cloudflare Workers target alongside the Angular SPA.** — Archived 2026-06-28 → `context/archive/2026-06-26-backend-scaffold/`. Lesson: —.
 - **F-01a: (foundation) The `users` table uses `email` as the sole identifier and login credential.** — Archived 2026-06-28 → `context/archive/2026-06-28-users-email-schema/`. Lesson: —.
