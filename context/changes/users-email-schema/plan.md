@@ -196,22 +196,22 @@ Update `context/foundation/roadmap.md` S-02 outcome and PRD refs to remove the n
 
 #### Automated
 
-- [x] 1.1 `SELECT COUNT(*) FROM users` on local D1 returns 0 (pre-flight guard)
-- [x] 1.2 `npm run migrate:local` exits 0
+- [x] 1.1 `SELECT COUNT(*) FROM users` on local D1 returns 0 (pre-flight guard) — 17c6eb1
+- [x] 1.2 `npm run migrate:local` exits 0 — 17c6eb1
 
 #### Manual
 
-- [x] 1.3 `npm run migrate:remote` exits 0
-- [x] 1.4 `PRAGMA table_info(users)` on remote shows `id`, `email`, `password_hash`, `created_at`
+- [x] 1.3 `npm run migrate:remote` exits 0 — 17c6eb1
+- [x] 1.4 `PRAGMA table_info(users)` on remote shows `id`, `email`, `password_hash`, `created_at` — 17c6eb1
 
 ### Phase 2: PRD Update
 
 #### Manual
 
-- [ ] 2.1 No `username` field references remain in PRD body
-- [ ] 2.2 FR-004a removed from PRD
-- [ ] 2.3 FR-004 reads "pre-filled from the user's account email"
-- [ ] 2.4 Auth section updated (no `username`, no `notification email`)
+- [x] 2.1 No `username` field references remain in PRD body
+- [x] 2.2 FR-004a removed from PRD
+- [x] 2.3 FR-004 reads "pre-filled from the user's account email"
+- [x] 2.4 Auth section updated (no `username`, no `notification email`)
 
 ### Phase 3: Roadmap Update
 
