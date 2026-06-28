@@ -109,7 +109,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Outcome:** User can register with an email address and password; log in with email and password; log out. Unauthenticated requests to any protected route are rejected.
 - **Change ID:** `auth-and-registration`
 - **PRD refs:** FR-001, FR-002, FR-003
-- **Prerequisites:** F-01
+- **Prerequisites:** F-01a
 - **Parallel with:** F-02
 - **Blockers:** —
 - **Unknowns:**
@@ -182,7 +182,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | Roadmap ID | Change ID             | Suggested issue title                               | Ready for `/10x-plan` | Notes                                                              |
 |------------|-----------------------|-----------------------------------------------------|-----------------------|--------------------------------------------------------------------|
 | F-01       | backend-scaffold      | Backend scaffold: Hono Worker + D1 + users table    | yes                   | Run `/10x-plan backend-scaffold`                                   |
-| F-01a      | users-email-schema    | Users table: email as sole identifier (drop username)| yes                  | Prerequisite for S-01; verify D1 ALTER TABLE / DROP COLUMN support |
+| F-01a      | users-email-schema    | Users table: email as sole identifier (drop username)| yes                  | Shadow-table migration applied (0002_users_email_schema.sql); schema confirmed on local + remote D1 |
 | F-02       | market-data-pipeline  | Market data pipeline: cron + Stooq + RSI → D1      | no                    | Awaits F-01; can be planned in parallel with S-01                  |
 | S-01       | auth-and-registration | Auth: register (email+password), login, logout      | no                    | Awaits F-01a; research password hashing in Workers during planning |
 | S-02       | alert-crud            | Alert CRUD: create alert + list view (north star)   | no                    | Awaits S-01                                                        |
