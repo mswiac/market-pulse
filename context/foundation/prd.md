@@ -47,14 +47,12 @@ Insight: market platforms deliberately limit the durability and depth of alerts 
 ## Functional Requirements
 
 ### Authentication
-- FR-001: User can register an account with a username, password, and notification email address. Priority: must-have
-- FR-002: User can log in using their username and password. Priority: must-have
+- FR-001: User can register an account with an email address and password. Priority: must-have
+- FR-002: User can log in using their email address and password. Priority: must-have
 - FR-003: User can log out of their account. Priority: must-have
 
 ### Alert Management
-- FR-004: User can create an alert by selecting an instrument (VIX or NASDAQ-100), alert type (price or RSI), threshold value, and notification email address. The email field is pre-filled from the user's profile default but can be overridden per alert. Priority: must-have
-  > Socrates: Counter-argument considered: "Email per alert is friction — the user will type the same address every time." Resolution: kept, but softened — a default notification email in the profile pre-fills the field, reducing friction while keeping per-alert flexibility.
-- FR-004a: User can set a default notification email address in their profile. Priority: must-have
+- FR-004: User can create an alert by selecting an instrument (VIX or NASDAQ-100), alert type (price or RSI), threshold value, and notification email address. The email field is pre-filled from the user's account email but can be overridden per alert. Priority: must-have
 - FR-005: User can view their list of active alerts. Priority: must-have
   > Socrates: Counter-argument considered: "A list is unnecessary overhead for a single user with a handful of alerts." Resolution: kept — without a list the user has no visibility into what alerts are active.
 - FR-006: User can edit an existing alert (change instrument, type, threshold value, or email). Priority: must-have
@@ -88,7 +86,7 @@ Supporting detail:
 
 ## Access Control
 
-Username + password + notification email at registration. Login uses username and password only — the email is not a login identifier; it serves as the default notification address pre-filled on new alerts. Flat role model — one type of user, everyone with identical permissions to manage their own alerts. The MVP serves a single user, but the account model is multi-user by design — adding more people does not require a rebuild. Unauthenticated users have no access to any application resource.
+Email address and password at registration. Login uses the email address and password — the email serves as both the login identifier and the default notification address pre-filled on new alerts. Flat role model — one type of user, everyone with identical permissions to manage their own alerts. The MVP serves a single user, but the account model is multi-user by design — adding more people does not require a rebuild. Unauthenticated users have no access to any application resource.
 
 ## Non-Goals
 
