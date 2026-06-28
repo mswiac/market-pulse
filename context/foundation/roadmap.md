@@ -3,7 +3,7 @@ project: MarketPulse
 version: 1
 status: draft
 created: 2026-06-21
-updated: 2026-06-21
+updated: 2026-06-28
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -30,7 +30,7 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | ID   | Change ID             | Outcome (user can …)                                      | Prerequisites  | PRD refs                        | Status   |
 |------|-----------------------|-----------------------------------------------------------|----------------|---------------------------------|----------|
 | F-01 | backend-scaffold      | (foundation) Hono Worker + D1 binding + users table       | —              | Access Control, NFR (isolation) | ready    |
-| F-01a | users-email-schema   | (foundation) users table: email as sole identifier        | F-01           | FR-001, FR-002                  | proposed |
+| F-01a | users-email-schema   | (foundation) users table: email as sole identifier        | F-01           | FR-001, FR-002                  | done     |
 | F-02 | market-data-pipeline  | (foundation) cron fetches Stooq closes + calculates RSI   | F-01           | NFR (daily evaluation), BL      | proposed |
 | S-01 | auth-and-registration | register, log in, and log out                             | F-01a          | FR-001, FR-002, FR-003          | proposed |
 | S-02 | alert-crud            | create a price/RSI alert and view the alert list          | S-01           | FR-004, FR-005                  | proposed |
@@ -86,7 +86,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** F-01 migration (`0001_create_users.sql`) is already applied to production D1. The new migration must use `ALTER TABLE` or a shadow-table pattern — D1 does not support `DROP COLUMN` in all SQLite versions; verify support before writing the migration.
-- **Status:** proposed
+- **Status:** done
 
 ### F-02: Market data pipeline
 
@@ -204,4 +204,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Done
 
-(Empty on first generation. `/10x-archive` appends entries here when a matching change is archived.)
+- **F-01a: (foundation) The `users` table uses `email` as the sole identifier and login credential.** — Archived 2026-06-28 → `context/archive/2026-06-28-users-email-schema/`. Lesson: —.
