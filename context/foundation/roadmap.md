@@ -30,9 +30,10 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | ID   | Change ID             | Outcome (user can …)                                      | Prerequisites  | PRD refs                        | Status   |
 |------|-----------------------|-----------------------------------------------------------|----------------|---------------------------------|----------|
 | F-01 | backend-scaffold      | (foundation) Hono Worker + D1 binding + users table       | —              | Access Control, NFR (isolation) | ready    |
+| F-01a | users-email-schema   | (foundation) users table: email as sole identifier        | F-01           | FR-001, FR-002                  | proposed |
 | F-02 | market-data-pipeline  | (foundation) cron fetches Stooq closes + calculates RSI   | F-01           | NFR (daily evaluation), BL      | proposed |
-| S-01 | auth-and-registration | register, log in, and log out                             | F-01           | FR-001, FR-002, FR-003, FR-004a | proposed |
-| S-02 | alert-crud            | create a price/RSI alert and view the alert list          | S-01           | FR-004, FR-004a, FR-005         | proposed |
+| S-01 | auth-and-registration | register, log in, and log out                             | F-01a          | FR-001, FR-002, FR-003          | proposed |
+| S-02 | alert-crud            | create a price/RSI alert and view the alert list          | S-01           | FR-004, FR-005                  | proposed |
 | S-03 | alert-edit-delete     | edit and delete an existing alert                         | S-02           | FR-006, FR-007                  | proposed |
 | S-04 | market-data-display   | see current RSI/price value next to each alert            | S-02, F-02     | FR-009                          | proposed |
 | S-05 | alert-notifications   | receive an email when an alert threshold is crossed       | S-04           | FR-008, FR-008a                 | proposed |
@@ -44,7 +45,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 
 | Stream | Theme                       | Chain                               | Note                                                                            |
 |--------|-----------------------------|-------------------------------------|---------------------------------------------------------------------------------|
-| A      | Auth & alert CRUD           | `F-01` → `S-01` → `S-02` → `S-03`  | Delivers the north star (S-02); S-03 is a refinement slice after it lands.      |
+| A      | Auth & alert CRUD           | `F-01` → `F-01a` → `S-01` → `S-02` → `S-03`  | Delivers the north star (S-02); S-03 is a refinement slice after it lands.      |
 | B      | Data pipeline & notif.      | `F-02` → `S-04` → `S-05` → `S-06`  | F-02 branches from F-01 parallel with S-01; S-04 joins Stream A at S-02.       |
 
 ## Baseline
@@ -74,6 +75,19 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Nothing can be deployed or exercised until this lands. Scope is deliberately minimal — a health-check route and a single table — so the first Workers deployment risk surfaces early rather than inside a large slice.
 - **Status:** ready
 
+### F-01a: Users table schema — email as login identifier
+
+- **Outcome:** (foundation) The `users` table uses `email` as the sole identifier and login credential. The separate `username` and `notification_email` columns are replaced by a single `email TEXT NOT NULL UNIQUE` column. A forward-only D1 migration (`0002_users_email_schema.sql`) applies the change to local and remote D1.
+- **Change ID:** `users-email-schema`
+- **PRD refs:** FR-001 (registration: email + password), FR-002 (login: email + password)
+- **Unlocks:** S-01 (auth endpoints must match the finalised schema before any auth code is written)
+- **Prerequisites:** F-01
+- **Parallel with:** F-02
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** F-01 migration (`0001_create_users.sql`) is already applied to production D1. The new migration must use `ALTER TABLE` or a shadow-table pattern — D1 does not support `DROP COLUMN` in all SQLite versions; verify support before writing the migration.
+- **Status:** proposed
+
 ### F-02: Market data pipeline
 
 - **Outcome:** (foundation) Cloudflare Cron Trigger fires daily, fetches closing prices for VIX and NASDAQ-100 from Stooq, stores raw closes in the `price_history` table, and writes the latest RSI per instrument to the `market_data` table.
@@ -92,9 +106,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### S-01: User can register and log in
 
-- **Outcome:** User can register with a username, password, and notification email address; log in with username and password; log out. Unauthenticated requests to any protected route are rejected.
+- **Outcome:** User can register with an email address and password; log in with email and password; log out. Unauthenticated requests to any protected route are rejected.
 - **Change ID:** `auth-and-registration`
-- **PRD refs:** FR-001, FR-002, FR-003, FR-004a
+- **PRD refs:** FR-001, FR-002, FR-003
 - **Prerequisites:** F-01
 - **Parallel with:** F-02
 - **Blockers:** —
@@ -105,9 +119,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### S-02: User can create a price or RSI alert and view the alert list ★ north star
 
-- **Outcome:** User can create an alert by selecting an instrument (VIX or NASDAQ-100), alert type (price or RSI), and threshold value; the notification email field is pre-filled from the profile default set at registration but is editable per alert. Created alerts appear in a persistent list.
+- **Outcome:** User can create an alert by selecting an instrument (VIX or NASDAQ-100), alert type (price or RSI), and threshold value; the notification email field is pre-filled from the user's account email but is editable per alert. Created alerts appear in a persistent list.
 - **Change ID:** `alert-crud`
-- **PRD refs:** FR-004, FR-004a, FR-005
+- **PRD refs:** FR-004, FR-005
 - **Prerequisites:** S-01
 - **Parallel with:** —
 - **Blockers:** —
@@ -168,8 +182,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | Roadmap ID | Change ID             | Suggested issue title                               | Ready for `/10x-plan` | Notes                                                              |
 |------------|-----------------------|-----------------------------------------------------|-----------------------|--------------------------------------------------------------------|
 | F-01       | backend-scaffold      | Backend scaffold: Hono Worker + D1 + users table    | yes                   | Run `/10x-plan backend-scaffold`                                   |
+| F-01a      | users-email-schema    | Users table: email as sole identifier (drop username)| yes                  | Prerequisite for S-01; verify D1 ALTER TABLE / DROP COLUMN support |
 | F-02       | market-data-pipeline  | Market data pipeline: cron + Stooq + RSI → D1      | no                    | Awaits F-01; can be planned in parallel with S-01                  |
-| S-01       | auth-and-registration | Auth: register, login, logout                       | no                    | Awaits F-01; research password hashing in Workers during planning  |
+| S-01       | auth-and-registration | Auth: register (email+password), login, logout      | no                    | Awaits F-01a; research password hashing in Workers during planning |
 | S-02       | alert-crud            | Alert CRUD: create alert + list view (north star)   | no                    | Awaits S-01                                                        |
 | S-03       | alert-edit-delete     | Alert management: edit and delete                   | no                    | Awaits S-02; can be planned in parallel with S-04                  |
 | S-04       | market-data-display   | Market data display: current RSI/price on alert list| no                    | Awaits S-02 + F-02                                                 |

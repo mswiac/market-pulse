@@ -208,15 +208,15 @@ Update `context/foundation/roadmap.md` S-02 outcome and PRD refs to remove the n
 
 #### Manual
 
-- [x] 2.1 No `username` field references remain in PRD body
-- [x] 2.2 FR-004a removed from PRD
-- [x] 2.3 FR-004 reads "pre-filled from the user's account email"
-- [x] 2.4 Auth section updated (no `username`, no `notification email`)
+- [x] 2.1 No `username` field references remain in PRD body — 5eb0b67
+- [x] 2.2 FR-004a removed from PRD — 5eb0b67
+- [x] 2.3 FR-004 reads "pre-filled from the user's account email" — 5eb0b67
+- [x] 2.4 Auth section updated (no `username`, no `notification email`) — 5eb0b67
 
 ### Phase 3: Roadmap Update
 
 #### Manual
 
-- [ ] 3.1 S-02 outcome reads "pre-filled from the user's account email"
-- [ ] 3.2 S-02 PRD refs contain `FR-004, FR-005` (no FR-004a)
-- [ ] 3.3 `grep -n "FR-004a" context/foundation/roadmap.md` → zero hits
+- [x] 3.1 S-02 outcome reads "pre-filled from the user's account email"
+- [x] 3.2 S-02 PRD refs contain `FR-004, FR-005` (no FR-004a)
+- [x] 3.3 `grep -n "FR-004a" context/foundation/roadmap.md` → zero hits
