@@ -11,28 +11,34 @@
     "worker:dev": "wrangler dev --local",
     "migrate:local": "wrangler d1 migrations apply marketpulse-db --local",
     "migrate:remote": "wrangler d1 migrations apply marketpulse-db --remote",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.worker.json"
+    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.worker.json",
+    "test:worker": "vitest run"
   },
   "private": true,
   "packageManager": "npm@11.13.0",
   "dependencies": {
+    "@angular/cdk": "^22.0.4",
+    "@angular/common": "^22.0.6",
+    "@angular/compiler": "^22.0.6",
+    "@angular/core": "^22.0.6",
+    "@angular/forms": "^22.0.6",
+    "@angular/material": "^22.0.4",
+    "@angular/platform-browser": "^22.0.6",
+    "@angular/router": "^22.0.6",
     "hono": "^4",
-    "@angular/common": "^22.0.0",
-    "@angular/compiler": "^22.0.0",
-    "@angular/core": "^22.0.0",
-    "@angular/forms": "^22.0.0",
-    "@angular/platform-browser": "^22.0.0",
-    "@angular/router": "^22.0.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4",
-    "wrangler": "^4",
     "@angular/build": "^22.0.1",
     "@angular/cli": "^22.0.1",
-    "@angular/compiler-cli": "^22.0.0",
+    "@angular/compiler-cli": "^22.0.6",
+    "@cloudflare/vitest-pool-workers": "^0.18.4",
+    "@cloudflare/workers-types": "^4",
+    "@types/node": "^26.1.1",
     "prettier": "^3.8.1",
-    "typescript": "~6.0.2"
+    "typescript": "~6.0.2",
+    "vitest": "^4.1.10",
+    "wrangler": "^4"
   }
 }

@@ -1,0 +1,22 @@
+<mat-toolbar color="primary">
+  <span>MarketPulse</span>
+  <span class="spacer"></span>
+  @if (user(); as currentUser) {
+    <span class="user-email">{{ currentUser.email }}</span>
+  }
+  <button mat-button (click)="onLogout()">Log out</button>
+</mat-toolbar>
+
+<div class="home-content">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Welcome back</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      @if (user(); as currentUser) {
+        <p>You're signed in as <strong>{{ currentUser.email }}</strong>.</p>
+      }
+      <p>Alert management is coming soon.</p>
+    </mat-card-content>
+  </mat-card>
+</div>

@@ -15,3 +15,10 @@
 - **Problem**: HTTPS authentication fails with "could not read Username" — no interactive credential prompt is available in this environment
 - **Rule**: Always use SSH remote URL (`git@github.com:mswiac/MarketPulse.git`). Before any push or fetch, verify the remote is set to SSH, not HTTPS, via `git remote -v`.
 - **Applies to**: all
+
+## Always use Conventional Commits for commits and PR titles
+
+- **Context**: All commit messages and PR titles in this repo
+- **Problem**: PR #21's title read "Auth and registration (S-01)" instead of "feat(S-01): ...", inconsistent with the convention already visible in commit history (e.g. "feat(F-01a): ...", "chore(F-01): ...")
+- **Rule**: Always use Conventional Commits (`type(scope): description`) for both commit messages and PR titles in this project; use the roadmap item's ID (e.g. `S-01`, `F-01a`) as the scope when the change maps to one
+- **Applies to**: all

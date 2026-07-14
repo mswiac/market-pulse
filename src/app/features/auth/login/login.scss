@@ -1,0 +1,39 @@
+.auth-page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 26rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.form-error {
+  color: var(--mat-sys-error);
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+mat-card-footer {
+  display: block;
+  padding: 0 1rem 1rem;
+}
+
+.switch-link {
+  margin: 0;
+  font-size: 0.875rem;
+}

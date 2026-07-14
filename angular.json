@@ -7,7 +7,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "bootstrap-scaffold": {
+    "market-pulse": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -85,10 +85,11 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "bootstrap-scaffold:build:production"
+              "buildTarget": "market-pulse:build:production"
             },
             "development": {
-              "buildTarget": "bootstrap-scaffold:build:development"
+              "buildTarget": "market-pulse:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"
