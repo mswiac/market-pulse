@@ -16,9 +16,8 @@ const MIN_PASSWORD_LENGTH = 8;
 const MAX_PASSWORD_LENGTH = 128;
 const INVALID_CREDENTIALS_MESSAGE = 'invalid email or password';
 
-// Not a real user's hash — used to pay the same PBKDF2 cost on an unknown
-// email as a real verify would, so response latency can't reveal whether
-// the email is registered (see plan's anti-enumeration requirement).
+// Not a real user's hash — pays the same PBKDF2 cost as a real verify so an
+// unknown email can't be distinguished from a wrong password by timing.
 const DUMMY_PASSWORD_HASH =
   'pbkdf2-sha256$10000$MQ2O9oI268zIzUTxSOGIYQ==$5jcrAH7LuEJ6FWlCqbsy1ebXxreQtxiWS21GxW5ald4=';
 
@@ -32,8 +31,6 @@ function normalizeEmail(email: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-// Malformed/non-JSON bodies would otherwise throw past this point and hit
-// Hono's default 500 handler instead of the clean 4xx shape used elsewhere.
 async function parseCredentialsBody(c: { req: { json: () => Promise<unknown> } }): Promise<{
   email?: unknown;
   password?: unknown;
@@ -94,9 +91,6 @@ authRoutes.post('/login', async (c) => {
     .bind(email)
     .first<{ id: number; password_hash: string }>();
 
-  // Always run verifyPassword, even on an unknown email, against a dummy
-  // hash — otherwise an unknown email returns instantly while a known one
-  // pays the full PBKDF2 cost, letting response latency leak which case hit.
   const passwordValid = await verifyPassword(password, c.env.PASSWORD_PEPPER, user?.password_hash ?? DUMMY_PASSWORD_HASH);
 
   if (!user || !passwordValid) {

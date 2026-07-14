@@ -78,7 +78,6 @@ export const sessionMiddleware: MiddlewareHandler<{ Bindings: Env; Variables: Se
 
   const session = await validateSession(c.env.DB, sessionId);
   if (!session) {
-    // Stop the browser resending a dead session id on every future request.
     clearSessionCookie(c);
     return c.json({ error: 'unauthorized' }, 401);
   }
