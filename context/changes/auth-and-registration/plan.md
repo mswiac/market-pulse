@@ -350,19 +350,19 @@ Sliding-expiration renewal is throttled (see Critical Implementation Details) sp
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly locally: `npm run migrate:local`
-- [x] 1.2 Migration applies cleanly to remote D1: `npm run migrate:remote`
+- [x] 1.1 Migration applies cleanly locally: `npm run migrate:local` — 77ee62d
+- [x] 1.2 Migration applies cleanly to remote D1: `npm run migrate:remote` — 77ee62d
 
 #### Manual
 
-- [x] 1.3 `sessions` table visible via `wrangler d1 execute`
+- [x] 1.3 `sessions` table visible via `wrangler d1 execute` — 77ee62d
 
 ### Phase 2: Backend test infrastructure
 
 #### Automated
 
-- [ ] 2.1 `npm run test:worker` runs successfully (empty/smoke suite)
-- [ ] 2.2 `npm run typecheck` passes with `test/` included
+- [x] 2.1 `npm run test:worker` runs successfully (empty/smoke suite)
+- [x] 2.2 `npm run typecheck` passes with `test/` included
 
 ### Phase 3: Backend — auth logic
 
