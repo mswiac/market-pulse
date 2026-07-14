@@ -3,7 +3,7 @@ project: MarketPulse
 version: 1
 status: draft
 created: 2026-06-21
-updated: 2026-06-28
+updated: 2026-07-14
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -32,7 +32,7 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | F-01 | backend-scaffold      | (foundation) Hono Worker + D1 binding + users table       | —              | Access Control, NFR (isolation) | done     |
 | F-01a | users-email-schema   | (foundation) users table: email as sole identifier        | F-01           | FR-001, FR-002                  | done     |
 | F-02 | market-data-pipeline  | (foundation) cron fetches Stooq closes + calculates RSI   | F-01           | NFR (daily evaluation), BL      | proposed |
-| S-01 | auth-and-registration | register, log in, and log out                             | F-01a          | FR-001, FR-002, FR-003          | proposed |
+| S-01 | auth-and-registration | register, log in, and log out                             | F-01a          | FR-001, FR-002, FR-003          | done     |
 | S-02 | alert-crud            | create a price/RSI alert and view the alert list          | S-01           | FR-004, FR-005                  | proposed |
 | S-03 | alert-edit-delete     | edit and delete an existing alert                         | S-02           | FR-006, FR-007                  | proposed |
 | S-04 | market-data-display   | see current RSI/price value next to each alert            | S-02, F-02     | FR-009                          | proposed |
@@ -115,7 +115,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Which password hashing library works in the Workers V8 runtime without native modules? (`bcrypt` requires native bindings; candidates: `bcryptjs`, Web Crypto API PBKDF2, Argon2 via WASM.) — Owner: user. Block: no (researchable during `/10x-plan`; the choice affects implementation, not whether planning can start).
 - **Risk:** First Angular reactive forms + JWT issuing in the Workers V8 runtime — the runtime is not Node.js and native npm packages behave differently. A bug in auth here propagates to every downstream slice. The `nodejs_compat` compatibility flag must be set in `wrangler.toml` (documented in `context/foundation/infrastructure.md`).
-- **Status:** proposed
+- **Status:** done
 
 ### S-02: User can create a price or RSI alert and view the alert list ★ north star
 
@@ -206,3 +206,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 - **F-01: (foundation) Hono Worker entry point wired to D1 with the `users` table schema landed; Worker deploys to the Cloudflare Workers target alongside the Angular SPA.** — Archived 2026-06-28 → `context/archive/2026-06-26-backend-scaffold/`. Lesson: —.
 - **F-01a: (foundation) The `users` table uses `email` as the sole identifier and login credential.** — Archived 2026-06-28 → `context/archive/2026-06-28-users-email-schema/`. Lesson: —.
+- **S-01: User can register with an email address and password; log in with email and password; log out. Unauthenticated requests to any protected route are rejected.** — Archived 2026-07-14 → `context/archive/2026-07-14-auth-and-registration/`. Lesson: —.

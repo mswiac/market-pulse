@@ -1,6 +1,6 @@
 # Lessons Learned
 
-> Append-only register of recurring rules and patterns. Re-read at start by /10x-frame, /10x-research, /10x-plan, /10x-plan-review, /10x-implement, /10x-impl-review.
+> Append-only register of recurring rules and patterns. Re-read at start by /10x-frame, /10x-research, /10x-plan, /10x-plan-review, /10x-implement, /10x-impl-review, /10x-archive.
 
 ## Always use English in all project artifacts
 
@@ -21,4 +21,11 @@
 - **Context**: All commit messages and PR titles in this repo
 - **Problem**: PR #21's title read "Auth and registration (S-01)" instead of "feat(S-01): ...", inconsistent with the convention already visible in commit history (e.g. "feat(F-01a): ...", "chore(F-01): ...")
 - **Rule**: Always use Conventional Commits (`type(scope): description`) for both commit messages and PR titles in this project; use the roadmap item's ID (e.g. `S-01`, `F-01a`) as the scope when the change maps to one
+- **Applies to**: all
+
+## Always branch before committing, never commit directly to main
+
+- **Context**: Every commit made in this repo, including mechanics of the 10x-* skills (e.g. /10x-implement's phase-end ritual, /10x-archive's close-out commit)
+- **Problem**: After merging PR #21, the user asked to switch to `main` and run /10x-archive; the skill committed the archive close-out directly onto `main` because that was the checked-out branch, requiring manual surgery (git branch + reset --hard) to move the commit onto a proper feature branch
+- **Rule**: Before running any `git commit` (manual or via a skill's commit ritual), check `git branch --show-current`; if it is `main`, create and switch to a new branch first — never commit directly to main, even for small/mechanical changes
 - **Applies to**: all
