@@ -33,6 +33,7 @@
     "@angular/compiler-cli": "^22.0.0",
     "@cloudflare/vitest-pool-workers": "^0.18.4",
     "@cloudflare/workers-types": "^4",
+    "@types/node": "^26.1.1",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",
     "vitest": "^4.1.10",

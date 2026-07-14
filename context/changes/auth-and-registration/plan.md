@@ -361,23 +361,23 @@ Sliding-expiration renewal is throttled (see Critical Implementation Details) sp
 
 #### Automated
 
-- [x] 2.1 `npm run test:worker` runs successfully (empty/smoke suite)
-- [x] 2.2 `npm run typecheck` passes with `test/` included
+- [x] 2.1 `npm run test:worker` runs successfully (empty/smoke suite) — d1d1827
+- [x] 2.2 `npm run typecheck` passes with `test/` included — d1d1827
 
 ### Phase 3: Backend — auth logic
 
 #### Automated
 
-- [ ] 3.1 `npm run test:worker` passes, including auth tests
-- [ ] 3.2 `npm run typecheck` passes
+- [x] 3.1 `npm run test:worker` passes, including auth tests
+- [x] 3.2 `npm run typecheck` passes
 
 #### Manual
 
-- [ ] 3.3 curl flow: register → cookie + sessions row → `/api/me` → logout → `/api/me` 401
-- [ ] 3.4 Duplicate email registration returns 409 with explicit message
-- [ ] 3.5 Wrong-password login returns generic 401 message
-- [ ] 3.6 `PASSWORD_PEPPER` secret set for local dev and remote before testing register/login
-- [ ] 3.7 Measured CPU time of `/api/register`/`/api/login` fits the Workers Free plan's ~10ms budget; iterations tuned accordingly
+- [x] 3.3 curl flow: register → cookie + sessions row → `/api/me` → logout → `/api/me` 401
+- [x] 3.4 Duplicate email registration returns 409 with explicit message
+- [x] 3.5 Wrong-password login returns generic 401 message
+- [x] 3.6 `PASSWORD_PEPPER` secret set for local dev and remote before testing register/login
+- [x] 3.7 Measured CPU time of `/api/register`/`/api/login` fits the Workers Free plan's ~10ms budget; iterations tuned accordingly
 
 ### Phase 4: Frontend — auth end to end
 
