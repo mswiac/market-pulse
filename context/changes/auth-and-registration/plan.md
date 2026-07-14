@@ -383,16 +383,16 @@ Sliding-expiration renewal is throttled (see Critical Implementation Details) sp
 
 #### Automated
 
-- [x] 4.1 `npm run typecheck` passes
-- [x] 4.2 `npm run build` succeeds
+- [x] 4.1 `npm run typecheck` passes — 301acce
+- [x] 4.2 `npm run build` succeeds — 301acce
 
 #### Manual
 
-- [x] 4.3 Visiting `/` with no session redirects to `/login`
-- [x] 4.4 Register → landed on home view with registered email
-- [x] 4.5 Refresh page → still authenticated, no redirect
-- [x] 4.6 Logout → redirected to `/login`; revisiting `/` redirects again
-- [x] 4.7 Duplicate-email registration shows inline "already registered" message
-- [x] 4.8 Wrong-password login shows generic invalid-credentials message
-- [x] 4.9 Full flow verified through `ng serve` + `proxy.conf.json` dev wiring
-- [x] 4.10 Session-expiry interceptor clears auth state and redirects to `/login` when a stale/revoked session hits a 401
+- [x] 4.3 Visiting `/` with no session redirects to `/login` — 301acce
+- [x] 4.4 Register → landed on home view with registered email — 301acce
+- [x] 4.5 Refresh page → still authenticated, no redirect — 301acce
+- [x] 4.6 Logout → redirected to `/login`; revisiting `/` redirects again — 301acce
+- [x] 4.7 Duplicate-email registration shows inline "already registered" message — 301acce
+- [x] 4.8 Wrong-password login shows generic invalid-credentials message — 301acce
+- [x] 4.9 Full flow verified through `ng serve` + `proxy.conf.json` dev wiring — 301acce
+- [x] 4.10 Session-expiry interceptor clears auth state and redirects to `/login` when a stale/revoked session hits a 401 — 301acce
