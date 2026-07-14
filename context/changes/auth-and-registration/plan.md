@@ -368,31 +368,31 @@ Sliding-expiration renewal is throttled (see Critical Implementation Details) sp
 
 #### Automated
 
-- [x] 3.1 `npm run test:worker` passes, including auth tests
-- [x] 3.2 `npm run typecheck` passes
+- [x] 3.1 `npm run test:worker` passes, including auth tests — b1d4e66
+- [x] 3.2 `npm run typecheck` passes — b1d4e66
 
 #### Manual
 
-- [x] 3.3 curl flow: register → cookie + sessions row → `/api/me` → logout → `/api/me` 401
-- [x] 3.4 Duplicate email registration returns 409 with explicit message
-- [x] 3.5 Wrong-password login returns generic 401 message
-- [x] 3.6 `PASSWORD_PEPPER` secret set for local dev and remote before testing register/login
-- [x] 3.7 Measured CPU time of `/api/register`/`/api/login` fits the Workers Free plan's ~10ms budget; iterations tuned accordingly
+- [x] 3.3 curl flow: register → cookie + sessions row → `/api/me` → logout → `/api/me` 401 — b1d4e66
+- [x] 3.4 Duplicate email registration returns 409 with explicit message — b1d4e66
+- [x] 3.5 Wrong-password login returns generic 401 message — b1d4e66
+- [x] 3.6 `PASSWORD_PEPPER` secret set for local dev and remote before testing register/login — b1d4e66
+- [x] 3.7 Measured CPU time of `/api/register`/`/api/login` fits the Workers Free plan's ~10ms budget; iterations tuned accordingly — b1d4e66
 
 ### Phase 4: Frontend — auth end to end
 
 #### Automated
 
-- [ ] 4.1 `npm run typecheck` passes
-- [ ] 4.2 `npm run build` succeeds
+- [x] 4.1 `npm run typecheck` passes
+- [x] 4.2 `npm run build` succeeds
 
 #### Manual
 
-- [ ] 4.3 Visiting `/` with no session redirects to `/login`
-- [ ] 4.4 Register → landed on home view with registered email
-- [ ] 4.5 Refresh page → still authenticated, no redirect
-- [ ] 4.6 Logout → redirected to `/login`; revisiting `/` redirects again
-- [ ] 4.7 Duplicate-email registration shows inline "already registered" message
-- [ ] 4.8 Wrong-password login shows generic invalid-credentials message
-- [ ] 4.9 Full flow verified through `ng serve` + `proxy.conf.json` dev wiring
-- [ ] 4.10 Session-expiry interceptor clears auth state and redirects to `/login` when a stale/revoked session hits a 401
+- [x] 4.3 Visiting `/` with no session redirects to `/login`
+- [x] 4.4 Register → landed on home view with registered email
+- [x] 4.5 Refresh page → still authenticated, no redirect
+- [x] 4.6 Logout → redirected to `/login`; revisiting `/` redirects again
+- [x] 4.7 Duplicate-email registration shows inline "already registered" message
+- [x] 4.8 Wrong-password login shows generic invalid-credentials message
+- [x] 4.9 Full flow verified through `ng serve` + `proxy.conf.json` dev wiring
+- [x] 4.10 Session-expiry interceptor clears auth state and redirects to `/login` when a stale/revoked session hits a 401

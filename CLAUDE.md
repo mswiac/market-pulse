@@ -23,7 +23,7 @@ Split deployment — two separate services:
 Key flows:
 1. **Daily cron** (Cloudflare Cron Trigger): fetches closes from Stooq → calculates RSI → evaluates all active alerts → sends email via Resend for each triggered alert → records trigger events in D1.
 2. **Alert CRUD**: Angular SPA calls Worker endpoints; D1 is the source of truth.
-3. **Auth**: username + password, flat role model — each user manages only their own alerts.
+3. **Auth**: email + password, D1-backed sessions (httpOnly cookie, sliding expiration), flat role model — each user manages only their own alerts.
 
 ## Commands
 

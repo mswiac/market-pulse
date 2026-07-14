@@ -5,6 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 [assets]
 directory = "./dist/market-pulse/browser"
+binding = "ASSETS"
 not_found_handling = "single-page-application"
 
 [[d1_databases]]
