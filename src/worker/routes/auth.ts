@@ -2,11 +2,25 @@ import { Hono } from 'hono';
 import { getCookie } from 'hono/cookie';
 import type { Env } from '../index';
 import { hashPassword, verifyPassword } from '../lib/password';
-import { clearSessionCookie, createSession, destroySession, sessionMiddleware, setSessionCookie } from '../lib/session';
+import {
+  SESSION_COOKIE_NAME,
+  clearSessionCookie,
+  createSession,
+  destroySession,
+  sessionMiddleware,
+  setSessionCookie,
+} from '../lib/session';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
+const MAX_PASSWORD_LENGTH = 128;
 const INVALID_CREDENTIALS_MESSAGE = 'invalid email or password';
+
+// Not a real user's hash — used to pay the same PBKDF2 cost on an unknown
+// email as a real verify would, so response latency can't reveal whether
+// the email is registered (see plan's anti-enumeration requirement).
+const DUMMY_PASSWORD_HASH =
+  'pbkdf2-sha256$10000$MQ2O9oI268zIzUTxSOGIYQ==$5jcrAH7LuEJ6FWlCqbsy1ebXxreQtxiWS21GxW5ald4=';
 
 type Variables = { userId: number };
 
@@ -18,12 +32,31 @@ function normalizeEmail(email: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-authRoutes.post('/register', async (c) => {
-  const body = await c.req.json<{ email?: unknown; password?: unknown }>();
-  const email = normalizeEmail(body.email);
-  const password = typeof body.password === 'string' ? body.password : null;
+// Malformed/non-JSON bodies would otherwise throw past this point and hit
+// Hono's default 500 handler instead of the clean 4xx shape used elsewhere.
+async function parseCredentialsBody(c: { req: { json: () => Promise<unknown> } }): Promise<{
+  email?: unknown;
+  password?: unknown;
+} | null> {
+  try {
+    return (await c.req.json()) as { email?: unknown; password?: unknown };
+  } catch {
+    return null;
+  }
+}
 
-  if (!email || !EMAIL_PATTERN.test(email) || !password || password.length < MIN_PASSWORD_LENGTH) {
+authRoutes.post('/register', async (c) => {
+  const body = await parseCredentialsBody(c);
+  const email = body ? normalizeEmail(body.email) : null;
+  const password = body && typeof body.password === 'string' ? body.password : null;
+
+  if (
+    !email ||
+    !EMAIL_PATTERN.test(email) ||
+    !password ||
+    password.length < MIN_PASSWORD_LENGTH ||
+    password.length > MAX_PASSWORD_LENGTH
+  ) {
     return c.json({ error: INVALID_CREDENTIALS_MESSAGE }, 400);
   }
 
@@ -49,11 +82,11 @@ authRoutes.post('/register', async (c) => {
 });
 
 authRoutes.post('/login', async (c) => {
-  const body = await c.req.json<{ email?: unknown; password?: unknown }>();
-  const email = normalizeEmail(body.email);
-  const password = typeof body.password === 'string' ? body.password : null;
+  const body = await parseCredentialsBody(c);
+  const email = body ? normalizeEmail(body.email) : null;
+  const password = body && typeof body.password === 'string' ? body.password : null;
 
-  if (!email || !password) {
+  if (!email || !password || password.length > MAX_PASSWORD_LENGTH) {
     return c.json({ error: INVALID_CREDENTIALS_MESSAGE }, 401);
   }
 
@@ -61,7 +94,12 @@ authRoutes.post('/login', async (c) => {
     .bind(email)
     .first<{ id: number; password_hash: string }>();
 
-  if (!user || !(await verifyPassword(password, c.env.PASSWORD_PEPPER, user.password_hash))) {
+  // Always run verifyPassword, even on an unknown email, against a dummy
+  // hash — otherwise an unknown email returns instantly while a known one
+  // pays the full PBKDF2 cost, letting response latency leak which case hit.
+  const passwordValid = await verifyPassword(password, c.env.PASSWORD_PEPPER, user?.password_hash ?? DUMMY_PASSWORD_HASH);
+
+  if (!user || !passwordValid) {
     return c.json({ error: INVALID_CREDENTIALS_MESSAGE }, 401);
   }
 
@@ -72,7 +110,7 @@ authRoutes.post('/login', async (c) => {
 });
 
 authRoutes.post('/logout', async (c) => {
-  const sessionId = getCookie(c, 'session_id');
+  const sessionId = getCookie(c, SESSION_COOKIE_NAME);
   if (sessionId) {
     await destroySession(c.env.DB, sessionId);
   }

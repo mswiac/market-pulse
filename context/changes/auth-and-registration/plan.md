@@ -334,6 +334,15 @@ Sliding-expiration renewal is throttled (see Critical Implementation Details) sp
 
 `migrations/0003_create_sessions.sql` is a plain `CREATE TABLE`, not a shadow-table migration — no existing data to preserve since `sessions` is new. No changes to the existing `users` table are needed for this slice.
 
+## Addendum (post-implementation)
+
+Four changes landed during implementation that weren't in the original phase text above, all discussed and approved interactively while testing:
+
+- **Angular Material adoption**: `@angular/material` + `@angular/cdk` were added, and the register/login/home components (Phase 4, item 5-6) were built with Material components (`mat-card`, `mat-form-field`, `mat-button`, `mat-toolbar`) instead of the plain "minimal placeholder" markup originally described. `@angular/animations` was deliberately NOT added (deprecated in Angular 22 in favor of native `animate.enter`/`animate.leave`).
+- **SPA routing fix**: `wrangler.toml`'s `[assets]` block gained `binding = "ASSETS"`, and `src/worker/index.ts` gained a catch-all `app.get('*', (c) => c.env.ASSETS.fetch(c.req.raw))` route. Without this, the Hono app's own 404 handler intercepted client-side routes (e.g. `/login`) instead of falling through to the SPA fallback — a real bug found only through manual same-origin testing, not anticipated in the original plan.
+- **App identity**: `src/index.html`'s `<title>` was changed from the default "BootstrapScaffold" to "MarketPulse", and a custom pulse/ECG-icon `favicon.svg` replaced the default Angular CLI favicon (`favicon.ico` removed).
+- **Scaffold cleanup**: `src/app/app.html` and `src/app/app.ts` were stripped of the default Angular CLI placeholder content down to `<router-outlet />` and an empty `App` class.
+
 ## References
 
 - Roadmap slice: `context/foundation/roadmap.md` (S-01, `auth-and-registration`)

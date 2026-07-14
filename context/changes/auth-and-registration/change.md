@@ -1,7 +1,7 @@
 ---
 change_id: auth-and-registration
 title: Auth and registration
-status: implemented
+status: impl_reviewed
 created: 2026-07-14
 updated: 2026-07-14
 archived_at: null
