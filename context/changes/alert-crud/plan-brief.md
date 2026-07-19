@@ -13,7 +13,7 @@ Only auth (S-01) exists today. `Home` is a placeholder — a toolbar with logout
 
 ## Desired End State
 
-After login, the user lands on `/` and sees their alert list (empty on first visit). A "New alert" button opens a modal form — instrument, alert type, threshold, and a notification email pre-filled from the account but editable. On submit, the alert appears at the top of the list immediately, with inline validation for out-of-range thresholds and a visible error for duplicate alerts.
+After login, the user lands on `/` and sees their alert list (empty on first visit), all in Polish. A "Nowy alert" button opens a modal form — instrument, alert type, threshold, and a notification email pre-filled from the account but editable. On submit, the alert appears at the top of the list immediately as a collapsed row (instrument · type · threshold); clicking it expands to show the notification email, last-edited date, and current price/RSI (hardcoded "Brak danych" placeholder — no market-data pipeline exists yet). Inline validation blocks out-of-range thresholds and VIX+RSI combinations before submission; a visible error covers duplicates.
 
 ## Key Decisions Made
 
@@ -28,20 +28,27 @@ After login, the user lands on `/` and sees their alert list (empty on first vis
 | Navigation shell | None — single page, no sidebar yet | Sidebar/history nav belongs to S-06; building it now is scope creep | Plan (user Q&A) |
 | List placement | Replaces `Home`'s placeholder content | User's own description: land on the alerts page right after login | Plan (user Q&A) |
 | Backend test depth | Exhaustive (validation, duplicates, boundaries, malformed body, isolation) | User-isolation is the highest-risk correctness point per research | Plan (user Q&A) |
+| UI language | Polish for all new/touched UI (alerts + `Home`); backend API strings stay English | Product's users are Polish-speaking; CLAUDE.md amended with an explicit UI-text exception | User request 2026-07-19 |
+| S-01 login/register translation | Deliberately out of scope — tracked as [issue #23](https://github.com/mswiac/market-pulse/issues/23) | Avoids touching the already-implemented, tested S-01 flow within this change | User Q&A 2026-07-19 |
+| List item layout | `mat-expansion-panel` accordion: header = instrument/type/threshold, body = email/last-edited/current price/current RSI | User's own description: summary row, click to expand for details | User Q&A 2026-07-19 |
+| Current price/RSI display | Hardcoded "Brak danych" placeholder for both, always shown for price, RSI row shown only for NASDAQ-100/RSI alerts | No market-data pipeline (F-02) exists yet; avoids reworking the UI shell when S-04 lands real values | User Q&A 2026-07-19 |
+| Alert timestamps | Add `updated_at` column (equal to `created_at` at insert) now, display it as "last edited" | No edit feature yet (S-03), but this makes the label correct today and needs no further schema change later | User Q&A 2026-07-19 |
 
 ## Scope
 
 **In scope:**
-- `alerts` table migration
+- `alerts` table migration (including `updated_at` for future edit support)
 - `POST`/`GET /api/alerts`, scoped to the authenticated user
-- Alert list view (replacing the `Home` placeholder)
-- Alert creation dialog with client + server validation
+- Alert list view as an expand-on-click accordion (replacing the `Home` placeholder), in Polish
+- Alert creation dialog with client + server validation, in Polish
+- Translating `Home`'s existing copy to Polish (it's already being touched)
 
 **Out of scope:**
-- Edit/delete (S-03), current RSI/price display (S-04/F-02), notifications (S-05), trigger history (S-06)
+- Edit/delete (S-03), real current RSI/price values (S-04/F-02 — this slice only shows a hardcoded placeholder), notifications (S-05), trigger history (S-06)
 - Any side-nav/shell layout
 - DB-level `CHECK` constraints for general enum/range validation (the one VIX+RSI exclusion constraint is in scope, see above)
 - Instruments/indicators beyond VIX, NASDAQ-100, price, RSI
+- Translating S-01's `login`/`register` pages (tracked separately in issue #23)
 
 ## Architecture / Approach
 
@@ -53,8 +60,8 @@ Standard layering already established by S-01: migration → Hono route module (
 |---|---|---|
 | 1. Database schema | `alerts` table + migration | Missing `ON DELETE CASCADE` (already missed once on `sessions`) |
 | 2. Backend API | Create + list endpoints, exhaustive tests | User-isolation bug (manual `WHERE user_id` scoping, no structural guard) |
-| 3. Frontend service + list | Alerts render on the home page | None significant — read-only, mirrors existing patterns closely |
-| 4. Frontend creation dialog | End-to-end create flow | First `MatDialog` usage in the codebase; conditional threshold validators and VIX/RSI option-filtering both need re-evaluation whenever `instrument`/`alertType` change |
+| 3. Frontend service + list | Polish alert list on the home page, as an accordion | First `mat-expansion-panel` usage in the codebase; conditional RSI-row visibility |
+| 4. Frontend creation dialog | End-to-end create flow, in Polish | First `MatDialog` usage in the codebase; conditional threshold validators and VIX/RSI option-filtering both need re-evaluation whenever `instrument`/`alertType` change |
 
 **Prerequisites:** S-01 (done). No new dependencies — `@angular/cdk` (for `MatDialog`) is already installed.
 **Estimated effort:** ~1 session across 4 phases; each phase is small and independently verifiable.
@@ -67,5 +74,6 @@ Standard layering already established by S-01: migration → Hono route module (
 ## Success Criteria (Summary)
 
 - A user can create a valid alert and see it in their list without a page reload.
-- Invalid thresholds, duplicate alerts, and VIX+RSI combinations are rejected with a visible, understandable error.
+- Invalid thresholds, duplicate alerts, and VIX+RSI combinations are rejected with a visible, understandable (Polish) error.
+- Clicking an alert reveals its email, last-edited date, and current price/RSI placeholder — with the RSI row present only when it's a NASDAQ-100/RSI alert.
 - A second user never sees the first user's alerts.
