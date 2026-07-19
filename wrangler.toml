@@ -4,7 +4,7 @@ main = "src/worker/index.ts"
 compatibility_flags = ["nodejs_compat"]
 
 [assets]
-directory = "./dist/market-pulse/browser"
+directory = "./dist/market-pulse/browser/pl"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
 
