@@ -1,0 +1,330 @@
+# Alert CRUD (S-02) Implementation Plan
+
+## Overview
+
+Implement the roadmap's north-star slice: a logged-in user can create a price or RSI alert on VIX or NASDAQ-100 and see it in a persistent list. This lands a new `alerts` D1 table, `POST`/`GET /api/alerts` endpoints scoped to the authenticated user, and a frontend list + creation dialog that replace the current "Alert management is coming soon" placeholder on the home page.
+
+## Current State Analysis
+
+- No `alerts` table, route, or frontend feature exists yet — S-01 (auth) is the only implemented slice.
+- `sessionMiddleware` (`src/worker/lib/session.ts:70-90`) already validates the session cookie and sets `userId` on the Hono context; it was explicitly designed to be reused without changes.
+- The `Home` component (`src/app/features/home/home.ts`, `home.html:19`) is currently a placeholder shell — toolbar with logout + a card with static text — and is the natural target for the alert list.
+- No validation library exists anywhere (no zod), no DB `CHECK` constraints beyond `NOT NULL`/`UNIQUE`/`FOREIGN KEY`, no shared row-type file, no `MatDialog` usage yet — all confirmed by direct file reads of `auth.ts`, `session.ts`, `home.ts`, `login.ts`, `auth.service.ts`, `app.routes.ts`, `package.json`, `wrangler.toml`.
+
+## Desired End State
+
+A user who registers/logs in lands on `/` and sees their alert list (empty state on first visit). A "New alert" button opens a modal form (instrument, alert type, threshold, notification email pre-filled from the account) — on submit, the alert appears at the top of the list without a page reload, and duplicate or out-of-range submissions are rejected with a visible, field-relevant error.
+
+**Verification**: `npm run typecheck`, `npm run test:worker`, and `npm run build` all pass; manual walkthrough in `Testing Strategy` below succeeds end-to-end.
+
+### Key Discoveries:
+
+- `context/archive/2026-06-28-users-email-schema/plan.md` explicitly anticipated `alerts.notification_email` as an application-layer prefill from `users.email`, confirming this column belongs on `alerts`, not derived via a join (`users` has no `notification_email` column since F-01a).
+- `auth.ts:64-73` establishes the UNIQUE-violation-by-message-match pattern (`err.message.includes('UNIQUE')` → `409`), directly reusable for duplicate-alert rejection.
+- `migrations/0004_sessions_cascade_delete.sql` shows `ON DELETE CASCADE` was missed on the first `sessions` migration and needed a follow-up fix — the `alerts` migration must include it from the start.
+- `@angular/cdk` is already a dependency (`package.json:20`), so `MatDialog` (which depends on the CDK Overlay) needs no new package — just new imports.
+
+## What We're NOT Doing
+
+- Editing or deleting alerts (S-03).
+- Displaying current RSI/price value next to alerts, or any RSI calculation (S-04/F-02) — threshold is stored, not evaluated.
+- Sending notifications or recording trigger events (S-05).
+- Trigger history view (S-06).
+- Any shell layout or side navigation — deferred to whenever S-06 needs it; this slice only touches the existing `Home` route.
+- DB-level `CHECK` constraints on `instrument`/`alert_type`/`threshold` range — validation is application-layer only, matching existing convention (a `UNIQUE` constraint is still used for duplicate prevention, which is a different, already-established pattern).
+- Instruments or indicator types beyond VIX/NASDAQ-100 and price/RSI (PRD non-goals).
+
+## Implementation Approach
+
+Follow the codebase's established layering for a new resource: migration → Hono route module (inline D1 queries, manual validation, reused session middleware) → Angular service (signal-based state, mirroring `AuthService`) → Angular components (standalone, Material, mirroring `login`/`register`). Ship the list before the creation UI so each phase is independently verifiable against a real (if initially empty) backend.
+
+## Critical Implementation Details
+
+- **Conditional threshold validators must be recomputed on `alertType` change.** RSI needs `min(0)`/`max(100)`; price needs a strict `> 0` check (`Validators.min(0)` alone would wrongly accept `0`, so use a custom validator). When the user switches the `alertType` select, the `threshold` control's validators must be reassigned and `updateValueAndValidity()` called — otherwise stale validators from the previous type silently persist.
+- **First `MatDialog` usage in this codebase.** The opener (`Home`) needs `MatDialogModule` in its `imports` to inject `MatDialog` and call `dialog.open(AlertForm)`. The dialog content component (`AlertForm`) separately needs `MatDialogModule` in its own `imports` for the `<mat-dialog-content>`/`<mat-dialog-actions>` template directives, plus an injected `MatDialogRef<AlertForm>` to close itself (`dialogRef.close(true)`) on success.
+- **API responses use SQL column aliases to produce camelCase JSON directly** (e.g. `alert_type AS alertType`), avoiding a separate mapping layer — both `POST` and `GET` handlers must alias consistently so the frontend `Alert` interface lines up with the raw response shape.
+
+## Phase 1: Database schema
+
+### Overview
+
+Introduce the `alerts` table as a plain forward migration (no shadow-table needed — this is a new table, not an alteration of an existing one).
+
+### Changes Required:
+
+#### 1. Alerts table migration
+
+**File**: `migrations/0005_create_alerts.sql`
+
+**Intent**: Store one alert per row, scoped to a user, with duplicate prevention and cascade cleanup when a user is deleted.
+
+**Contract**:
+```sql
+CREATE TABLE alerts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  instrument TEXT NOT NULL,
+  alert_type TEXT NOT NULL,
+  threshold REAL NOT NULL,
+  notification_email TEXT NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  UNIQUE (user_id, instrument, alert_type, threshold)
+);
+CREATE INDEX idx_alerts_user_id ON alerts(user_id);
+```
+`instrument` holds `'VIX'` or `'NASDAQ100'`; `alert_type` holds `'PRICE'` or `'RSI'` — both enforced only at the application layer (Phase 2), matching the no-`CHECK`-constraint convention already in `users`/`sessions`.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Migration applies cleanly: `npm run migrate:local`
+- Existing test suite still passes (migration auto-loaded by `vitest.config.mts`, no other tests reference `alerts` yet): `npm run test:worker`
+- Typecheck still passes: `npm run typecheck`
+
+#### Manual Verification:
+
+- Inspect the local D1 schema and confirm the table shape: `wrangler d1 execute marketpulse-db --local --command "SELECT sql FROM sqlite_master WHERE name='alerts'"`
+
+---
+
+## Phase 2: Backend API
+
+### Overview
+
+Add `POST /api/alerts` (create) and `GET /api/alerts` (list), scoped to the authenticated user via the existing session middleware, plus exhaustive integration tests.
+
+### Changes Required:
+
+#### 1. Shared email validation helper
+
+**File**: `src/worker/lib/email.ts` (new)
+
+**Intent**: `alerts.ts` needs the same email-format validation as `auth.ts` for `notificationEmail`; extract it once instead of duplicating the regex and normalization logic.
+
+**Contract**: exports `EMAIL_PATTERN: RegExp` and `normalizeEmail(email: unknown): string | null`, with identical behavior to the current private implementation in `auth.ts`.
+
+#### 2. Auth route update
+
+**File**: `src/worker/routes/auth.ts`
+
+**Intent**: Use the shared helper instead of the local copy.
+
+**Contract**: Replace the local `EMAIL_PATTERN` const and `normalizeEmail` function with an import from `../lib/email`. No behavior change — `test/worker/auth.test.ts` must keep passing unmodified.
+
+#### 3. Alerts route module
+
+**File**: `src/worker/routes/alerts.ts` (new)
+
+**Intent**: Create and list alerts for the authenticated user only; every route in this module requires a valid session (unlike `auth.ts`, where only `/me` is protected).
+
+**Contract**:
+- `type Variables = { userId: number }`; `const alertsRoutes = new Hono<{ Bindings: Env; Variables: Variables }>()`; `alertsRoutes.use('*', sessionMiddleware)` applied once at the module level.
+- Validation helpers: `normalizeInstrument` (accepts exactly `'VIX'` or `'NASDAQ100'`), `normalizeAlertType` (accepts exactly `'PRICE'` or `'RSI'`), `validateThreshold(alertType, value)` — must be a finite number; `'RSI'` additionally requires `0 <= value <= 100` (inclusive); `'PRICE'` additionally requires `value > 0` (strict).
+- `POST /` — body `{ instrument, alertType, threshold, notificationEmail }`. Validates each field independently, returning a field-specific `400 { error: '<field> ...' }` on the first failure (unlike `auth.ts`'s single generic credentials message — there's no security reason to obscure which of 4 fields is wrong on a creation form). On success: insert scoped to `c.get('userId')`, using `RETURNING id, instrument, alert_type AS alertType, threshold, notification_email AS notificationEmail, created_at AS createdAt`; respond `201` with that row. A `UNIQUE` constraint violation (same message-matching pattern as `auth.ts:69`) → `409 { error: 'duplicate alert' }`.
+- `GET /` — `SELECT id, instrument, alert_type AS alertType, threshold, notification_email AS notificationEmail, created_at AS createdAt FROM alerts WHERE user_id = ? ORDER BY created_at DESC, id DESC`, bound to `c.get('userId')`. Responds `200` with the array (empty array for a user with no alerts, not a 404).
+
+#### 4. Route mounting
+
+**File**: `src/worker/index.ts`
+
+**Intent**: Expose the new routes under the established `/api` prefix.
+
+**Contract**: `app.route('/api/alerts', alertsRoutes)`, added alongside the existing `app.route('/api', authRoutes)` line, before the SPA catch-all (`app.get('*', ...)`).
+
+#### 5. Integration tests
+
+**File**: `test/worker/alerts.test.ts` (new)
+
+**Intent**: Exhaustive coverage per the agreed test scope — happy path, per-field validation, boundary values, duplicates, malformed input, and cross-user isolation.
+
+**Contract**: Follows `auth.test.ts`'s `exports.default.fetch(...)` + `sessionCookieFrom(...)` style; a shared helper registers and logs in a user to obtain a cookie before exercising alert endpoints. Cases: create-then-list happy path; reject each invalid field (bad `instrument`, bad `alertType`, non-numeric/negative/out-of-range `threshold` for both `RSI` and `PRICE`, malformed `notificationEmail`); accept `RSI` threshold at exactly `0` and exactly `100`; reject `RSI` at `-0.01` and `100.01`; reject `PRICE` threshold of `0`; accept a `PRICE` threshold with decimals (e.g. `18.42`); reject an exact duplicate (same user + instrument + alertType + threshold) with `409`; reject a malformed JSON body with `400`; reject `POST`/`GET` without a session cookie with `401`; confirm a second user's `GET /api/alerts` never includes the first user's alert (isolation).
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Typecheck passes: `npm run typecheck`
+- All worker tests pass, including the new suite: `npm run test:worker`
+
+#### Manual Verification:
+
+- Start the local worker (`npm run worker:dev`) and manually exercise `POST`/`GET /api/alerts` with a valid session cookie (obtained via `/api/login`) using curl or HTTPie, confirming response shape and status codes match the contract above.
+
+---
+
+## Phase 3: Frontend — alerts service + list view
+
+### Overview
+
+Introduce the data layer and read-only list rendering, replacing the `Home` placeholder text. No creation UI yet — this phase is verifiable against a real (empty) backend before Phase 4 adds writes.
+
+### Changes Required:
+
+#### 1. Alerts service
+
+**File**: `src/app/features/alerts/alerts.service.ts` (new)
+
+**Intent**: Single source of truth for the current user's alerts, mirroring `AuthService`'s signal + `tap` shape so the list reflects a later `create()` call automatically.
+
+**Contract**: `@Injectable({ providedIn: 'root' })`; exports `interface Alert { id: number; instrument: string; alertType: string; threshold: number; notificationEmail: string; createdAt: number }`; private `signal<Alert[]>([])` + public `.asReadonly()`; `list(): Observable<Alert[]>` calls `GET /api/alerts`, `tap` sets the signal; `create(payload: { instrument: string; alertType: string; threshold: number; notificationEmail: string }): Observable<Alert>` calls `POST /api/alerts`, `tap` prepends the created alert (`this._alerts.update(a => [created, ...a])`).
+
+#### 2. Alert list component
+
+**File**: `src/app/features/alerts/alert-list/alert-list.ts` / `.html` / `.scss` (new)
+
+**Intent**: Render the authenticated user's alerts; fetch once on construction.
+
+**Contract**: Standalone component (selector `app-alert-list`), injects `AlertsService`, calls `list().subscribe()` in the constructor. Template reads `alertsService.alerts()`, renders instrument/alertType/threshold/notificationEmail per row, and shows an explicit empty-state message ("No alerts yet — create one to get started.") when the array is empty.
+
+#### 3. Home integration
+
+**File**: `src/app/features/home/home.ts` / `home.html`
+
+**Intent**: Replace the static placeholder with the real alert list; toolbar (logout, user email) is unchanged.
+
+**Contract**: `Home`'s `imports` gains `AlertList`; `home.html`'s `<p>Alert management is coming soon.</p>` line is replaced with `<app-alert-list />`.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Typecheck passes: `npm run typecheck`
+- Production build succeeds: `npm run build`
+
+#### Manual Verification:
+
+- Log in with a fresh user, land on `/`, see the alert-list empty state render correctly with no console errors.
+
+---
+
+## Phase 4: Frontend — alert creation dialog
+
+### Overview
+
+Add the "New alert" button and the `MatDialog`-hosted creation form, completing the end-to-end flow.
+
+### Changes Required:
+
+#### 1. Alert form (dialog content)
+
+**File**: `src/app/features/alerts/alert-form/alert-form.ts` / `.html` / `.scss` (new)
+
+**Intent**: The alert-creation form, opened as `MatDialog` content — first `<mat-select>` usage in this codebase.
+
+**Contract**: Standalone component; `imports: [ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatSelectModule, MatInputModule, MatButtonModule]`; injects `MatDialogRef<AlertForm>`, `AlertsService`, `AuthService`. `fb.nonNullable.group({...})` with: `instrument` (`Validators.required`, options `'VIX'`/`'NASDAQ100'` labeled "VIX"/"NASDAQ-100"), `alertType` (`Validators.required`, options `'PRICE'`/`'RSI'` labeled "Price"/"RSI"), `threshold` (`Validators.required` plus the conditional min/max or strict-positive validator described in Critical Implementation Details, recomputed whenever `alertType` changes), `notificationEmail` (default value `authService.currentUser()?.email ?? ''`, `[Validators.required, Validators.email]`, editable). On submit: `alertsService.create(...).subscribe({ next: () => dialogRef.close(true), error: (err) => ... })`; a `409` response is mapped onto the form the same way `register.ts` maps its own server-side conflict (`setErrors({ server: true })` + `markAsTouched()`) so a duplicate alert surfaces a visible `mat-error` instead of failing silently.
+
+#### 2. Home trigger button
+
+**File**: `src/app/features/home/home.ts` / `home.html`
+
+**Intent**: Let the user open the creation dialog.
+
+**Contract**: `Home` injects `MatDialog` (adds `MatDialogModule` to its `imports`); a new `openNewAlertDialog()` method calls `this.dialog.open(AlertForm)`; a `<button mat-raised-button (click)="openNewAlertDialog()">New alert</button>` is placed above `<app-alert-list />`.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Typecheck passes: `npm run typecheck`
+- Production build succeeds: `npm run build`
+
+#### Manual Verification:
+
+- Click "New alert", submit a valid RSI alert, see the dialog close and the new alert appear at the top of the list without a page reload.
+- Attempt an RSI threshold of `150` — inline validation blocks submission before any request is sent.
+- Attempt to create the same alert twice — the second submission surfaces the `409` as a visible form error, not a silent failure.
+- The notification email field is pre-filled with the logged-in account's email and remains editable.
+
+---
+
+## Testing Strategy
+
+### Unit Tests:
+
+None — Angular unit tests are disabled project-wide (`skipTests: true` in `angular.json`, a hard rule in `CLAUDE.md`). Coverage comes from backend integration tests (Phase 2) and manual verification (Phases 3-4).
+
+### Integration Tests:
+
+- `test/worker/alerts.test.ts` (Phase 2) — see the exhaustive case list above; this is the primary automated safety net for this slice, particularly the cross-user isolation case, which is the highest-risk correctness point identified in research.
+
+### Manual Testing Steps:
+
+1. Register a new user, confirm redirect to `/` shows the empty alert list.
+2. Open "New alert", create a `VIX` / `RSI` / `35` alert with the pre-filled email — confirm it appears at the top of the list.
+3. Open "New alert" again, attempt the exact same alert — confirm a visible duplicate error, no duplicate row added.
+4. Open "New alert", select `PRICE`, attempt threshold `0` — confirm inline validation blocks it; attempt `4500.25` — confirm it's accepted and appears in the list.
+5. Log out, register a second user, confirm their alert list is empty (does not show the first user's alerts).
+6. Refresh the page after creating an alert — confirm it persists (loaded from `GET /api/alerts`, not just local state).
+
+## Performance Considerations
+
+None specific to this slice — single-digit alert counts per user at this product stage; no pagination or virtualization needed.
+
+## Migration Notes
+
+`migrations/0005_create_alerts.sql` is a plain forward `CREATE TABLE` (no existing data to migrate, no shadow-table pattern needed). Applies to local and remote D1 via the existing `npm run migrate:local` / `migrate:remote` scripts with no config changes.
+
+## References
+
+- Research: `context/changes/alert-crud/research.md`
+- Session middleware to reuse: `src/worker/lib/session.ts:70-90`
+- UNIQUE-violation pattern to mirror: `src/worker/routes/auth.ts:64-73`
+- Protected-route pattern to mirror: `src/worker/routes/auth.ts:115-126`
+- Integration test style to mirror: `test/worker/auth.test.ts`
+- Component pattern to mirror: `src/app/features/auth/login/login.ts`, `login.html`
+- Server-error-to-form mapping pattern: `src/app/features/auth/register/register.ts:39-51`
+- Service pattern to mirror: `src/app/core/auth/auth.service.ts`
+- Placeholder to replace: `src/app/features/home/home.html:19`
+
+## Progress
+
+> Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles. See `references/progress-format.md`.
+
+### Phase 1: Database schema
+
+#### Automated
+
+- [ ] 1.1 Migration applies cleanly: `npm run migrate:local`
+- [ ] 1.2 Existing test suite still passes: `npm run test:worker`
+- [ ] 1.3 Typecheck still passes: `npm run typecheck`
+
+#### Manual
+
+- [ ] 1.4 Inspect local D1 schema for the `alerts` table shape
+
+### Phase 2: Backend API
+
+#### Automated
+
+- [ ] 2.1 Typecheck passes: `npm run typecheck`
+- [ ] 2.2 All worker tests pass, including `alerts.test.ts`: `npm run test:worker`
+
+#### Manual
+
+- [ ] 2.3 Manually exercise `POST`/`GET /api/alerts` against the local worker with a valid session cookie
+
+### Phase 3: Frontend — alerts service + list view
+
+#### Automated
+
+- [ ] 3.1 Typecheck passes: `npm run typecheck`
+- [ ] 3.2 Production build succeeds: `npm run build`
+
+#### Manual
+
+- [ ] 3.3 Fresh user login renders the alert-list empty state with no console errors
+
+### Phase 4: Frontend — alert creation dialog
+
+#### Automated
+
+- [ ] 4.1 Typecheck passes: `npm run typecheck`
+- [ ] 4.2 Production build succeeds: `npm run build`
+
+#### Manual
+
+- [ ] 4.3 Create an alert via the dialog and see it appear in the list without a page reload
+- [ ] 4.4 RSI threshold of 150 is blocked by inline validation
+- [ ] 4.5 Duplicate alert submission surfaces a visible 409 form error
+- [ ] 4.6 Notification email is pre-filled from the account and remains editable
