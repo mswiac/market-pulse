@@ -1,7 +1,7 @@
 ---
 change_id: alert-crud
 title: Alert CRUD - create alert and view alert list
-status: impl_reviewed
+status: implemented
 created: 2026-07-19
 updated: 2026-07-19
 archived_at: null

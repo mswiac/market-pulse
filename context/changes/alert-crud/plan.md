@@ -322,7 +322,7 @@ None specific to this slice — single-digit alert counts per user at this produ
 
 #### Manual
 
-- [ ] 1.4 Inspect local D1 schema for the `alerts` table shape
+- [x] 1.4 Inspect local D1 schema for the `alerts` table shape
 
 ### Phase 2: Backend API
 
@@ -333,7 +333,7 @@ None specific to this slice — single-digit alert counts per user at this produ
 
 #### Manual
 
-- [ ] 2.3 Manually exercise `POST`/`GET /api/alerts` against the local worker with a valid session cookie
+- [x] 2.3 Manually exercise `POST`/`GET /api/alerts` against the local worker with a valid session cookie
 
 ### Phase 3: Frontend — alerts service + list view
 
@@ -344,8 +344,8 @@ None specific to this slice — single-digit alert counts per user at this produ
 
 #### Manual
 
-- [ ] 3.3 Fresh user login renders the Polish empty-state message with no console errors
-- [ ] 3.4 Home's toolbar and copy render in Polish
+- [x] 3.3 Fresh user login renders the Polish empty-state message with no console errors
+- [x] 3.4 Home's toolbar and copy render in Polish
 
 ### Phase 4: Frontend — alert creation dialog
 
@@ -356,11 +356,11 @@ None specific to this slice — single-digit alert counts per user at this produ
 
 #### Manual
 
-- [ ] 4.3 Create an alert via the dialog and see it appear in the list without a page reload
-- [ ] 4.4 RSI threshold of 150 is blocked by inline validation
-- [ ] 4.5 Duplicate alert submission surfaces a visible 409 form error
-- [ ] 4.6 Notification email is pre-filled from the account and remains editable
-- [ ] 4.7 Selecting VIX offers only "Cena" as the alert type (no RSI option)
-- [ ] 4.8 Switching from NASDAQ-100+RSI to VIX resets alert type to Cena instead of keeping an invalid combination
-- [ ] 4.9 Expanding an alert shows email, last-edited date, and "Aktualna cena: Brak danych"
-- [ ] 4.10 "Aktualne RSI: Brak danych" appears only for a NASDAQ-100/RSI alert, absent otherwise
+- [x] 4.3 Create an alert via the dialog and see it appear in the list without a page reload
+- [x] 4.4 RSI threshold of 150 is blocked by inline validation
+- [x] 4.5 Duplicate alert submission surfaces a visible 409 form error
+- [x] 4.6 Notification email is pre-filled from the account and remains editable
+- [x] 4.7 Selecting VIX offers only "Cena" as the alert type (no RSI option)
+- [x] 4.8 Switching from NASDAQ-100+RSI to VIX resets alert type to Cena instead of keeping an invalid combination
+- [x] 4.9 Expanding an alert shows email, last-edited date, and "Aktualna cena: Brak danych"
+- [x] 4.10 "Aktualne RSI: Brak danych" appears only for a NASDAQ-100/RSI alert, absent otherwise
