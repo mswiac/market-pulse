@@ -33,7 +33,7 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | F-01a | users-email-schema   | (foundation) users table: email as sole identifier        | F-01           | FR-001, FR-002                  | done     |
 | F-02 | market-data-pipeline  | (foundation) cron fetches Stooq closes + calculates RSI   | F-01           | NFR (daily evaluation), BL      | proposed |
 | S-01 | auth-and-registration | register, log in, and log out                             | F-01a          | FR-001, FR-002, FR-003          | done     |
-| S-02 | alert-crud            | create a price/RSI alert and view the alert list          | S-01           | FR-004, FR-005                  | proposed |
+| S-02 | alert-crud            | create a price/RSI alert and view the alert list          | S-01           | FR-004, FR-005                  | done     |
 | S-03 | alert-edit-delete     | edit and delete an existing alert                         | S-02           | FR-006, FR-007                  | proposed |
 | S-04 | market-data-display   | see current RSI/price value next to each alert            | S-02, F-02     | FR-009                          | proposed |
 | S-05 | alert-notifications   | receive an email when an alert threshold is crossed       | S-04           | FR-008, FR-008a                 | proposed |
@@ -127,7 +127,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Introduces the `alerts` table and its forward-only D1 migration. RSI threshold type requires input validation on the frontend (range 0–100) but no backend RSI calculation yet — that lands in S-04/S-05. RSI is only a valid alert type for NASDAQ-100 (see FR-004 rationale in `prd.md`) — VIX must restrict the form to price alerts only, and the `alerts` table constraint should enforce the same at the persistence layer. First multi-field Angular form beyond auth.
-- **Status:** proposed
+- **Status:** done
 
 ### S-03: User can edit and delete an alert
 
@@ -207,3 +207,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **F-01: (foundation) Hono Worker entry point wired to D1 with the `users` table schema landed; Worker deploys to the Cloudflare Workers target alongside the Angular SPA.** — Archived 2026-06-28 → `context/archive/2026-06-26-backend-scaffold/`. Lesson: —.
 - **F-01a: (foundation) The `users` table uses `email` as the sole identifier and login credential.** — Archived 2026-06-28 → `context/archive/2026-06-28-users-email-schema/`. Lesson: —.
 - **S-01: User can register with an email address and password; log in with email and password; log out. Unauthenticated requests to any protected route are rejected.** — Archived 2026-07-14 → `context/archive/2026-07-14-auth-and-registration/`. Lesson: —.
+- **S-02: User can create an alert by selecting an instrument (VIX or NASDAQ-100), alert type, and threshold value; VIX supports price alerts only, NASDAQ-100 supports price or RSI alerts. The notification email field is pre-filled from the user's account email but is editable per alert. Created alerts appear in a persistent list.** — Archived 2026-07-19 → `context/archive/2026-07-19-alert-crud/`. Lesson: —.

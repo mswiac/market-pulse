@@ -1,10 +1,10 @@
 ---
 change_id: alert-crud
 title: Alert CRUD - create alert and view alert list
-status: implemented
+status: archived
 created: 2026-07-19
 updated: 2026-07-19
-archived_at: null
+archived_at: 2026-07-19T12:55:10Z
 ---
 
 ## Notes
