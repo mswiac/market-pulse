@@ -564,10 +564,10 @@ and the Worker's static-assets path.
 
 #### Automated
 
-- [x] 2.1 `npm run typecheck` passes
-- [x] 2.2 `npx ng extract-i18n --output-path src/locale` exits 0 and `messages.xlf` contains every planned id
-- [x] 2.3 `npm run build` exits 0 with `i18nMissingTranslation: "error"` active
-- [x] 2.4 `grep -rn "[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]" src/app --include=*.html --include=*.ts` returns no matches
+- [x] 2.1 `npm run typecheck` passes — 16dde04
+- [x] 2.2 `npx ng extract-i18n --output-path src/locale` exits 0 and `messages.xlf` contains every planned id — 16dde04
+- [x] 2.3 `npm run build` exits 0 with `i18nMissingTranslation: "error"` active — 16dde04
+- [x] 2.4 `grep -rn "[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]" src/app --include=*.html --include=*.ts` returns no matches — 16dde04
 
 #### Manual
 
@@ -579,8 +579,8 @@ and the Worker's static-assets path.
 
 #### Automated
 
-- [ ] 3.1 `npm run build` exits 0
-- [ ] 3.2 `npm run deploy` exits 0
+- [x] 3.1 `npm run build` exits 0
+- [x] 3.2 `npm run deploy` exits 0
 
 #### Manual
 
