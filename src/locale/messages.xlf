@@ -2,6 +2,392 @@
 <xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
   <file source-language="en-US" datatype="plaintext" original="ng2.template">
     <body>
+      <trans-unit id="alertForm.title" datatype="html">
+        <source>New alert</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
+          <context context-type="linenumber">1,3</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertForm.instrument.label" datatype="html">
+        <source>Instrument</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
+          <context context-type="linenumber">6,7</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertForm.alertType.label" datatype="html">
+        <source>Alert type</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
+          <context context-type="linenumber">14,15</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertForm.alertType.price" datatype="html">
+        <source>Price</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
+          <context context-type="linenumber">16,17</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertForm.threshold.label" datatype="html">
+        <source>Threshold</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
+          <context context-type="linenumber">24,25</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertForm.threshold.errorRequired" datatype="html">
+        <source>Field required.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
+          <context context-type="linenumber">27,28</context>
+        </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
+          <context context-type="linenumber">39,40</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertForm.threshold.errorRange" datatype="html">
+        <source>Value must be between 0 and 100.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
+          <context context-type="linenumber">29,30</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertForm.threshold.errorPositive" datatype="html">
+        <source>Value must be greater than 0.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
+          <context context-type="linenumber">31,35</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertForm.notificationEmail.label" datatype="html">
+        <source>Notification email</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
+          <context context-type="linenumber">36,37</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertForm.notificationEmail.errorInvalid" datatype="html">
+        <source>Enter a valid email address.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
+          <context context-type="linenumber">41,45</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertForm.cancel" datatype="html">
+        <source>Cancel</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
+          <context context-type="linenumber">51,52</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertForm.submit" datatype="html">
+        <source> Create alert </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
+          <context context-type="linenumber">53,55</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertForm.error.duplicateAlert" datatype="html">
+        <source>An alert like this already exists.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.ts</context>
+          <context context-type="linenumber">100</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertForm.error.rsiUnavailableForVix" datatype="html">
+        <source>RSI is not available for VIX.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.ts</context>
+          <context context-type="linenumber">104</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertForm.error.generic" datatype="html">
+        <source>Something went wrong. Please try again.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.ts</context>
+          <context context-type="linenumber">107</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.loadError" datatype="html">
+        <source>Failed to load alerts.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">2,4</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.sort.instrument" datatype="html">
+        <source>Instrument</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">7,8</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.sort.alertType" datatype="html">
+        <source>Alert type</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">13,14</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.sort.threshold" datatype="html">
+        <source>Threshold</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">19,20</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.detail.currentPrice" datatype="html">
+        <source>Current price:</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">39</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.detail.noData" datatype="html">
+        <source>No data</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">39,40</context>
+        </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">41,43</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.detail.currentRsi" datatype="html">
+        <source>Current RSI:</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">41</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.detail.notificationEmail" datatype="html">
+        <source>Notification email:</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">43,44</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.detail.lastEdited" datatype="html">
+        <source>Last edited:</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">44</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.emptyState" datatype="html">
+        <source>No alerts yet — add your first one to get started.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">48,52</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.type.price" datatype="html">
+        <source>Price threshold</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.ts</context>
+          <context context-type="linenumber">13</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.type.rsi" datatype="html">
+        <source>RSI threshold</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.ts</context>
+          <context context-type="linenumber">14</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="login.title" datatype="html">
+        <source>Log in</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/login/login.html</context>
+          <context context-type="linenumber">4,5</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="login.email.label" datatype="html">
+        <source>Email</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/login/login.html</context>
+          <context context-type="linenumber">10,11</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="login.email.errorRequired" datatype="html">
+        <source>Email is required.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/login/login.html</context>
+          <context context-type="linenumber">13,14</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="login.email.errorInvalid" datatype="html">
+        <source>Enter a valid email address.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/login/login.html</context>
+          <context context-type="linenumber">15,17</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="login.password.label" datatype="html">
+        <source>Password</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/login/login.html</context>
+          <context context-type="linenumber">20,21</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="login.password.errorRequired" datatype="html">
+        <source>Password is required.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/login/login.html</context>
+          <context context-type="linenumber">23,25</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="login.submit" datatype="html">
+        <source> Log in </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/login/login.html</context>
+          <context context-type="linenumber">32,33</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="login.footer.prompt" datatype="html">
+        <source>Need an account?</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/login/login.html</context>
+          <context context-type="linenumber">38</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="login.footer.link" datatype="html">
+        <source>Register</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/login/login.html</context>
+          <context context-type="linenumber">38,40</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="login.errorInvalidCredentials" datatype="html">
+        <source>Invalid email or password.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/login/login.ts</context>
+          <context context-type="linenumber">40</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="register.title" datatype="html">
+        <source>Create your account</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/register/register.html</context>
+          <context context-type="linenumber">4,5</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="register.email.label" datatype="html">
+        <source>Email</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/register/register.html</context>
+          <context context-type="linenumber">10,11</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="register.email.errorRequired" datatype="html">
+        <source>Email is required.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/register/register.html</context>
+          <context context-type="linenumber">13,14</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="register.email.errorInvalid" datatype="html">
+        <source>Enter a valid email address.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/register/register.html</context>
+          <context context-type="linenumber">15,16</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="register.password.label" datatype="html">
+        <source>Password</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/register/register.html</context>
+          <context context-type="linenumber">22,23</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="register.password.errorRequired" datatype="html">
+        <source>Password is required.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/register/register.html</context>
+          <context context-type="linenumber">25,26</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="register.password.errorMinlength" datatype="html">
+        <source>Password must be at least 8 characters.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/register/register.html</context>
+          <context context-type="linenumber">27,29</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="register.submit" datatype="html">
+        <source> Register </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/register/register.html</context>
+          <context context-type="linenumber">32,34</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="register.footer.prompt" datatype="html">
+        <source>Already have an account?</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/register/register.html</context>
+          <context context-type="linenumber">38</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="register.footer.link" datatype="html">
+        <source>Log in</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/register/register.html</context>
+          <context context-type="linenumber">38,40</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="register.errorEmailTaken" datatype="html">
+        <source>This email is already registered.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/register/register.ts</context>
+          <context context-type="linenumber">42</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="register.errorGeneric" datatype="html">
+        <source>Something went wrong. Please try again.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/auth/register/register.ts</context>
+          <context context-type="linenumber">44</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="home.logout" datatype="html">
+        <source>Log out</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/home/home.html</context>
+          <context context-type="linenumber">7,10</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="home.welcomeTitle" datatype="html">
+        <source>Welcome back</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/home/home.html</context>
+          <context context-type="linenumber">13,14</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="home.loggedInAs" datatype="html">
+        <source>Logged in as:</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/home/home.html</context>
+          <context context-type="linenumber">17</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="home.alertsSectionTitle" datatype="html">
+        <source>Your alerts</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/home/home.html</context>
+          <context context-type="linenumber">23,25</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="home.newAlertFab" datatype="html">
+        <source>New alert</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/home/home.html</context>
+          <context context-type="linenumber">30,32</context>
+        </context-group>
+      </trans-unit>
     </body>
   </file>
 </xliff>

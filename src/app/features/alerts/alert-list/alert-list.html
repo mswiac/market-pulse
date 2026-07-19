@@ -1,22 +1,22 @@
 @if (loadError()) {
-  <p class="empty-state">Nie udało się wczytać alertów.</p>
+  <p class="empty-state" i18n="@@alertList.loadError">Failed to load alerts.</p>
 } @else {
   @if (alerts().length > 0) {
     <div class="list-header">
       <button type="button" class="sort-col" (click)="toggleSort('instrument')">
-        Walor
+        <span i18n="@@alertList.sort.instrument">Instrument</span>
         @if (sortBy() === 'instrument') {
           <mat-icon class="sort-icon">{{ sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
         }
       </button>
       <button type="button" class="sort-col" (click)="toggleSort('alertType')">
-        Typ alertu
+        <span i18n="@@alertList.sort.alertType">Alert type</span>
         @if (sortBy() === 'alertType') {
           <mat-icon class="sort-icon">{{ sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
         }
       </button>
       <button type="button" class="sort-col" (click)="toggleSort('threshold')">
-        Próg
+        <span i18n="@@alertList.sort.threshold">Threshold</span>
         @if (sortBy() === 'threshold') {
           <mat-icon class="sort-icon">{{ sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
         }
@@ -36,16 +36,16 @@
         </mat-expansion-panel-header>
 
         <div class="alert-detail">
-          <p><strong>Aktualna cena:</strong> Brak danych</p>
+          <p><strong i18n="@@alertList.detail.currentPrice">Current price:</strong> <span i18n="@@alertList.detail.noData">No data</span></p>
           @if (showCurrentRsi(alert.instrument, alert.alertType)) {
-            <p><strong>Aktualne RSI:</strong> Brak danych</p>
+            <p><strong i18n="@@alertList.detail.currentRsi">Current RSI:</strong> <span i18n="@@alertList.detail.noData">No data</span></p>
           }
-          <p><strong>E-mail powiadomień:</strong> {{ alert.notificationEmail }}</p>
-          <p><strong>Ostatnia edycja:</strong> {{ alert.updatedAt * 1000 | date: 'dd.MM.yyyy' }}</p>
+          <p><strong i18n="@@alertList.detail.notificationEmail">Notification email:</strong> {{ alert.notificationEmail }}</p>
+          <p><strong i18n="@@alertList.detail.lastEdited">Last edited:</strong> {{ alert.updatedAt * 1000 | date: 'dd.MM.yyyy' }}</p>
         </div>
       </mat-expansion-panel>
     } @empty {
-      <p class="empty-state">Brak alertów — dodaj pierwszy, aby zacząć.</p>
+      <p class="empty-state" i18n="@@alertList.emptyState">No alerts yet — add your first one to get started.</p>
     }
   </mat-accordion>
 }

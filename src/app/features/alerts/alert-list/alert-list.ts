@@ -10,8 +10,8 @@ const INSTRUMENT_LABELS: Record<string, string> = {
 };
 
 const ALERT_TYPE_LABELS: Record<string, string> = {
-  PRICE: 'Próg cenowy',
-  RSI: 'Próg RSI',
+  PRICE: $localize`:@@alertList.type.price:Price threshold`,
+  RSI: $localize`:@@alertList.type.rsi:RSI threshold`,
 };
 
 type SortableColumn = 'instrument' | 'alertType' | 'threshold';

@@ -551,10 +551,10 @@ and the Worker's static-assets path.
 
 #### Automated
 
-- [x] 1.1 `npm run typecheck` passes
-- [x] 1.2 `npx ng extract-i18n --output-path src/locale` exits 0 and produces `src/locale/messages.xlf`
-- [x] 1.3 `npm run build` exits 0 and produces a built `index.html` for the `pl` locale
-- [x] 1.4 The built `index.html`'s `<base href>` resolves to `"/"`, not `"/pl/"`
+- [x] 1.1 `npm run typecheck` passes — 63dd425
+- [x] 1.2 `npx ng extract-i18n --output-path src/locale` exits 0 and produces `src/locale/messages.xlf` — 63dd425
+- [x] 1.3 `npm run build` exits 0 and produces a built `index.html` for the `pl` locale — 63dd425
+- [x] 1.4 The built `index.html`'s `<base href>` resolves to `"/"`, not `"/pl/"` — 63dd425
 
 #### Manual
 
@@ -564,10 +564,10 @@ and the Worker's static-assets path.
 
 #### Automated
 
-- [ ] 2.1 `npm run typecheck` passes
-- [ ] 2.2 `npx ng extract-i18n --output-path src/locale` exits 0 and `messages.xlf` contains every planned id
-- [ ] 2.3 `npm run build` exits 0 with `i18nMissingTranslation: "error"` active
-- [ ] 2.4 `grep -rn "[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]" src/app --include=*.html --include=*.ts` returns no matches
+- [x] 2.1 `npm run typecheck` passes
+- [x] 2.2 `npx ng extract-i18n --output-path src/locale` exits 0 and `messages.xlf` contains every planned id
+- [x] 2.3 `npm run build` exits 0 with `i18nMissingTranslation: "error"` active
+- [x] 2.4 `grep -rn "[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]" src/app --include=*.html --include=*.ts` returns no matches
 
 #### Manual
 
