@@ -345,8 +345,8 @@ None specific to this slice — single-digit alert counts per user at this produ
 
 #### Automated
 
-- [x] 4.1 Typecheck passes: `npm run typecheck`
-- [x] 4.2 Production build succeeds: `npm run build`
+- [x] 4.1 Typecheck passes: `npm run typecheck` — e0ba3a6
+- [x] 4.2 Production build succeeds: `npm run build` — e0ba3a6
 
 #### Manual
 
