@@ -38,6 +38,10 @@
         <source>Notification email</source>
         <target>E-mail do powiadomień</target>
       </trans-unit>
+      <trans-unit id="alertForm.notificationEmail.errorRequired" datatype="html">
+        <source>Field required.</source>
+        <target>Pole wymagane.</target>
+      </trans-unit>
       <trans-unit id="alertForm.notificationEmail.errorInvalid" datatype="html">
         <source>Enter a valid email address.</source>
         <target>Wprowadź prawidłowy adres e-mail.</target>

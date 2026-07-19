@@ -36,7 +36,7 @@
       <mat-label i18n="@@alertForm.notificationEmail.label">Notification email</mat-label>
       <input matInput type="email" formControlName="notificationEmail" autocomplete="email" />
       @if (form.controls.notificationEmail.hasError('required') && form.controls.notificationEmail.touched) {
-        <mat-error i18n="@@alertForm.threshold.errorRequired">Field required.</mat-error>
+        <mat-error i18n="@@alertForm.notificationEmail.errorRequired">Field required.</mat-error>
       } @else if (form.controls.notificationEmail.hasError('email') && form.controls.notificationEmail.touched) {
         <mat-error i18n="@@alertForm.notificationEmail.errorInvalid">Enter a valid email address.</mat-error>
       }
