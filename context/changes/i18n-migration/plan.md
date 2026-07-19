@@ -558,7 +558,7 @@ and the Worker's static-assets path.
 
 #### Manual
 
-- [ ] 1.5 Serve the built `pl` output locally and confirm the app renders exactly as today
+- [x] 1.5 Serve the built `pl` output locally and confirm the app renders exactly as today
 
 ### Phase 2: Content Migration
 
@@ -571,18 +571,18 @@ and the Worker's static-assets path.
 
 #### Manual
 
-- [ ] 2.5 Click through every screen and alert-type/error-state combination on the built `pl` bundle
-- [ ] 2.6 Confirm home/alert-list/alert-form render byte-identical Polish wording vs. before this change
-- [ ] 2.7 Confirm login/register now render in Polish
+- [x] 2.5 Click through every screen and alert-type/error-state combination on the built `pl` bundle
+- [x] 2.6 Confirm home/alert-list/alert-form render byte-identical Polish wording vs. before this change
+- [x] 2.7 Confirm login/register now render in Polish
 
 ### Phase 3: Deploy Verification
 
 #### Automated
 
-- [x] 3.1 `npm run build` exits 0
-- [x] 3.2 `npm run deploy` exits 0
+- [x] 3.1 `npm run build` exits 0 — 2e40fa1
+- [x] 3.2 `npm run deploy` exits 0 — 2e40fa1
 
 #### Manual
 
-- [ ] 3.3 Locally verify SPA fallback routing against the new nested asset directory
-- [ ] 3.4 Spot-check the live production URL after deploy
+- [x] 3.3 Locally verify SPA fallback routing against the new nested asset directory
+- [x] 3.4 Spot-check the live production URL after deploy
