@@ -5,7 +5,7 @@
 
 ## What & Why
 
-Implement the roadmap's north-star slice: a logged-in user can create a price or RSI alert on VIX or NASDAQ-100 and see it in a persistent list. This is the first slice that exercises the full stack (D1 schema → Hono API → Angular UI) beyond auth, and proves the alert-management flow that every downstream slice (edit/delete, market-data display, notifications, trigger history) builds on.
+Implement the roadmap's north-star slice: a logged-in user can create a price or RSI alert on VIX or NASDAQ-100 and see it in a persistent list. **RSI is valid for NASDAQ-100 only — VIX is price-only** (PRD FR-004, updated 2026-07-19). This is the first slice that exercises the full stack (D1 schema → Hono API → Angular UI) beyond auth, and proves the alert-management flow that every downstream slice (edit/delete, market-data display, notifications, trigger history) builds on.
 
 ## Starting Point
 
@@ -20,7 +20,8 @@ After login, the user lands on `/` and sees their alert list (empty on first vis
 | Decision | Choice | Why (1 sentence) | Source |
 |---|---|---|---|
 | Instrument/type wire values | `'VIX'`/`'NASDAQ100'`, `'PRICE'`/`'RSI'` | Alphanumeric-only, avoids any future URL/filename friction | Plan (user Q&A) |
-| DB-level constraints | Application-layer validation only, no `CHECK` | Matches existing convention — `users`/`sessions` use only `NOT NULL`/`UNIQUE`/`FK` | Plan (user Q&A) |
+| DB-level constraints | Application-layer validation only for enum/range; one `CHECK` for VIX+RSI exclusion | Matches existing convention for general enums/ranges; VIX+RSI is explicitly required "at the persistence layer" by the updated roadmap | Plan (user Q&A) + PRD/roadmap update 2026-07-19 |
+| VIX + RSI combination | Rejected client-side (option hidden), server-side (400), and DB-side (`CHECK`) | RSI on VIX has no established sentiment interpretation (PRD FR-004 Socrates note) | PRD/roadmap update 2026-07-19 |
 | Threshold rules | RSI 0–100 inclusive (decimals ok), price > 0 (decimals ok) | Matches how RSI and index prices actually behave as continuous values | Plan (user Q&A) |
 | Duplicate alerts | Rejected via `UNIQUE(user_id, instrument, alert_type, threshold)` → 409 | Prevents accidental duplicate notifications later (S-05) | Plan (user Q&A) |
 | Creation UI | `MatDialog` modal on the list page | User keeps list context; no navigation away | Plan (user Q&A) |
@@ -39,7 +40,7 @@ After login, the user lands on `/` and sees their alert list (empty on first vis
 **Out of scope:**
 - Edit/delete (S-03), current RSI/price display (S-04/F-02), notifications (S-05), trigger history (S-06)
 - Any side-nav/shell layout
-- DB-level `CHECK` constraints
+- DB-level `CHECK` constraints for general enum/range validation (the one VIX+RSI exclusion constraint is in scope, see above)
 - Instruments/indicators beyond VIX, NASDAQ-100, price, RSI
 
 ## Architecture / Approach
@@ -53,7 +54,7 @@ Standard layering already established by S-01: migration → Hono route module (
 | 1. Database schema | `alerts` table + migration | Missing `ON DELETE CASCADE` (already missed once on `sessions`) |
 | 2. Backend API | Create + list endpoints, exhaustive tests | User-isolation bug (manual `WHERE user_id` scoping, no structural guard) |
 | 3. Frontend service + list | Alerts render on the home page | None significant — read-only, mirrors existing patterns closely |
-| 4. Frontend creation dialog | End-to-end create flow | First `MatDialog` usage in the codebase; conditional threshold validators need re-evaluation on type change |
+| 4. Frontend creation dialog | End-to-end create flow | First `MatDialog` usage in the codebase; conditional threshold validators and VIX/RSI option-filtering both need re-evaluation whenever `instrument`/`alertType` change |
 
 **Prerequisites:** S-01 (done). No new dependencies — `@angular/cdk` (for `MatDialog`) is already installed.
 **Estimated effort:** ~1 session across 4 phases; each phase is small and independently verifiable.
@@ -61,10 +62,10 @@ Standard layering already established by S-01: migration → Hono route module (
 ## Open Risks & Assumptions
 
 - Cross-user isolation is enforced entirely by remembering to add `WHERE user_id = ?` in every query — there is no DB-level or framework-level guard. The exhaustive Phase 2 test suite is the primary safety net; worth double-checking during implementation review.
-- No DB `CHECK` constraints means a future out-of-band script or migration could insert invalid `instrument`/`alert_type`/`threshold` data undetected — acceptable at current scale per the app-layer-only decision.
+- No DB `CHECK` constraints on enum membership or threshold range means a future out-of-band script or migration could insert an invalid `instrument`/`alert_type`/`threshold` value undetected — acceptable at current scale per the app-layer-only decision. The VIX+RSI combination is the one exception with a DB-level backstop.
 
 ## Success Criteria (Summary)
 
 - A user can create a valid alert and see it in their list without a page reload.
-- Invalid thresholds and duplicate alerts are rejected with a visible, understandable error.
+- Invalid thresholds, duplicate alerts, and VIX+RSI combinations are rejected with a visible, understandable error.
 - A second user never sees the first user's alerts.

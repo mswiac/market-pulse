@@ -2,7 +2,7 @@
 
 ## Overview
 
-Implement the roadmap's north-star slice: a logged-in user can create a price or RSI alert on VIX or NASDAQ-100 and see it in a persistent list. This lands a new `alerts` D1 table, `POST`/`GET /api/alerts` endpoints scoped to the authenticated user, and a frontend list + creation dialog that replace the current "Alert management is coming soon" placeholder on the home page.
+Implement the roadmap's north-star slice: a logged-in user can create a price or RSI alert on VIX or NASDAQ-100 and see it in a persistent list. **RSI is only a valid alert type for NASDAQ-100 — VIX supports price alerts only** (PRD FR-004, updated 2026-07-19: a naive RSI on VIX has no established sentiment interpretation). This lands a new `alerts` D1 table, `POST`/`GET /api/alerts` endpoints scoped to the authenticated user, and a frontend list + creation dialog that replace the current "Alert management is coming soon" placeholder on the home page.
 
 ## Current State Analysis
 
@@ -13,7 +13,7 @@ Implement the roadmap's north-star slice: a logged-in user can create a price or
 
 ## Desired End State
 
-A user who registers/logs in lands on `/` and sees their alert list (empty state on first visit). A "New alert" button opens a modal form (instrument, alert type, threshold, notification email pre-filled from the account) — on submit, the alert appears at the top of the list without a page reload, and duplicate or out-of-range submissions are rejected with a visible, field-relevant error.
+A user who registers/logs in lands on `/` and sees their alert list (empty state on first visit). A "New alert" button opens a modal form (instrument, alert type, threshold, notification email pre-filled from the account) — on submit, the alert appears at the top of the list without a page reload, and duplicate, out-of-range, or invalid instrument/type-combination submissions (VIX + RSI) are rejected with a visible, field-relevant error.
 
 **Verification**: `npm run typecheck`, `npm run test:worker`, and `npm run build` all pass; manual walkthrough in `Testing Strategy` below succeeds end-to-end.
 
@@ -23,6 +23,7 @@ A user who registers/logs in lands on `/` and sees their alert list (empty state
 - `auth.ts:64-73` establishes the UNIQUE-violation-by-message-match pattern (`err.message.includes('UNIQUE')` → `409`), directly reusable for duplicate-alert rejection.
 - `migrations/0004_sessions_cascade_delete.sql` shows `ON DELETE CASCADE` was missed on the first `sessions` migration and needed a follow-up fix — the `alerts` migration must include it from the start.
 - `@angular/cdk` is already a dependency (`package.json:20`), so `MatDialog` (which depends on the CDK Overlay) needs no new package — just new imports.
+- `context/foundation/prd.md` (FR-004) and `context/foundation/roadmap.md` (S-02 risk note) were updated 2026-07-19, after the initial research pass, to restrict RSI to NASDAQ-100 only. The roadmap explicitly calls for this to be enforced "at the persistence layer," not just in application code — this plan adds a targeted `CHECK` constraint for this one cross-field rule (see Phase 1), which is a narrower, explicitly-requested exception to the "no DB constraints" convention noted below, not a reversal of it.
 
 ## What We're NOT Doing
 
@@ -31,7 +32,7 @@ A user who registers/logs in lands on `/` and sees their alert list (empty state
 - Sending notifications or recording trigger events (S-05).
 - Trigger history view (S-06).
 - Any shell layout or side navigation — deferred to whenever S-06 needs it; this slice only touches the existing `Home` route.
-- DB-level `CHECK` constraints on `instrument`/`alert_type`/`threshold` range — validation is application-layer only, matching existing convention (a `UNIQUE` constraint is still used for duplicate prevention, which is a different, already-established pattern).
+- DB-level `CHECK` constraints on `instrument`/`alert_type` enum membership or `threshold` range — validation for these stays application-layer only, matching existing convention (a `UNIQUE` constraint is still used for duplicate prevention, and a single-purpose `CHECK` is used for the VIX/RSI exclusion — see Phase 1 — both narrow, explicitly-requested exceptions, not a reversal of the general no-DB-constraints convention).
 - Instruments or indicator types beyond VIX/NASDAQ-100 and price/RSI (PRD non-goals).
 
 ## Implementation Approach
@@ -40,6 +41,7 @@ Follow the codebase's established layering for a new resource: migration → Hon
 
 ## Critical Implementation Details
 
+- **RSI is not a valid alert type for VIX (PRD FR-004).** This is enforced in three places, all of which must agree: the DB `CHECK` constraint (Phase 1, backstop), the backend validation in `POST /api/alerts` (Phase 2, primary — returns `400` before any insert is attempted), and the frontend form (Phase 4 — the "RSI" option is unavailable whenever `instrument` is `'VIX'`, and switching `instrument` to `'VIX'` while `alertType` is `'RSI'` must reset `alertType` rather than silently submitting an invalid combination).
 - **Conditional threshold validators must be recomputed on `alertType` change.** RSI needs `min(0)`/`max(100)`; price needs a strict `> 0` check (`Validators.min(0)` alone would wrongly accept `0`, so use a custom validator). When the user switches the `alertType` select, the `threshold` control's validators must be reassigned and `updateValueAndValidity()` called — otherwise stale validators from the previous type silently persist.
 - **First `MatDialog` usage in this codebase.** The opener (`Home`) needs `MatDialogModule` in its `imports` to inject `MatDialog` and call `dialog.open(AlertForm)`. The dialog content component (`AlertForm`) separately needs `MatDialogModule` in its own `imports` for the `<mat-dialog-content>`/`<mat-dialog-actions>` template directives, plus an injected `MatDialogRef<AlertForm>` to close itself (`dialogRef.close(true)`) on success.
 - **API responses use SQL column aliases to produce camelCase JSON directly** (e.g. `alert_type AS alertType`), avoiding a separate mapping layer — both `POST` and `GET` handlers must alias consistently so the frontend `Alert` interface lines up with the raw response shape.
@@ -68,11 +70,12 @@ CREATE TABLE alerts (
   threshold REAL NOT NULL,
   notification_email TEXT NOT NULL,
   created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-  UNIQUE (user_id, instrument, alert_type, threshold)
+  UNIQUE (user_id, instrument, alert_type, threshold),
+  CHECK (NOT (instrument = 'VIX' AND alert_type = 'RSI'))
 );
 CREATE INDEX idx_alerts_user_id ON alerts(user_id);
 ```
-`instrument` holds `'VIX'` or `'NASDAQ100'`; `alert_type` holds `'PRICE'` or `'RSI'` — both enforced only at the application layer (Phase 2), matching the no-`CHECK`-constraint convention already in `users`/`sessions`.
+`instrument` holds `'VIX'` or `'NASDAQ100'`; `alert_type` holds `'PRICE'` or `'RSI'` — enum membership and threshold range are enforced only at the application layer (Phase 2), matching the no-`CHECK`-constraint convention already in `users`/`sessions`. The one exception is the `CHECK` above: per the roadmap's explicit requirement (PRD FR-004, S-02 risk note), VIX+RSI is an invalid combination and is rejected at the persistence layer as a backstop, in addition to the primary application-layer rejection in Phase 2.
 
 ### Success Criteria:
 
@@ -121,7 +124,8 @@ Add `POST /api/alerts` (create) and `GET /api/alerts` (list), scoped to the auth
 **Contract**:
 - `type Variables = { userId: number }`; `const alertsRoutes = new Hono<{ Bindings: Env; Variables: Variables }>()`; `alertsRoutes.use('*', sessionMiddleware)` applied once at the module level.
 - Validation helpers: `normalizeInstrument` (accepts exactly `'VIX'` or `'NASDAQ100'`), `normalizeAlertType` (accepts exactly `'PRICE'` or `'RSI'`), `validateThreshold(alertType, value)` — must be a finite number; `'RSI'` additionally requires `0 <= value <= 100` (inclusive); `'PRICE'` additionally requires `value > 0` (strict).
-- `POST /` — body `{ instrument, alertType, threshold, notificationEmail }`. Validates each field independently, returning a field-specific `400 { error: '<field> ...' }` on the first failure (unlike `auth.ts`'s single generic credentials message — there's no security reason to obscure which of 4 fields is wrong on a creation form). On success: insert scoped to `c.get('userId')`, using `RETURNING id, instrument, alert_type AS alertType, threshold, notification_email AS notificationEmail, created_at AS createdAt`; respond `201` with that row. A `UNIQUE` constraint violation (same message-matching pattern as `auth.ts:69`) → `409 { error: 'duplicate alert' }`.
+- **Cross-field rule**: after the individual fields normalize successfully, reject the combination `instrument === 'VIX' && alertType === 'RSI'` with `400 { error: 'RSI is not available for VIX' }` — checked before the insert, so the DB `CHECK` constraint (Phase 1) is a backstop that should never actually fire through this endpoint.
+- `POST /` — body `{ instrument, alertType, threshold, notificationEmail }`. Validates each field independently (then the cross-field rule above), returning a field-specific `400 { error: '<field> ...' }` on the first failure (unlike `auth.ts`'s single generic credentials message — there's no security reason to obscure which of 4 fields is wrong on a creation form). On success: insert scoped to `c.get('userId')`, using `RETURNING id, instrument, alert_type AS alertType, threshold, notification_email AS notificationEmail, created_at AS createdAt`; respond `201` with that row. A `UNIQUE` constraint violation (same message-matching pattern as `auth.ts:69`) → `409 { error: 'duplicate alert' }`. A `CHECK constraint failed` violation (should be unreachable given the pre-insert validation above, but handled defensively) → `400 { error: 'RSI is not available for VIX' }`, checked before the generic rethrow.
 - `GET /` — `SELECT id, instrument, alert_type AS alertType, threshold, notification_email AS notificationEmail, created_at AS createdAt FROM alerts WHERE user_id = ? ORDER BY created_at DESC, id DESC`, bound to `c.get('userId')`. Responds `200` with the array (empty array for a user with no alerts, not a 404).
 
 #### 4. Route mounting
@@ -138,7 +142,7 @@ Add `POST /api/alerts` (create) and `GET /api/alerts` (list), scoped to the auth
 
 **Intent**: Exhaustive coverage per the agreed test scope — happy path, per-field validation, boundary values, duplicates, malformed input, and cross-user isolation.
 
-**Contract**: Follows `auth.test.ts`'s `exports.default.fetch(...)` + `sessionCookieFrom(...)` style; a shared helper registers and logs in a user to obtain a cookie before exercising alert endpoints. Cases: create-then-list happy path; reject each invalid field (bad `instrument`, bad `alertType`, non-numeric/negative/out-of-range `threshold` for both `RSI` and `PRICE`, malformed `notificationEmail`); accept `RSI` threshold at exactly `0` and exactly `100`; reject `RSI` at `-0.01` and `100.01`; reject `PRICE` threshold of `0`; accept a `PRICE` threshold with decimals (e.g. `18.42`); reject an exact duplicate (same user + instrument + alertType + threshold) with `409`; reject a malformed JSON body with `400`; reject `POST`/`GET` without a session cookie with `401`; confirm a second user's `GET /api/alerts` never includes the first user's alert (isolation).
+**Contract**: Follows `auth.test.ts`'s `exports.default.fetch(...)` + `sessionCookieFrom(...)` style; a shared helper registers and logs in a user to obtain a cookie before exercising alert endpoints. Cases: create-then-list happy path for both `VIX`/`PRICE` and `NASDAQ100`/`RSI`; reject each invalid field (bad `instrument`, bad `alertType`, non-numeric/negative/out-of-range `threshold` for both `RSI` and `PRICE`, malformed `notificationEmail`); reject `VIX`/`RSI` with `400` and the specific error message; accept `NASDAQ100`/`RSI` and `VIX`/`PRICE`; accept `RSI` threshold at exactly `0` and exactly `100`; reject `RSI` at `-0.01` and `100.01`; reject `PRICE` threshold of `0`; accept a `PRICE` threshold with decimals (e.g. `18.42`); reject an exact duplicate (same user + instrument + alertType + threshold) with `409`; reject a malformed JSON body with `400`; reject `POST`/`GET` without a session cookie with `401`; confirm a second user's `GET /api/alerts` never includes the first user's alert (isolation).
 
 ### Success Criteria:
 
@@ -212,7 +216,7 @@ Add the "New alert" button and the `MatDialog`-hosted creation form, completing 
 
 **Intent**: The alert-creation form, opened as `MatDialog` content — first `<mat-select>` usage in this codebase.
 
-**Contract**: Standalone component; `imports: [ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatSelectModule, MatInputModule, MatButtonModule]`; injects `MatDialogRef<AlertForm>`, `AlertsService`, `AuthService`. `fb.nonNullable.group({...})` with: `instrument` (`Validators.required`, options `'VIX'`/`'NASDAQ100'` labeled "VIX"/"NASDAQ-100"), `alertType` (`Validators.required`, options `'PRICE'`/`'RSI'` labeled "Price"/"RSI"), `threshold` (`Validators.required` plus the conditional min/max or strict-positive validator described in Critical Implementation Details, recomputed whenever `alertType` changes), `notificationEmail` (default value `authService.currentUser()?.email ?? ''`, `[Validators.required, Validators.email]`, editable). On submit: `alertsService.create(...).subscribe({ next: () => dialogRef.close(true), error: (err) => ... })`; a `409` response is mapped onto the form the same way `register.ts` maps its own server-side conflict (`setErrors({ server: true })` + `markAsTouched()`) so a duplicate alert surfaces a visible `mat-error` instead of failing silently.
+**Contract**: Standalone component; `imports: [ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatSelectModule, MatInputModule, MatButtonModule]`; injects `MatDialogRef<AlertForm>`, `AlertsService`, `AuthService`. `fb.nonNullable.group({...})` with: `instrument` (`Validators.required`, options `'VIX'`/`'NASDAQ100'` labeled "VIX"/"NASDAQ-100"), `alertType` (`Validators.required`, options `'PRICE'`/`'RSI'` labeled "Price"/"RSI"), `threshold` (`Validators.required` plus the conditional min/max or strict-positive validator described in Critical Implementation Details, recomputed whenever `alertType` changes), `notificationEmail` (default value `authService.currentUser()?.email ?? ''`, `[Validators.required, Validators.email]`, editable). The `alertType` select's available options depend on the current `instrument` value: when `instrument === 'VIX'`, only "Price" is offered (the "RSI" `mat-option` is omitted, not merely disabled); subscribing to `instrument`'s `valueChanges` and switching to `'VIX'` while `alertType` is currently `'RSI'` must reset `alertType` to `'PRICE'` rather than leave an invalid combination selected. On submit: `alertsService.create(...).subscribe({ next: () => dialogRef.close(true), error: (err) => ... })`; both a `409` (duplicate) and a `400` (VIX+RSI, should be unreachable given the option-filtering above but handled defensively) are mapped onto the form the same way `register.ts` maps its own server-side conflict (`setErrors({ server: true })` + `markAsTouched()`) so any rejection surfaces a visible `mat-error` instead of failing silently.
 
 #### 2. Home trigger button
 
@@ -235,6 +239,8 @@ Add the "New alert" button and the `MatDialog`-hosted creation form, completing 
 - Attempt an RSI threshold of `150` — inline validation blocks submission before any request is sent.
 - Attempt to create the same alert twice — the second submission surfaces the `409` as a visible form error, not a silent failure.
 - The notification email field is pre-filled with the logged-in account's email and remains editable.
+- Select `VIX` as the instrument — confirm the alert-type select offers only "Price" (no "RSI" option is present).
+- Select `NASDAQ-100` + `RSI`, then switch the instrument to `VIX` — confirm `alertType` resets to "Price" rather than silently keeping the invalid combination.
 
 ---
 
@@ -256,6 +262,7 @@ None — Angular unit tests are disabled project-wide (`skipTests: true` in `ang
 4. Open "New alert", select `PRICE`, attempt threshold `0` — confirm inline validation blocks it; attempt `4500.25` — confirm it's accepted and appears in the list.
 5. Log out, register a second user, confirm their alert list is empty (does not show the first user's alerts).
 6. Refresh the page after creating an alert — confirm it persists (loaded from `GET /api/alerts`, not just local state).
+7. Open "New alert", select `VIX` — confirm only "Price" is offered as the alert type (no way to select RSI for VIX).
 
 ## Performance Considerations
 
@@ -263,11 +270,12 @@ None specific to this slice — single-digit alert counts per user at this produ
 
 ## Migration Notes
 
-`migrations/0005_create_alerts.sql` is a plain forward `CREATE TABLE` (no existing data to migrate, no shadow-table pattern needed). Applies to local and remote D1 via the existing `npm run migrate:local` / `migrate:remote` scripts with no config changes.
+`migrations/0005_create_alerts.sql` is a plain forward `CREATE TABLE` (no existing data to migrate, no shadow-table pattern needed) — this holds even with the added `CHECK` constraint, since it's part of the initial table definition, not a later alteration. Applies to local and remote D1 via the existing `npm run migrate:local` / `migrate:remote` scripts with no config changes.
 
 ## References
 
 - Research: `context/changes/alert-crud/research.md`
+- VIX/RSI restriction rationale: `context/foundation/prd.md` FR-004 (Socrates note), `context/foundation/roadmap.md` S-02 risk note (both updated 2026-07-19)
 - Session middleware to reuse: `src/worker/lib/session.ts:70-90`
 - UNIQUE-violation pattern to mirror: `src/worker/routes/auth.ts:64-73`
 - Protected-route pattern to mirror: `src/worker/routes/auth.ts:115-126`
@@ -328,3 +336,5 @@ None specific to this slice — single-digit alert counts per user at this produ
 - [ ] 4.4 RSI threshold of 150 is blocked by inline validation
 - [ ] 4.5 Duplicate alert submission surfaces a visible 409 form error
 - [ ] 4.6 Notification email is pre-filled from the account and remains editable
+- [ ] 4.7 Selecting VIX offers only "Price" as the alert type (no RSI option)
+- [ ] 4.8 Switching from NASDAQ-100+RSI to VIX resets alert type to Price instead of keeping an invalid combination
