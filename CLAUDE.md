@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Never generate spec files — `skipTests: true` is set globally in `angular.json`.
 - Never write to `context/archive/` — archived changes are immutable; abort with "This change is archived" if a target path starts there.
 - Destructive production actions (drop DB, rotate secrets, delete a Workers project) are human-only — suggest but do not execute.
-- All repository files must be written in English — no Polish in any file content, comments, or documentation. Polish is allowed only in chat responses.
+- All repository files must be written in English — no Polish in any file content, comments, or documentation. Polish is allowed only in chat responses. **Exception**: user-facing UI strings (labels, buttons, messages, validation text shown in the rendered app — e.g. `.html` template copy) may be written in Polish, since the product's end users are Polish-speaking. Everything else — variable/function/component names, code comments, commit messages, PR titles/bodies, and all other documentation — stays English.
 
 ## Project: MarketPulse
 
