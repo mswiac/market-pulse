@@ -227,7 +227,7 @@ Add the "New alert" button and the `MatDialog`-hosted creation form, completing 
 
 **Intent**: The alert-creation form, opened as `MatDialog` content — first `<mat-select>` usage in this codebase.
 
-**Contract**: Standalone component; `imports: [ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatSelectModule, MatInputModule, MatButtonModule]`; injects `MatDialogRef<AlertForm>`, `AlertsService`, `AuthService`. Dialog title: "Nowy alert". `fb.nonNullable.group({...})` with: `instrument` (label "Instrument", `Validators.required`, options `'VIX'`/`'NASDAQ100'` displayed as "VIX"/"NASDAQ-100"), `alertType` (label "Typ alertu", `Validators.required`, options `'PRICE'`/`'RSI'` displayed as "Cena"/"RSI"), `threshold` (label "Próg", `Validators.required` plus the conditional min/max or strict-positive validator described in Critical Implementation Details, recomputed whenever `alertType` changes), `notificationEmail` (label "E-mail do powiadomień", default value `authService.currentUser()?.email ?? ''`, `[Validators.required, Validators.email]`, editable). Validation messages: "Pole wymagane." (`required`), "Wprowadź prawidłowy adres e-mail." (`email`), "Wartość musi mieścić się w zakresie 0–100." (RSI range), "Wartość musi być większa od 0." (price strict-positive). Submit button: "Utwórz alert". The `alertType` select's available options depend on the current `instrument` value: when `instrument === 'VIX'`, only "Cena" is offered (the "RSI" `mat-option` is omitted, not merely disabled); subscribing to `instrument`'s `valueChanges` and switching to `'VIX'` while `alertType` is currently `'RSI'` must reset `alertType` to `'PRICE'` rather than leave an invalid combination selected. On submit: `alertsService.create(...).subscribe({ next: () => dialogRef.close(true), error: (err) => ... })`; both a `409` (duplicate → "Taki alert już istnieje.") and a `400` for the VIX+RSI case (should be unreachable given the option-filtering above, but handled defensively → "RSI nie jest dostępne dla VIX.") are mapped onto the form the same way `register.ts` maps its own server-side conflict (`setErrors({ server: true })` + `markAsTouched()`), reading the raw English `error` string only to select which Polish message to display — never rendering it directly.
+**Contract**: Standalone component; `imports: [ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatSelectModule, MatInputModule, MatButtonModule]`; injects `MatDialogRef<AlertForm>`, `AlertsService`, `AuthService`. Dialog title: "Nowy alert". `fb.nonNullable.group({...})` with: `instrument` (label "Instrument", `Validators.required`, options `'VIX'`/`'NASDAQ100'` displayed as "VIX"/"NASDAQ-100"), `alertType` (label "Typ alertu", `Validators.required`, options `'PRICE'`/`'RSI'` displayed as "Cena"/"RSI"), `threshold` (label "Próg", `Validators.required` plus the conditional min/max or strict-positive validator described in Critical Implementation Details, recomputed whenever `alertType` changes), `notificationEmail` (label "E-mail do powiadomień", default value `authService.currentUser()?.email ?? ''`, `[Validators.required, Validators.email]`, editable). Validation messages: "Pole wymagane." (`required`), "Wprowadź prawidłowy adres e-mail." (`email`), "Wartość musi mieścić się w zakresie 0–100." (RSI range), "Wartość musi być większa od 0." (price strict-positive). Submit button: "Utwórz alert". The `alertType` select's available options depend on the current `instrument` value: when `instrument === 'VIX'`, only "Cena" is offered (the "RSI" `mat-option` is omitted, not merely disabled); subscribing to `instrument`'s `valueChanges` and switching to `'VIX'` while `alertType` is currently `'RSI'` must reset `alertType` to `'PRICE'` rather than leave an invalid combination selected. On submit: `alertsService.create(...).subscribe({ next: () => dialogRef.close(true), error: (err) => ... })`; both a `409` (duplicate → "Taki alert już istnieje.") and a `400` for the VIX+RSI case (should be unreachable given the option-filtering above, but handled defensively → "RSI nie jest dostępne dla VIX.") are mapped onto the form the same way `register.ts` maps its own server-side conflict (`setErrors({ server: true })` + `markAsTouched()`), reading the raw English `error` string only to select which Polish message to display — never rendering it directly. Any other/unrecognized error response (unexpected status, network failure) falls back to a generic message ("Wystąpił błąd. Spróbuj ponownie.") via the same `setErrors`/`markAsTouched()` mechanism, so no error path leaves the dialog silently stuck.
 
 #### 2. Home trigger button
 
@@ -252,7 +252,8 @@ Add the "New alert" button and the `MatDialog`-hosted creation form, completing 
 - The notification email field is pre-filled with the logged-in account's email and remains editable.
 - Select `VIX` as the instrument — confirm the alert-type select offers only "Cena" (no "RSI" option is present).
 - Select `NASDAQ-100` + `RSI`, then switch the instrument to `VIX` — confirm the alert type resets to "Cena" rather than silently keeping the invalid combination.
-- Click a created alert to expand it — confirm it shows "E-mail powiadomień", "Ostatnia edycja" (a real date), "Aktualna cena: Brak danych", and — only for a NASDAQ-100/RSI alert — "Aktualne RSI: Brak danych" (absent for any other instrument/type combination).
+- Click a created alert to expand it — confirm it shows "E-mail powiadomień", "Ostatnia edycja" (a real date), and "Aktualna cena: Brak danych".
+- For a NASDAQ-100/RSI alert specifically, confirm the expanded detail also shows "Aktualne RSI: Brak danych"; confirm this row is absent for any other instrument/type combination.
 
 ---
 
@@ -309,13 +310,13 @@ None specific to this slice — single-digit alert counts per user at this produ
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly: `npm run migrate:local`
-- [x] 1.2 Existing test suite still passes: `npm run test:worker`
-- [x] 1.3 Typecheck still passes: `npm run typecheck`
+- [x] 1.1 Migration applies cleanly: `npm run migrate:local` — 5fb80fc
+- [x] 1.2 Existing test suite still passes: `npm run test:worker` — 5fb80fc
+- [x] 1.3 Typecheck still passes: `npm run typecheck` — 5fb80fc
 
 #### Manual
 
-- [ ] 1.4 Inspect local D1 schema for the `alerts` table shape
+- [x] 1.4 Inspect local D1 schema for the `alerts` table shape — 5fb80fc
 
 ### Phase 2: Backend API
 
