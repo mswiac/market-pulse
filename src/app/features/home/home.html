@@ -8,7 +8,7 @@
 </mat-toolbar>
 
 <div class="home-content">
-  <mat-card>
+  <mat-card class="welcome-card">
     <mat-card-header>
       <mat-card-title>Witaj ponownie</mat-card-title>
     </mat-card-header>
@@ -16,7 +16,16 @@
       @if (user(); as currentUser) {
         <p>Zalogowano jako: <strong>{{ currentUser.email }}</strong>.</p>
       }
-      <app-alert-list />
     </mat-card-content>
   </mat-card>
+
+  <section class="alerts-section">
+    <h2>Twoje alerty</h2>
+    <app-alert-list />
+  </section>
 </div>
+
+<button matFab extended color="primary" class="new-alert-fab" (click)="openNewAlertDialog()">
+  <mat-icon>add</mat-icon>
+  Nowy alert
+</button>

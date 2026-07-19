@@ -333,8 +333,8 @@ None specific to this slice — single-digit alert counts per user at this produ
 
 #### Automated
 
-- [x] 3.1 Typecheck passes: `npm run typecheck`
-- [x] 3.2 Production build succeeds: `npm run build`
+- [x] 3.1 Typecheck passes: `npm run typecheck` — 415b997
+- [x] 3.2 Production build succeeds: `npm run build` — 415b997
 
 #### Manual
 
@@ -345,8 +345,8 @@ None specific to this slice — single-digit alert counts per user at this produ
 
 #### Automated
 
-- [ ] 4.1 Typecheck passes: `npm run typecheck`
-- [ ] 4.2 Production build succeeds: `npm run build`
+- [x] 4.1 Typecheck passes: `npm run typecheck`
+- [x] 4.2 Production build succeeds: `npm run build`
 
 #### Manual
 
