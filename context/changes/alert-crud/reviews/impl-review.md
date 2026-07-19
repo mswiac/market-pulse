@@ -45,7 +45,7 @@
 - **Location**: context/changes/alert-crud/plan.md Progress §Phase 4 / working tree
 - **Detail**: Progress rows 4.1/4.2 are `[x]` with no `— <sha>` suffix — the phase-end commit ritual never ran for Phase 4. All of Phase 4 (alert-form.ts/html/scss, home.ts/html dialog wiring) plus every post-Phase-4 UI refinement (sorting, grid layout, colors, FAB, decimal formatting, welcome-card width) is uncommitted in the working tree. Automated checks (typecheck/tests/build) all pass against this uncommitted state, confirmed directly this session.
 - **Fix**: Run the Phase 4 commit ritual now (or a single consolidated commit covering Phase 4 + the UI-polish work), writing the SHA back into rows 4.1/4.2.
-- **Decision**: PENDING
+- **Decision**: FIXED — committed as `e0ba3a6` (Phase 4 + UI polish), SHA written back into Progress rows 4.1/4.2.
 
 ### F3 — Plan's Phase 3/4 text no longer describes the shipped UI
 
@@ -55,7 +55,7 @@
 - **Location**: context/changes/alert-crud/plan.md Phase 3 §2, Phase 4 §2
 - **Detail**: Actual alert-list.ts/html/scss and home.ts/html carry substantial functionality never described in the plan text: column sorting (instrument/type/threshold with direction toggle), CSS grid column alignment, M3 color-token styling, an extended FAB instead of a plain button, and 2-decimal formatting. None of this contradicts "What We're NOT Doing," so it isn't scope creep in a concerning sense — but the plan document is now a stale description of Phase 3/4's actual contract.
 - **Fix**: Add a short addendum to Phase 3/4 "Changes Required" noting the UI-polish additions, so the plan stays an accurate record.
-- **Decision**: PENDING
+- **Decision**: FIXED — added addendum paragraphs to Phase 3 item 2, Phase 4 item 1, and Phase 4 item 2 in plan.md describing the sorting/grid/color/FAB/decimal/blur-formatting/spacing additions.
 
 ### F4 — Defensive CHECK-constraint fallback path untested
 
@@ -65,7 +65,7 @@
 - **Location**: src/worker/routes/alerts.ts:105-107
 - **Detail**: The `CHECK constraint failed` → 400 branch is unreachable through the public API (app-level validation already rejects VIX+RSI first) and has no test exercising it directly. Not a bug — it's documented defense-in-depth — just an untested code path.
 - **Fix**: Optional — add a unit test that bypasses app validation (direct D1 insert) to confirm the catch branch's message match still works, or accept as-is.
-- **Decision**: PENDING
+- **Decision**: FIXED — added a test in `alerts.test.ts` that inserts VIX+RSI directly via `env.DB` (bypassing the route), asserting the DB throws with a message matching `CHECK constraint failed` — confirming the assumption the route's catch branch (alerts.ts:105-107) relies on.
 
 ## Sub-agent evidence (verbatim)
 

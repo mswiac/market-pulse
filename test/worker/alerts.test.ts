@@ -1,4 +1,4 @@
-import { exports } from 'cloudflare:workers';
+import { env, exports } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
 const BASE_URL = 'https://example.com';
@@ -182,6 +182,24 @@ describe('alerts endpoints', () => {
   it('rejects GET without a session cookie', async () => {
     const response = await listAlerts();
     expect(response.status).toBe(401);
+  });
+
+  it('DB CHECK constraint rejects VIX+RSI on a direct insert (backstop behind the route-level rejection)', async () => {
+    const response = await exports.default.fetch(`${BASE_URL}/api/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'check-constraint@example.com', password: PASSWORD }),
+    });
+    const { id: userId } = (await response.json()) as { id: number };
+
+    await expect(
+      env.DB.prepare(
+        `INSERT INTO alerts (user_id, instrument, alert_type, threshold, notification_email)
+         VALUES (?, 'VIX', 'RSI', 50, 'alerts@example.com')`,
+      )
+        .bind(userId)
+        .run(),
+    ).rejects.toThrow(/CHECK constraint failed/);
   });
 
   it('never includes another user\'s alerts (isolation)', async () => {
