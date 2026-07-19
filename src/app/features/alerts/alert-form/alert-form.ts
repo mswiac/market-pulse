@@ -97,13 +97,13 @@ export class AlertForm {
   private messageFor(err: unknown): string {
     if (err instanceof HttpErrorResponse) {
       if (err.status === 409) {
-        return 'Taki alert już istnieje.';
+        return $localize`:@@alertForm.error.duplicateAlert:An alert like this already exists.`;
       }
       const serverError = (err.error as { error?: string } | null)?.error;
       if (err.status === 400 && serverError === VIX_RSI_ERROR) {
-        return 'RSI nie jest dostępne dla VIX.';
+        return $localize`:@@alertForm.error.rsiUnavailableForVix:RSI is not available for VIX.`;
       }
     }
-    return 'Wystąpił błąd. Spróbuj ponownie.';
+    return $localize`:@@alertForm.error.generic:Something went wrong. Please try again.`;
   }
 }

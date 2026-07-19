@@ -12,7 +12,8 @@
     "migrate:local": "wrangler d1 migrations apply marketpulse-db --local",
     "migrate:remote": "wrangler d1 migrations apply marketpulse-db --remote",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.worker.json",
-    "test:worker": "vitest run"
+    "test:worker": "vitest run",
+    "extract-i18n": "ng extract-i18n --output-path src/locale"
   },
   "private": true,
   "packageManager": "npm@11.13.0",
@@ -33,6 +34,7 @@
     "@angular/build": "^22.0.1",
     "@angular/cli": "^22.0.1",
     "@angular/compiler-cli": "^22.0.6",
+    "@angular/localize": "^22.0.6",
     "@cloudflare/vitest-pool-workers": "^0.18.4",
     "@cloudflare/workers-types": "^4",
     "@types/node": "^26.1.1",

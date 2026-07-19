@@ -39,9 +39,9 @@ export class Register {
       error: (err: unknown) => {
         this.submitting.set(false);
         if (err instanceof HttpErrorResponse && err.status === 409) {
-          this.emailError.set('This email is already registered.');
+          this.emailError.set($localize`:@@register.errorEmailTaken:This email is already registered.`);
         } else {
-          this.emailError.set('Something went wrong. Please try again.');
+          this.emailError.set($localize`:@@register.errorGeneric:Something went wrong. Please try again.`);
         }
         // mat-form-field only renders its <mat-error> when the control's own
         // errorState is true; the required/email validators alone won't flip

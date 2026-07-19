@@ -1,9 +1,9 @@
-<h2 mat-dialog-title>Nowy alert</h2>
+<h2 mat-dialog-title i18n="@@alertForm.title">New alert</h2>
 
 <form [formGroup]="form" (ngSubmit)="onSubmit()">
   <mat-dialog-content>
     <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
-      <mat-label>Instrument</mat-label>
+      <mat-label i18n="@@alertForm.instrument.label">Instrument</mat-label>
       <mat-select formControlName="instrument">
         <mat-option value="VIX">VIX</mat-option>
         <mat-option value="NASDAQ100">NASDAQ-100</mat-option>
@@ -11,9 +11,9 @@
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
-      <mat-label>Typ alertu</mat-label>
+      <mat-label i18n="@@alertForm.alertType.label">Alert type</mat-label>
       <mat-select formControlName="alertType">
-        <mat-option value="PRICE">Cena</mat-option>
+        <mat-option value="PRICE" i18n="@@alertForm.alertType.price">Price</mat-option>
         @if (showRsiOption()) {
           <mat-option value="RSI">RSI</mat-option>
         }
@@ -21,24 +21,24 @@
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
-      <mat-label>Próg</mat-label>
+      <mat-label i18n="@@alertForm.threshold.label">Threshold</mat-label>
       <input matInput type="number" step="0.01" formControlName="threshold" (blur)="onThresholdBlur($event)" />
       @if (form.controls.threshold.hasError('required') && form.controls.threshold.touched) {
-        <mat-error>Pole wymagane.</mat-error>
+        <mat-error i18n="@@alertForm.threshold.errorRequired">Field required.</mat-error>
       } @else if (form.controls.threshold.hasError('min') || form.controls.threshold.hasError('max')) {
-        <mat-error>Wartość musi mieścić się w zakresie 0–100.</mat-error>
+        <mat-error i18n="@@alertForm.threshold.errorRange">Value must be between 0 and 100.</mat-error>
       } @else if (form.controls.threshold.hasError('positive')) {
-        <mat-error>Wartość musi być większa od 0.</mat-error>
+        <mat-error i18n="@@alertForm.threshold.errorPositive">Value must be greater than 0.</mat-error>
       }
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
-      <mat-label>E-mail do powiadomień</mat-label>
+      <mat-label i18n="@@alertForm.notificationEmail.label">Notification email</mat-label>
       <input matInput type="email" formControlName="notificationEmail" autocomplete="email" />
       @if (form.controls.notificationEmail.hasError('required') && form.controls.notificationEmail.touched) {
-        <mat-error>Pole wymagane.</mat-error>
+        <mat-error i18n="@@alertForm.notificationEmail.errorRequired">Field required.</mat-error>
       } @else if (form.controls.notificationEmail.hasError('email') && form.controls.notificationEmail.touched) {
-        <mat-error>Wprowadź prawidłowy adres e-mail.</mat-error>
+        <mat-error i18n="@@alertForm.notificationEmail.errorInvalid">Enter a valid email address.</mat-error>
       }
     </mat-form-field>
 
@@ -48,9 +48,9 @@
   </mat-dialog-content>
 
   <mat-dialog-actions align="end">
-    <button mat-button type="button" mat-dialog-close>Anuluj</button>
-    <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || submitting()">
-      Utwórz alert
+    <button mat-button type="button" mat-dialog-close i18n="@@alertForm.cancel">Cancel</button>
+    <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || submitting()" i18n="@@alertForm.submit">
+      Create alert
     </button>
   </mat-dialog-actions>
 </form>

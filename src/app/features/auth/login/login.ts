@@ -37,7 +37,7 @@ export class Login {
       next: () => void this.router.navigateByUrl('/'),
       error: () => {
         this.submitting.set(false);
-        this.errorMessage.set('Invalid email or password.');
+        this.errorMessage.set($localize`:@@login.errorInvalidCredentials:Invalid email or password.`);
       },
     });
   }
