@@ -4,10 +4,11 @@ import { MatCardModule } from '@angular/material/card';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
+import { AlertList } from '../alerts/alert-list/alert-list';
 
 @Component({
   selector: 'app-home',
-  imports: [MatToolbarModule, MatButtonModule, MatCardModule],
+  imports: [MatToolbarModule, MatButtonModule, MatCardModule, AlertList],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })

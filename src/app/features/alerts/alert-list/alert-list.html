@@ -1,0 +1,22 @@
+<mat-accordion>
+  @for (alert of alerts(); track alert.id) {
+    <mat-expansion-panel>
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          {{ instrumentLabel(alert.instrument) }} · {{ alertTypeLabel(alert.alertType) }} · próg {{ alert.threshold }}
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+
+      <div class="alert-detail">
+        <p><strong>E-mail powiadomień:</strong> {{ alert.notificationEmail }}</p>
+        <p><strong>Ostatnia edycja:</strong> {{ alert.updatedAt * 1000 | date: 'dd.MM.yyyy HH:mm' }}</p>
+        <p><strong>Aktualna cena:</strong> Brak danych</p>
+        @if (showCurrentRsi(alert.instrument, alert.alertType)) {
+          <p><strong>Aktualne RSI:</strong> Brak danych</p>
+        }
+      </div>
+    </mat-expansion-panel>
+  } @empty {
+    <p class="empty-state">Brak alertów — dodaj pierwszy, aby zacząć.</p>
+  }
+</mat-accordion>

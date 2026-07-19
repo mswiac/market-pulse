@@ -316,14 +316,14 @@ None specific to this slice — single-digit alert counts per user at this produ
 
 #### Manual
 
-- [x] 1.4 Inspect local D1 schema for the `alerts` table shape — 5fb80fc
+- [ ] 1.4 Inspect local D1 schema for the `alerts` table shape
 
 ### Phase 2: Backend API
 
 #### Automated
 
-- [x] 2.1 Typecheck passes: `npm run typecheck`
-- [x] 2.2 All worker tests pass, including `alerts.test.ts`: `npm run test:worker`
+- [x] 2.1 Typecheck passes: `npm run typecheck` — 22c480c
+- [x] 2.2 All worker tests pass, including `alerts.test.ts`: `npm run test:worker` — 22c480c
 
 #### Manual
 
@@ -333,8 +333,8 @@ None specific to this slice — single-digit alert counts per user at this produ
 
 #### Automated
 
-- [ ] 3.1 Typecheck passes: `npm run typecheck`
-- [ ] 3.2 Production build succeeds: `npm run build`
+- [x] 3.1 Typecheck passes: `npm run typecheck`
+- [x] 3.2 Production build succeeds: `npm run build`
 
 #### Manual
 
