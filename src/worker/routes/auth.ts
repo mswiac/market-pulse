@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { getCookie } from 'hono/cookie';
 import type { Env } from '../index';
+import { EMAIL_PATTERN, normalizeEmail } from '../lib/email';
 import { hashPassword, verifyPassword } from '../lib/password';
 import {
   SESSION_COOKIE_NAME,
@@ -11,7 +12,6 @@ import {
   setSessionCookie,
 } from '../lib/session';
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
 const MAX_PASSWORD_LENGTH = 128;
 const INVALID_CREDENTIALS_MESSAGE = 'invalid email or password';
@@ -24,12 +24,6 @@ const DUMMY_PASSWORD_HASH =
 type Variables = { userId: number };
 
 const authRoutes = new Hono<{ Bindings: Env; Variables: Variables }>();
-
-function normalizeEmail(email: unknown): string | null {
-  if (typeof email !== 'string') return null;
-  const trimmed = email.trim().toLowerCase();
-  return trimmed.length > 0 ? trimmed : null;
-}
 
 async function parseCredentialsBody(c: { req: { json: () => Promise<unknown> } }): Promise<{
   email?: unknown;

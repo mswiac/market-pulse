@@ -52,7 +52,8 @@ Insight: market platforms deliberately limit the durability and depth of alerts 
 - FR-003: User can log out of their account. Priority: must-have
 
 ### Alert Management
-- FR-004: User can create an alert by selecting an instrument (VIX or NASDAQ-100), alert type (price or RSI), threshold value, and notification email address. The email field is pre-filled from the user's account email but can be overridden per alert. Priority: must-have
+- FR-004: User can create an alert by selecting an instrument (VIX or NASDAQ-100), alert type, threshold value, and notification email address. VIX supports price alerts only; NASDAQ-100 supports price or RSI alerts. The email field is pre-filled from the user's account email but can be overridden per alert. Priority: must-have
+  > Socrates: Counter-argument considered: "RSI on VIX is unconventional — VIX is a sentiment/volatility index read via absolute thresholds (e.g. >23 = fear), not a trending price series RSI is designed for. The one established technique applying RSI to VIX (Connors' VIX Reversal) uses non-default parameters and signals on a *different* instrument (S&P 500), not on VIX itself — a naive RSI(14, 30/70) on VIX has no established sentiment interpretation." Resolution: restrict RSI to NASDAQ-100; VIX alerts are price-only.
 - FR-005: User can view their list of active alerts. Priority: must-have
   > Socrates: Counter-argument considered: "A list is unnecessary overhead for a single user with a handful of alerts." Resolution: kept — without a list the user has no visibility into what alerts are active.
 - FR-006: User can edit an existing alert (change instrument, type, threshold value, or email). Priority: must-have
@@ -80,7 +81,7 @@ Insight: market platforms deliberately limit the durability and depth of alerts 
 The system fetches daily market data, calculates indicators, and sends a notification when a user-defined threshold is crossed — requiring the user to act only once, at alert creation.
 
 Supporting detail:
-- **Inputs**: daily closing data for VIX and NASDAQ-100 sourced from a market data provider on a daily schedule. For RSI alerts, RSI is derived from a sequence of recent daily closing values; for price alerts, no additional calculation is needed.
+- **Inputs**: daily closing data for VIX and NASDAQ-100 sourced from a market data provider on a daily schedule. For RSI alerts (NASDAQ-100 only, see FR-004), RSI is derived from a sequence of recent daily closing values; for price alerts, no additional calculation is needed.
 - **Output**: an email sent to the address designated on the alert, triggered at most once per day per alert when the threshold condition is met.
 - **User encounter**: the user configures an alert once (instrument, type, threshold, email) and receives an email notification the day the condition is first satisfied, with no further action required.
 

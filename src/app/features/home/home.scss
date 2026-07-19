@@ -9,12 +9,30 @@
 }
 
 .home-content {
-  padding: 2rem;
+  padding: 2rem 2rem 6rem;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
 }
 
-mat-card {
+.welcome-card {
   width: 100%;
-  max-width: 32rem;
+  max-width: 48rem;
+}
+
+.alerts-section {
+  width: 100%;
+  max-width: 48rem;
+}
+
+.alerts-section h2 {
+  font: var(--mat-sys-title-medium);
+  margin: 0 0 1rem;
+}
+
+.new-alert-fab {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
 }

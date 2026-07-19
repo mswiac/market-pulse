@@ -3,7 +3,7 @@ project: MarketPulse
 version: 1
 status: draft
 created: 2026-06-21
-updated: 2026-07-14
+updated: 2026-07-19
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -90,7 +90,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### F-02: Market data pipeline
 
-- **Outcome:** (foundation) Cloudflare Cron Trigger fires daily, fetches closing prices for VIX and NASDAQ-100 from Stooq, stores raw closes in the `price_history` table, and writes the latest RSI per instrument to the `market_data` table.
+- **Outcome:** (foundation) Cloudflare Cron Trigger fires daily, fetches closing prices for VIX and NASDAQ-100 from Stooq, stores raw closes in the `price_history` table, and writes the latest RSI to the `market_data` table for NASDAQ-100 (VIX alerts are price-only, per FR-004 — no RSI needed for VIX).
 - **Change ID:** `market-data-pipeline`
 - **PRD refs:** NFR (alert thresholds evaluated every calendar day — a missed evaluation is a core product failure); Business Logic section (daily closing data from Stooq; RSI derived from recent closes)
 - **Unlocks:** S-04 (market-data-display needs current RSI/price in D1); S-05 (alert-notifications reads pre-computed RSI for threshold evaluation)
@@ -119,14 +119,14 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### S-02: User can create a price or RSI alert and view the alert list ★ north star
 
-- **Outcome:** User can create an alert by selecting an instrument (VIX or NASDAQ-100), alert type (price or RSI), and threshold value; the notification email field is pre-filled from the user's account email but is editable per alert. Created alerts appear in a persistent list.
+- **Outcome:** User can create an alert by selecting an instrument (VIX or NASDAQ-100), alert type, and threshold value; VIX supports price alerts only, NASDAQ-100 supports price or RSI alerts. The notification email field is pre-filled from the user's account email but is editable per alert. Created alerts appear in a persistent list.
 - **Change ID:** `alert-crud`
 - **PRD refs:** FR-004, FR-005
 - **Prerequisites:** S-01
 - **Parallel with:** —
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** Introduces the `alerts` table and its forward-only D1 migration. RSI threshold type requires input validation on the frontend (range 0–100) but no backend RSI calculation yet — that lands in S-04/S-05. First multi-field Angular form beyond auth.
+- **Risk:** Introduces the `alerts` table and its forward-only D1 migration. RSI threshold type requires input validation on the frontend (range 0–100) but no backend RSI calculation yet — that lands in S-04/S-05. RSI is only a valid alert type for NASDAQ-100 (see FR-004 rationale in `prd.md`) — VIX must restrict the form to price alerts only, and the `alerts` table constraint should enforce the same at the persistence layer. First multi-field Angular form beyond auth.
 - **Status:** proposed
 
 ### S-03: User can edit and delete an alert

@@ -4,19 +4,28 @@
   @if (user(); as currentUser) {
     <span class="user-email">{{ currentUser.email }}</span>
   }
-  <button mat-button (click)="onLogout()">Log out</button>
+  <button mat-button (click)="onLogout()">Wyloguj</button>
 </mat-toolbar>
 
 <div class="home-content">
-  <mat-card>
+  <mat-card class="welcome-card">
     <mat-card-header>
-      <mat-card-title>Welcome back</mat-card-title>
+      <mat-card-title>Witaj ponownie</mat-card-title>
     </mat-card-header>
     <mat-card-content>
       @if (user(); as currentUser) {
-        <p>You're signed in as <strong>{{ currentUser.email }}</strong>.</p>
+        <p>Zalogowano jako: <strong>{{ currentUser.email }}</strong>.</p>
       }
-      <p>Alert management is coming soon.</p>
     </mat-card-content>
   </mat-card>
+
+  <section class="alerts-section">
+    <h2>Twoje alerty</h2>
+    <app-alert-list />
+  </section>
 </div>
+
+<button matFab extended color="primary" class="new-alert-fab" (click)="openNewAlertDialog()">
+  <mat-icon>add</mat-icon>
+  Nowy alert
+</button>
