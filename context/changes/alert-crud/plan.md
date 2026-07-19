@@ -309,9 +309,9 @@ None specific to this slice — single-digit alert counts per user at this produ
 
 #### Automated
 
-- [ ] 1.1 Migration applies cleanly: `npm run migrate:local`
-- [ ] 1.2 Existing test suite still passes: `npm run test:worker`
-- [ ] 1.3 Typecheck still passes: `npm run typecheck`
+- [x] 1.1 Migration applies cleanly: `npm run migrate:local`
+- [x] 1.2 Existing test suite still passes: `npm run test:worker`
+- [x] 1.3 Typecheck still passes: `npm run typecheck`
 
 #### Manual
 
