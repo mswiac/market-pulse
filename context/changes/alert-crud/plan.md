@@ -322,8 +322,8 @@ None specific to this slice — single-digit alert counts per user at this produ
 
 #### Automated
 
-- [ ] 2.1 Typecheck passes: `npm run typecheck`
-- [ ] 2.2 All worker tests pass, including `alerts.test.ts`: `npm run test:worker`
+- [x] 2.1 Typecheck passes: `npm run typecheck`
+- [x] 2.2 All worker tests pass, including `alerts.test.ts`: `npm run test:worker`
 
 #### Manual
 
