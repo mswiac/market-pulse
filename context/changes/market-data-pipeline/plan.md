@@ -302,11 +302,11 @@ Both migrations are pure `CREATE TABLE` — no existing data to migrate, no shad
 
 #### Automated
 
-- [x] 4.1 Unit/integration tests pass: `npm run test:worker`
-- [x] 4.2 Type checking passes: `npm run typecheck`
-- [x] 4.3 Full existing test suite still passes: `npm run test:worker`
+- [x] 4.1 Unit/integration tests pass: `npm run test:worker` — 7171b82
+- [x] 4.2 Type checking passes: `npm run typecheck` — 7171b82
+- [x] 4.3 Full existing test suite still passes: `npm run test:worker` — 7171b82
 
 #### Manual
 
-- [ ] 4.4 Local `wrangler dev --local --test-scheduled` run produces correct D1 rows
-- [ ] 4.5 Post-deploy: remote migrations applied, remote D1 shows real production data after a scheduled run
+- [x] 4.4 Local `wrangler dev --local --test-scheduled` run produces correct D1 rows
+- [x] 4.5 Post-deploy: remote migrations applied, remote D1 shows real production data after a scheduled run
