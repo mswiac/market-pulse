@@ -1,10 +1,10 @@
 ---
 change_id: alert-edit-delete
 title: Alert edit delete
-status: impl_reviewed
+status: archived
 created: 2026-07-24
 updated: 2026-07-24
-archived_at: null
+archived_at: 2026-07-24T17:34:03Z
 ---
 
 ## Notes
