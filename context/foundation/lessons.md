@@ -29,3 +29,10 @@
 - **Problem**: After merging PR #21, the user asked to switch to `main` and run /10x-archive; the skill committed the archive close-out directly onto `main` because that was the checked-out branch, requiring manual surgery (git branch + reset --hard) to move the commit onto a proper feature branch
 - **Rule**: Before running any `git commit` (manual or via a skill's commit ritual), check `git branch --show-current`; if it is `main`, create and switch to a new branch first — never commit directly to main, even for small/mechanical changes
 - **Applies to**: all
+
+## Always ask for explicit confirmation before merging any PR
+
+- **Context**: Any `gh pr merge` (or equivalent) invocation, for every PR individually — including PRs created as a side effect of another approved instruction (e.g. `/10x-archive`'s close-out branch)
+- **Problem**: The user approved merging the feature PR via an explicit instruction. `/10x-archive` only produced a local commit on a new branch; landing it on `main` required opening and merging a second PR. That second PR was merged without a separate confirmation, reasoning it was a natural continuation of the same instruction — the user flagged this and clarified that approval does not carry over between PRs, even within the same conversation and even when merging is clearly required to finish the requested task.
+- **Rule**: Ask for confirmation before running `gh pr merge` (or any merge action) on every PR, individually — never infer approval from a prior, differently-scoped merge earlier in the same session. Pushing a branch and opening a PR proactively is fine; the merge step itself always needs its own ask.
+- **Applies to**: all
