@@ -34,7 +34,7 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | F-02 | market-data-pipeline  | (foundation) cron fetches Stooq closes + calculates RSI   | F-01           | NFR (daily evaluation), BL      | done |
 | S-01 | auth-and-registration | register, log in, and log out                             | F-01a          | FR-001, FR-002, FR-003          | done     |
 | S-02 | alert-crud            | create a price/RSI alert and view the alert list          | S-01           | FR-004, FR-005                  | done     |
-| S-03 | alert-edit-delete     | edit and delete an existing alert                         | S-02           | FR-006, FR-007                  | proposed |
+| S-03 | alert-edit-delete     | edit and delete an existing alert                         | S-02           | FR-006, FR-007                  | done     |
 | S-04 | market-data-display   | see current RSI/price value next to each alert            | S-02, F-02     | FR-009                          | proposed |
 | S-05 | alert-notifications   | receive an email when an alert threshold is crossed       | S-04           | FR-008, FR-008a                 | proposed |
 | S-06 | trigger-history       | view a history of all previously triggered alerts         | S-05           | FR-010                          | proposed |
@@ -139,7 +139,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Straightforward CRUD extension of S-02; no new external dependencies. Safe to run in parallel with S-04.
-- **Status:** proposed
+- **Status:** done
 
 ### S-04: User can see current RSI/price value next to each alert
 
@@ -209,3 +209,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-01: User can register with an email address and password; log in with email and password; log out. Unauthenticated requests to any protected route are rejected.** — Archived 2026-07-14 → `context/archive/2026-07-14-auth-and-registration/`. Lesson: —.
 - **S-02: User can create an alert by selecting an instrument (VIX or NASDAQ-100), alert type, and threshold value; VIX supports price alerts only, NASDAQ-100 supports price or RSI alerts. The notification email field is pre-filled from the user's account email but is editable per alert. Created alerts appear in a persistent list.** — Archived 2026-07-19 → `context/archive/2026-07-19-alert-crud/`. Lesson: —.
 - **F-02: (foundation) Cloudflare Cron Trigger fires daily, fetches closing prices for VIX and NASDAQ-100 from Stooq, stores raw closes in the `price_history` table, and writes the latest RSI to the `market_data` table for NASDAQ-100 (VIX alerts are price-only, per FR-004 — no RSI needed for VIX).** — Archived 2026-07-24 → `context/archive/2026-07-24-market-data-pipeline/`. Lesson: —.
+- **S-03: User can update the instrument, alert type, threshold value, or notification email on an existing alert; user can permanently delete an alert.** — Archived 2026-07-24 → `context/archive/2026-07-24-alert-edit-delete/`. Lesson: —.
