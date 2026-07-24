@@ -1,10 +1,10 @@
 ---
 change_id: market-data-pipeline
 title: Market data pipeline
-status: impl_reviewed
+status: archived
 created: 2026-07-24
 updated: 2026-07-24
-archived_at: null
+archived_at: 2026-07-24T14:52:08Z
 ---
 
 ## Notes

@@ -3,7 +3,7 @@ project: MarketPulse
 version: 1
 status: draft
 created: 2026-06-21
-updated: 2026-07-19
+updated: 2026-07-24
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -31,7 +31,7 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 |------|-----------------------|-----------------------------------------------------------|----------------|---------------------------------|----------|
 | F-01 | backend-scaffold      | (foundation) Hono Worker + D1 binding + users table       | —              | Access Control, NFR (isolation) | done     |
 | F-01a | users-email-schema   | (foundation) users table: email as sole identifier        | F-01           | FR-001, FR-002                  | done     |
-| F-02 | market-data-pipeline  | (foundation) cron fetches Stooq closes + calculates RSI   | F-01           | NFR (daily evaluation), BL      | proposed |
+| F-02 | market-data-pipeline  | (foundation) cron fetches Stooq closes + calculates RSI   | F-01           | NFR (daily evaluation), BL      | done |
 | S-01 | auth-and-registration | register, log in, and log out                             | F-01a          | FR-001, FR-002, FR-003          | done     |
 | S-02 | alert-crud            | create a price/RSI alert and view the alert list          | S-01           | FR-004, FR-005                  | done     |
 | S-03 | alert-edit-delete     | edit and delete an existing alert                         | S-02           | FR-006, FR-007                  | proposed |
@@ -100,7 +100,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - What is the exact Stooq bulk download URL and column format for VIX and NASDAQ-100, and does the format require a validation layer / circuit breaker? — Owner: user. Block: no (researchable during `/10x-plan`; resolve before writing the fetch layer).
 - **Risk:** Stooq has no official API contract — endpoint URL, column names, and availability can change without notice. No cron retry on failure unless implemented in application code; a silently failing cron satisfies the NFR failure condition. CPU budget on the free Workers tier (10ms) may be tight; the $5/month paid tier raises this to 15 minutes and should be budgeted before production.
-- **Status:** proposed
+- **Status:** done
 
 ## Slices
 
@@ -208,3 +208,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **F-01a: (foundation) The `users` table uses `email` as the sole identifier and login credential.** — Archived 2026-06-28 → `context/archive/2026-06-28-users-email-schema/`. Lesson: —.
 - **S-01: User can register with an email address and password; log in with email and password; log out. Unauthenticated requests to any protected route are rejected.** — Archived 2026-07-14 → `context/archive/2026-07-14-auth-and-registration/`. Lesson: —.
 - **S-02: User can create an alert by selecting an instrument (VIX or NASDAQ-100), alert type, and threshold value; VIX supports price alerts only, NASDAQ-100 supports price or RSI alerts. The notification email field is pre-filled from the user's account email but is editable per alert. Created alerts appear in a persistent list.** — Archived 2026-07-19 → `context/archive/2026-07-19-alert-crud/`. Lesson: —.
+- **F-02: (foundation) Cloudflare Cron Trigger fires daily, fetches closing prices for VIX and NASDAQ-100 from Stooq, stores raw closes in the `price_history` table, and writes the latest RSI to the `market_data` table for NASDAQ-100 (VIX alerts are price-only, per FR-004 — no RSI needed for VIX).** — Archived 2026-07-24 → `context/archive/2026-07-24-market-data-pipeline/`. Lesson: —.
