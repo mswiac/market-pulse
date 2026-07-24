@@ -121,4 +121,91 @@ alertsRoutes.get('/', async (c) => {
   return c.json(results, 200);
 });
 
+function parseAlertId(idParam: string): number | null {
+  const id = Number(idParam);
+  return Number.isInteger(id) ? id : null;
+}
+
+alertsRoutes.put('/:id', async (c) => {
+  const id = parseAlertId(c.req.param('id'));
+  if (id === null) {
+    return c.json({ error: 'invalid alert id' }, 400);
+  }
+
+  const body = await parseAlertBody(c);
+  if (!body) {
+    return c.json({ error: 'invalid request body' }, 400);
+  }
+
+  const instrument = normalizeInstrument(body.instrument);
+  if (!instrument) {
+    return c.json({ error: 'invalid instrument' }, 400);
+  }
+
+  const alertType = normalizeAlertType(body.alertType);
+  if (!alertType) {
+    return c.json({ error: 'invalid alert type' }, 400);
+  }
+
+  const threshold = validateThreshold(alertType, body.threshold);
+  if (threshold === null) {
+    return c.json({ error: 'invalid threshold' }, 400);
+  }
+
+  const notificationEmail = normalizeEmail(body.notificationEmail);
+  if (!notificationEmail || !EMAIL_PATTERN.test(notificationEmail)) {
+    return c.json({ error: 'invalid notification email' }, 400);
+  }
+
+  if (instrument === 'VIX' && alertType === 'RSI') {
+    return c.json({ error: 'RSI is not available for VIX' }, 400);
+  }
+
+  const userId = c.get('userId');
+
+  try {
+    const updated = await c.env.DB.prepare(
+      `UPDATE alerts
+       SET instrument = ?, alert_type = ?, threshold = ?, notification_email = ?, updated_at = unixepoch()
+       WHERE id = ? AND user_id = ?
+       RETURNING ${ALERT_ROW_COLUMNS}`,
+    )
+      .bind(instrument, alertType, threshold, notificationEmail, id, userId)
+      .first();
+
+    if (!updated) {
+      return c.json({ error: 'alert not found' }, 404);
+    }
+
+    return c.json(updated, 200);
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('UNIQUE')) {
+      return c.json({ error: 'duplicate alert' }, 409);
+    }
+    if (err instanceof Error && err.message.includes('CHECK constraint failed')) {
+      return c.json({ error: 'RSI is not available for VIX' }, 400);
+    }
+    throw err;
+  }
+});
+
+alertsRoutes.delete('/:id', async (c) => {
+  const id = parseAlertId(c.req.param('id'));
+  if (id === null) {
+    return c.json({ error: 'invalid alert id' }, 400);
+  }
+
+  const userId = c.get('userId');
+
+  const deleted = await c.env.DB.prepare('DELETE FROM alerts WHERE id = ? AND user_id = ? RETURNING id')
+    .bind(id, userId)
+    .first();
+
+  if (!deleted) {
+    return c.json({ error: 'alert not found' }, 404);
+  }
+
+  return c.body(null, 204);
+});
+
 export default alertsRoutes;
