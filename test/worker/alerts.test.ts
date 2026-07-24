@@ -43,6 +43,21 @@ async function listAlerts(cookie?: string): Promise<Response> {
   });
 }
 
+async function updateAlert(cookie: string, id: number, overrides: Record<string, unknown> = {}): Promise<Response> {
+  return exports.default.fetch(`${BASE_URL}/api/alerts/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
+    body: JSON.stringify(validAlertBody(overrides)),
+  });
+}
+
+async function deleteAlert(cookie: string, id: number): Promise<Response> {
+  return exports.default.fetch(`${BASE_URL}/api/alerts/${id}`, {
+    method: 'DELETE',
+    headers: { Cookie: cookie },
+  });
+}
+
 describe('alerts endpoints', () => {
   it('creates then lists a VIX/PRICE alert, including matching createdAt/updatedAt', async () => {
     const cookie = await registerAndLogIn('vix-price@example.com');
@@ -211,5 +226,118 @@ describe('alerts endpoints', () => {
     const listForB = await listAlerts(cookieB);
     expect(listForB.status).toBe(200);
     await expect(listForB.json()).resolves.toEqual([]);
+  });
+
+  it('updates an alert, advancing updatedAt past createdAt and persisting the new values', async () => {
+    const cookie = await registerAndLogIn('update-happy-path@example.com');
+    const created = (await (await createAlert(cookie, { instrument: 'VIX', alertType: 'PRICE', threshold: 20 })).json()) as Record<
+      string,
+      unknown
+    >;
+
+    const updateResponse = await updateAlert(cookie, created['id'] as number, {
+      instrument: 'VIX',
+      alertType: 'PRICE',
+      threshold: 25,
+    });
+    expect(updateResponse.status).toBe(200);
+    const updated = (await updateResponse.json()) as Record<string, unknown>;
+    expect(updated).toMatchObject({ id: created['id'], instrument: 'VIX', alertType: 'PRICE', threshold: 25 });
+    expect(updated['createdAt']).toBe(created['createdAt']);
+    expect(updated['updatedAt']).toBeGreaterThanOrEqual(created['updatedAt'] as number);
+
+    const listResponse = await listAlerts(cookie);
+    await expect(listResponse.json()).resolves.toMatchObject([{ threshold: 25 }]);
+  });
+
+  it('rejects an update with an invalid threshold, mirroring create validation', async () => {
+    const cookie = await registerAndLogIn('update-bad-threshold@example.com');
+    const created = (await (await createAlert(cookie)).json()) as Record<string, unknown>;
+
+    const response = await updateAlert(cookie, created['id'] as number, { threshold: 0 });
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: 'invalid threshold' });
+  });
+
+  it('rejects updating an alert to VIX + RSI with the specific error message', async () => {
+    const cookie = await registerAndLogIn('update-vix-rsi@example.com');
+    const created = (await (await createAlert(cookie)).json()) as Record<string, unknown>;
+
+    const response = await updateAlert(cookie, created['id'] as number, { instrument: 'VIX', alertType: 'RSI', threshold: 50 });
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: 'RSI is not available for VIX' });
+  });
+
+  it('rejects updating an alert to collide with a different existing alert', async () => {
+    const cookie = await registerAndLogIn('update-duplicate@example.com');
+    await createAlert(cookie, { instrument: 'VIX', alertType: 'PRICE', threshold: 20 });
+    const second = (await (await createAlert(cookie, { instrument: 'VIX', alertType: 'PRICE', threshold: 22 })).json()) as Record<
+      string,
+      unknown
+    >;
+
+    const response = await updateAlert(cookie, second['id'] as number, { instrument: 'VIX', alertType: 'PRICE', threshold: 20 });
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ error: 'duplicate alert' });
+  });
+
+  it('returns 404 updating a nonexistent alert id', async () => {
+    const cookie = await registerAndLogIn('update-nonexistent@example.com');
+    const response = await updateAlert(cookie, 999999);
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toMatchObject({ error: 'alert not found' });
+  });
+
+  it('returns 404 updating another user\'s alert (isolation)', async () => {
+    const cookieA = await registerAndLogIn('update-isolation-a@example.com');
+    const cookieB = await registerAndLogIn('update-isolation-b@example.com');
+    const created = (await (await createAlert(cookieA)).json()) as Record<string, unknown>;
+
+    const response = await updateAlert(cookieB, created['id'] as number, { threshold: 99 });
+    expect(response.status).toBe(404);
+  });
+
+  it('rejects PUT without a session cookie', async () => {
+    const response = await exports.default.fetch(`${BASE_URL}/api/alerts/1`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(validAlertBody()),
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it('deletes an alert, removing it from the list', async () => {
+    const cookie = await registerAndLogIn('delete-happy-path@example.com');
+    const created = (await (await createAlert(cookie)).json()) as Record<string, unknown>;
+
+    const deleteResponse = await deleteAlert(cookie, created['id'] as number);
+    expect(deleteResponse.status).toBe(204);
+
+    const listResponse = await listAlerts(cookie);
+    await expect(listResponse.json()).resolves.toEqual([]);
+  });
+
+  it('returns 404 deleting a nonexistent alert id', async () => {
+    const cookie = await registerAndLogIn('delete-nonexistent@example.com');
+    const response = await deleteAlert(cookie, 999999);
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toMatchObject({ error: 'alert not found' });
+  });
+
+  it('returns 404 deleting another user\'s alert (isolation)', async () => {
+    const cookieA = await registerAndLogIn('delete-isolation-a@example.com');
+    const cookieB = await registerAndLogIn('delete-isolation-b@example.com');
+    const created = (await (await createAlert(cookieA)).json()) as Record<string, unknown>;
+
+    const response = await deleteAlert(cookieB, created['id'] as number);
+    expect(response.status).toBe(404);
+
+    const listForA = await listAlerts(cookieA);
+    await expect(listForA.json()).resolves.toHaveLength(1);
+  });
+
+  it('rejects DELETE without a session cookie', async () => {
+    const response = await exports.default.fetch(`${BASE_URL}/api/alerts/1`, { method: 'DELETE' });
+    expect(response.status).toBe(401);
   });
 });

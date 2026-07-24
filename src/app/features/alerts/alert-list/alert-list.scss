@@ -76,3 +76,11 @@ button.sort-col:hover {
   text-align: center;
   opacity: 0.8;
 }
+
+.delete-error {
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  border-radius: 8px;
+  background-color: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}

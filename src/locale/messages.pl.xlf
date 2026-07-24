@@ -6,6 +6,10 @@
         <source>New alert</source>
         <target>Nowy alert</target>
       </trans-unit>
+      <trans-unit id="alertForm.editTitle" datatype="html">
+        <source>Edit alert</source>
+        <target>Edytuj alert</target>
+      </trans-unit>
       <trans-unit id="alertForm.instrument.label" datatype="html">
         <source>Instrument</source>
         <target>Instrument</target>
@@ -54,6 +58,10 @@
         <source> Create alert </source>
         <target> Utwórz alert </target>
       </trans-unit>
+      <trans-unit id="alertForm.submitEdit" datatype="html">
+        <source>Save changes</source>
+        <target>Zapisz zmiany</target>
+      </trans-unit>
       <trans-unit id="alertForm.error.duplicateAlert" datatype="html">
         <source>An alert like this already exists.</source>
         <target>Taki alert już istnieje.</target>
@@ -62,6 +70,10 @@
         <source>RSI is not available for VIX.</source>
         <target>RSI nie jest dostępne dla VIX.</target>
       </trans-unit>
+      <trans-unit id="alertForm.error.notFound" datatype="html">
+        <source>This alert no longer exists.</source>
+        <target>Ten alert już nie istnieje.</target>
+      </trans-unit>
       <trans-unit id="alertForm.error.generic" datatype="html">
         <source>Something went wrong. Please try again.</source>
         <target>Wystąpił błąd. Spróbuj ponownie.</target>
@@ -69,6 +81,10 @@
       <trans-unit id="alertList.loadError" datatype="html">
         <source>Failed to load alerts.</source>
         <target>Nie udało się wczytać alertów.</target>
+      </trans-unit>
+      <trans-unit id="alertList.deleteError" datatype="html">
+        <source>Failed to delete the alert. Please try again.</source>
+        <target>Nie udało się usunąć alertu. Spróbuj ponownie.</target>
       </trans-unit>
       <trans-unit id="alertList.sort.instrument" datatype="html">
         <source>Instrument</source>
@@ -101,6 +117,14 @@
       <trans-unit id="alertList.detail.lastEdited" datatype="html">
         <source>Last edited:</source>
         <target>Ostatnia edycja:</target>
+      </trans-unit>
+      <trans-unit id="alertList.action.edit" datatype="html">
+        <source>Edit alert</source>
+        <target>Edytuj alert</target>
+      </trans-unit>
+      <trans-unit id="alertList.action.delete" datatype="html">
+        <source>Delete alert</source>
+        <target>Usuń alert</target>
       </trans-unit>
       <trans-unit id="alertList.emptyState" datatype="html">
         <source>No alerts yet — add your first one to get started.</source>
@@ -221,6 +245,22 @@
       <trans-unit id="register.errorGeneric" datatype="html">
         <source>Something went wrong. Please try again.</source>
         <target>Coś poszło nie tak. Spróbuj ponownie.</target>
+      </trans-unit>
+      <trans-unit id="deleteAlertConfirm.title" datatype="html">
+        <source>Delete this alert?</source>
+        <target>Usunąć ten alert?</target>
+      </trans-unit>
+      <trans-unit id="deleteAlertConfirm.body" datatype="html">
+        <source>This action cannot be undone.</source>
+        <target>Tej operacji nie można cofnąć.</target>
+      </trans-unit>
+      <trans-unit id="deleteAlertConfirm.cancel" datatype="html">
+        <source>Cancel</source>
+        <target>Anuluj</target>
+      </trans-unit>
+      <trans-unit id="deleteAlertConfirm.confirm" datatype="html">
+        <source>Delete</source>
+        <target>Usuń</target>
       </trans-unit>
     </body>
   </file>

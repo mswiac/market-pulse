@@ -1,6 +1,9 @@
 @if (loadError()) {
   <p class="empty-state" i18n="@@alertList.loadError">Failed to load alerts.</p>
 } @else {
+  @if (deleteError()) {
+    <p class="delete-error" i18n="@@alertList.deleteError">Failed to delete the alert. Please try again.</p>
+  }
   @if (alerts().length > 0) {
     <div class="list-header">
       <button type="button" class="sort-col" (click)="toggleSort('instrument')">
@@ -43,6 +46,21 @@
           <p><strong i18n="@@alertList.detail.notificationEmail">Notification email:</strong> {{ alert.notificationEmail }}</p>
           <p><strong i18n="@@alertList.detail.lastEdited">Last edited:</strong> {{ alert.updatedAt * 1000 | date: 'dd.MM.yyyy' }}</p>
         </div>
+
+        <mat-action-row>
+          <button mat-icon-button (click)="openEditDialog(alert)" i18n-aria-label="@@alertList.action.edit" aria-label="Edit alert">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button
+            mat-icon-button
+            color="warn"
+            (click)="deleteAlert(alert)"
+            i18n-aria-label="@@alertList.action.delete"
+            aria-label="Delete alert"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        </mat-action-row>
       </mat-expansion-panel>
     } @empty {
       <p class="empty-state" i18n="@@alertList.emptyState">No alerts yet — add your first one to get started.</p>

@@ -1,0 +1,24 @@
+<h2 mat-dialog-title i18n="@@deleteAlertConfirm.title">Delete this alert?</h2>
+
+<mat-dialog-content>
+  <dl class="alert-summary-list">
+    <div>
+      <dt><strong i18n="@@alertList.sort.instrument">Instrument</strong></dt>
+      <dd>{{ data.instrument }}</dd>
+    </div>
+    <div>
+      <dt><strong i18n="@@alertList.sort.alertType">Alert type</strong></dt>
+      <dd>{{ data.alertType }}</dd>
+    </div>
+    <div>
+      <dt><strong i18n="@@alertList.sort.threshold">Threshold</strong></dt>
+      <dd>{{ data.threshold }}</dd>
+    </div>
+  </dl>
+  <p i18n="@@deleteAlertConfirm.body">This action cannot be undone.</p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close cdkFocusInitial i18n="@@deleteAlertConfirm.cancel">Cancel</button>
+  <button mat-flat-button color="warn" [mat-dialog-close]="true" i18n="@@deleteAlertConfirm.confirm">Delete</button>
+</mat-dialog-actions>

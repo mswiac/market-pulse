@@ -1,8 +1,12 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
+import { AlertForm } from '../alert-form/alert-form';
 import { Alert, AlertsService } from '../alerts.service';
+import { DeleteAlertConfirm, DeleteAlertConfirmData } from '../delete-alert-confirm/delete-alert-confirm';
 
 const INSTRUMENT_LABELS: Record<string, string> = {
   VIX: 'VIX',
@@ -14,22 +18,33 @@ const ALERT_TYPE_LABELS: Record<string, string> = {
   RSI: $localize`:@@alertList.type.rsi:RSI threshold`,
 };
 
+// Short type words for the delete-confirm summary — deliberately distinct
+// from ALERT_TYPE_LABELS above: those already bake "threshold" into the
+// label text for the list's column context, which reads ambiguously once
+// flattened into a single "instrument · type · value" line.
+const ALERT_TYPE_SHORT_LABELS: Record<string, string> = {
+  PRICE: $localize`:@@alertForm.alertType.price:Price`,
+  RSI: 'RSI',
+};
+
 type SortableColumn = 'instrument' | 'alertType' | 'threshold';
 type SortDirection = 'asc' | 'desc';
 
 @Component({
   selector: 'app-alert-list',
-  imports: [MatExpansionModule, MatIconModule, DatePipe, DecimalPipe],
+  imports: [MatExpansionModule, MatIconModule, MatButtonModule, MatDialogModule, DatePipe, DecimalPipe],
   templateUrl: './alert-list.html',
   styleUrl: './alert-list.scss',
 })
 export class AlertList {
   private readonly alertsService = inject(AlertsService);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly alerts = this.alertsService.alerts;
   protected readonly sortBy = signal<SortableColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('asc');
   protected readonly loadError = signal(false);
+  protected readonly deleteError = signal(false);
 
   protected readonly sortedAlerts = computed(() => {
     const alerts = this.alerts();
@@ -70,5 +85,27 @@ export class AlertList {
 
   protected showCurrentRsi(instrument: string, alertType: string): boolean {
     return instrument === 'NASDAQ100' && alertType === 'RSI';
+  }
+
+  protected openEditDialog(alert: Alert): void {
+    this.dialog.open(AlertForm, { width: '32rem', data: { alert } });
+  }
+
+  protected deleteAlert(alert: Alert): void {
+    const data: DeleteAlertConfirmData = {
+      instrument: this.instrumentLabel(alert.instrument),
+      alertType: ALERT_TYPE_SHORT_LABELS[alert.alertType] ?? alert.alertType,
+      threshold: alert.threshold.toFixed(2),
+    };
+
+    this.dialog
+      .open(DeleteAlertConfirm, { data })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (confirmed) {
+          this.deleteError.set(false);
+          this.alertsService.delete(alert.id).subscribe({ error: () => this.deleteError.set(true) });
+        }
+      });
   }
 }
