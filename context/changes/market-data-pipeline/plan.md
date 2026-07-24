@@ -288,15 +288,15 @@ Both migrations are pure `CREATE TABLE` — no existing data to migrate, no shad
 
 #### Automated
 
-- [x] 2.1 Unit tests pass: `npm run test:worker`
-- [x] 2.2 Type checking passes: `npm run typecheck`
+- [x] 2.1 Unit tests pass: `npm run test:worker` — 93db0e3
+- [x] 2.2 Type checking passes: `npm run typecheck` — 93db0e3
 
 ### Phase 3: RSI Calculation
 
 #### Automated
 
-- [ ] 3.1 Unit tests pass: `npm run test:worker`
-- [ ] 3.2 Type checking passes: `npm run typecheck`
+- [x] 3.1 Unit tests pass: `npm run test:worker`
+- [x] 3.2 Type checking passes: `npm run typecheck`
 
 ### Phase 4: Cron Orchestration & Wrangler Config
 
