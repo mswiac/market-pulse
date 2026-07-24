@@ -162,7 +162,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** —
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** Only external dependency at this point is Resend — Stooq and RSI are already validated by S-04. No retry logic on cron failure unless explicitly implemented — per NFR, a missed evaluation is a core product failure. The Resend SDK requires `nodejs_compat` flag (documented in `infrastructure.md`).
+- **Risk:** Only external dependency at this point is Resend — Stooq and RSI are already validated by S-04. No retry logic on cron failure unless explicitly implemented — per NFR, a missed evaluation is a core product failure. The Resend SDK requires `nodejs_compat` flag (documented in `infrastructure.md`). **Threshold-crossing detection**: data is sampled once daily, so price can jump past a threshold between two closes (e.g. price 10 → 12 with threshold 11) — evaluating with exact equality (`price === threshold`) would almost never fire. Evaluation must use a directional inequality (`price >= threshold` / `price <= threshold`) instead. The `alerts` schema also has no direction field (only `threshold`), and FR-008 just says "when crossed" without specifying direction — direction should be inferred at alert creation from the relationship between the current price and the chosen threshold (price below threshold → "up" alert; price above → "down" alert) rather than adding a form field. Firing also needs a "already triggered" state (e.g. via `trigger_events`) so the alert doesn't re-fire every day the price stays past the threshold.
 - **Status:** proposed
 
 ### S-06: User can view a history of triggered alerts
