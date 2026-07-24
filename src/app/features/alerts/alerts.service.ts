@@ -35,4 +35,16 @@ export class AlertsService {
       .post<Alert>('/api/alerts', payload)
       .pipe(tap((created) => this._alerts.update((alerts) => [created, ...alerts])));
   }
+
+  update(id: number, payload: CreateAlertPayload): Observable<Alert> {
+    return this.http.put<Alert>(`/api/alerts/${id}`, payload).pipe(
+      tap((updated) => this._alerts.update((alerts) => alerts.map((a) => (a.id === id ? updated : a)))),
+    );
+  }
+
+  delete(id: number): Observable<void> {
+    return this.http
+      .delete<void>(`/api/alerts/${id}`)
+      .pipe(tap(() => this._alerts.update((alerts) => alerts.filter((a) => a.id !== id))));
+  }
 }

@@ -253,19 +253,19 @@ No D1 migration in this plan — `PUT`/`DELETE` operate on the existing `alerts`
 
 #### Automated
 
-- [x] 1.1 Typecheck passes: `npm run typecheck`
-- [x] 1.2 All worker tests pass, including new update/delete cases: `npm run test:worker`
+- [x] 1.1 Typecheck passes: `npm run typecheck` — 96f6aa0
+- [x] 1.2 All worker tests pass, including new update/delete cases: `npm run test:worker` — 96f6aa0
 
 #### Manual
 
-- [x] 1.3 Manually exercise `PUT`/`DELETE /api/alerts/:id` against the local worker with a valid session cookie
+- [x] 1.3 Manually exercise `PUT`/`DELETE /api/alerts/:id` against the local worker with a valid session cookie — 96f6aa0
 
 ### Phase 2: Frontend — AlertsService update/delete methods
 
 #### Automated
 
-- [ ] 2.1 Typecheck passes: `npm run typecheck`
-- [ ] 2.2 Production build succeeds: `npm run build`
+- [x] 2.1 Typecheck passes: `npm run typecheck`
+- [x] 2.2 Production build succeeds: `npm run build`
 
 ### Phase 3: Frontend — Edit flow
 
