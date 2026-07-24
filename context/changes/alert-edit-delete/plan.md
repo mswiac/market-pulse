@@ -271,30 +271,30 @@ No D1 migration in this plan — `PUT`/`DELETE` operate on the existing `alerts`
 
 #### Automated
 
-- [x] 3.1 Typecheck passes: `npm run typecheck`
-- [x] 3.2 `npx ng extract-i18n --output-path src/locale` exits 0 and includes every new id from this phase
-- [x] 3.3 Production build succeeds: `npm run build`
+- [x] 3.1 Typecheck passes: `npm run typecheck` — c72802c
+- [x] 3.2 `npx ng extract-i18n --output-path src/locale` exits 0 and includes every new id from this phase — c72802c
+- [x] 3.3 Production build succeeds: `npm run build` — c72802c
 
 #### Manual
 
-- [ ] 3.4 Edit dialog opens pre-filled with all four fields, including a NASDAQ-100/RSI alert's threshold
-- [ ] 3.5 Editing threshold and saving updates the row in place without a refetch flash
-- [ ] 3.6 Editing instrument to VIX while alertType is RSI resets alertType to PRICE
-- [ ] 3.7 Editing to a duplicate of another alert surfaces the 409 error
-- [ ] 3.8 Editing an alert deleted in another tab surfaces "This alert no longer exists." without auto-closing
+- [x] 3.4 Edit dialog opens pre-filled with all four fields, including a NASDAQ-100/RSI alert's threshold
+- [x] 3.5 Editing threshold and saving updates the row in place without a refetch flash
+- [x] 3.6 Editing instrument to VIX while alertType is RSI resets alertType to PRICE
+- [x] 3.7 Editing to a duplicate of another alert surfaces the 409 error
+- [x] 3.8 Editing an alert deleted in another tab surfaces "This alert no longer exists." without auto-closing
 
 ### Phase 4: Frontend — Delete flow
 
 #### Automated
 
-- [ ] 4.1 Typecheck passes: `npm run typecheck`
-- [ ] 4.2 `npx ng extract-i18n --output-path src/locale` exits 0 and includes every new id from this phase
-- [ ] 4.3 Production build succeeds: `npm run build`
+- [x] 4.1 Typecheck passes: `npm run typecheck`
+- [x] 4.2 `npx ng extract-i18n --output-path src/locale` exits 0 and includes every new id from this phase
+- [x] 4.3 Production build succeeds: `npm run build`
 
 #### Manual
 
-- [ ] 4.4 Delete confirmation dialog names the specific alert being deleted
-- [ ] 4.5 Cancel leaves the alert untouched
-- [ ] 4.6 Confirm removes the alert from the list immediately
-- [ ] 4.7 Deletion persists after a page refresh
-- [ ] 4.8 Deleting the last alert restores the empty-state message
+- [x] 4.4 Delete confirmation dialog names the specific alert being deleted
+- [x] 4.5 Cancel leaves the alert untouched
+- [x] 4.6 Confirm removes the alert from the list immediately
+- [x] 4.7 Deletion persists after a page refresh
+- [x] 4.8 Deleting the last alert restores the empty-state message

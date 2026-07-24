@@ -118,6 +118,10 @@
         <source>Edit alert</source>
         <target>Edytuj alert</target>
       </trans-unit>
+      <trans-unit id="alertList.action.delete" datatype="html">
+        <source>Delete alert</source>
+        <target>Usuń alert</target>
+      </trans-unit>
       <trans-unit id="alertList.emptyState" datatype="html">
         <source>No alerts yet — add your first one to get started.</source>
         <target>Brak alertów — dodaj pierwszy, aby zacząć.</target>
@@ -237,6 +241,22 @@
       <trans-unit id="register.errorGeneric" datatype="html">
         <source>Something went wrong. Please try again.</source>
         <target>Coś poszło nie tak. Spróbuj ponownie.</target>
+      </trans-unit>
+      <trans-unit id="deleteAlertConfirm.title" datatype="html">
+        <source>Delete this alert?</source>
+        <target>Usunąć ten alert?</target>
+      </trans-unit>
+      <trans-unit id="deleteAlertConfirm.body" datatype="html">
+        <source>This action cannot be undone.</source>
+        <target>Tej operacji nie można cofnąć.</target>
+      </trans-unit>
+      <trans-unit id="deleteAlertConfirm.cancel" datatype="html">
+        <source>Cancel</source>
+        <target>Anuluj</target>
+      </trans-unit>
+      <trans-unit id="deleteAlertConfirm.confirm" datatype="html">
+        <source>Delete</source>
+        <target>Usuń</target>
       </trans-unit>
     </body>
   </file>

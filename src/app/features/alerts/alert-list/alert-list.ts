@@ -6,6 +6,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { AlertForm } from '../alert-form/alert-form';
 import { Alert, AlertsService } from '../alerts.service';
+import { DeleteAlertConfirm, DeleteAlertConfirmData } from '../delete-alert-confirm/delete-alert-confirm';
 
 const INSTRUMENT_LABELS: Record<string, string> = {
   VIX: 'VIX',
@@ -15,6 +16,15 @@ const INSTRUMENT_LABELS: Record<string, string> = {
 const ALERT_TYPE_LABELS: Record<string, string> = {
   PRICE: $localize`:@@alertList.type.price:Price threshold`,
   RSI: $localize`:@@alertList.type.rsi:RSI threshold`,
+};
+
+// Short type words for the delete-confirm summary — deliberately distinct
+// from ALERT_TYPE_LABELS above: those already bake "threshold" into the
+// label text for the list's column context, which reads ambiguously once
+// flattened into a single "instrument · type · value" line.
+const ALERT_TYPE_SHORT_LABELS: Record<string, string> = {
+  PRICE: $localize`:@@alertForm.alertType.price:Price`,
+  RSI: 'RSI',
 };
 
 type SortableColumn = 'instrument' | 'alertType' | 'threshold';
@@ -78,5 +88,22 @@ export class AlertList {
 
   protected openEditDialog(alert: Alert): void {
     this.dialog.open(AlertForm, { width: '32rem', data: { alert } });
+  }
+
+  protected deleteAlert(alert: Alert): void {
+    const data: DeleteAlertConfirmData = {
+      instrument: this.instrumentLabel(alert.instrument),
+      alertType: ALERT_TYPE_SHORT_LABELS[alert.alertType] ?? alert.alertType,
+      threshold: alert.threshold.toFixed(2),
+    };
+
+    this.dialog
+      .open(DeleteAlertConfirm, { data })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (confirmed) {
+          this.alertsService.delete(alert.id).subscribe();
+        }
+      });
   }
 }

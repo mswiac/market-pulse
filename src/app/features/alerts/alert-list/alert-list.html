@@ -48,6 +48,15 @@
           <button mat-icon-button (click)="openEditDialog(alert)" i18n-aria-label="@@alertList.action.edit" aria-label="Edit alert">
             <mat-icon>edit</mat-icon>
           </button>
+          <button
+            mat-icon-button
+            color="warn"
+            (click)="deleteAlert(alert)"
+            i18n-aria-label="@@alertList.action.delete"
+            aria-label="Delete alert"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
         </mat-action-row>
       </mat-expansion-panel>
     } @empty {

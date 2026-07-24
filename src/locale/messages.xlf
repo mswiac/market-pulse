@@ -36,6 +36,10 @@
           <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
           <context context-type="linenumber">22,23</context>
         </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.ts</context>
+          <context context-type="linenumber">26</context>
+        </context-group>
       </trans-unit>
       <trans-unit id="alertForm.threshold.label" datatype="html">
         <source>Threshold</source>
@@ -148,6 +152,10 @@
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
           <context context-type="linenumber">7,8</context>
         </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/delete-alert-confirm/delete-alert-confirm.html</context>
+          <context context-type="linenumber">6,7</context>
+        </context-group>
       </trans-unit>
       <trans-unit id="alertList.sort.alertType" datatype="html">
         <source>Alert type</source>
@@ -155,12 +163,20 @@
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
           <context context-type="linenumber">13,14</context>
         </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/delete-alert-confirm/delete-alert-confirm.html</context>
+          <context context-type="linenumber">10,11</context>
+        </context-group>
       </trans-unit>
       <trans-unit id="alertList.sort.threshold" datatype="html">
         <source>Threshold</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
           <context context-type="linenumber">19,20</context>
+        </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/delete-alert-confirm/delete-alert-confirm.html</context>
+          <context context-type="linenumber">14,15</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.detail.currentPrice" datatype="html">
@@ -209,25 +225,60 @@
           <context context-type="linenumber">48,49</context>
         </context-group>
       </trans-unit>
+      <trans-unit id="alertList.action.delete" datatype="html">
+        <source>Delete alert</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">56,58</context>
+        </context-group>
+      </trans-unit>
       <trans-unit id="alertList.emptyState" datatype="html">
         <source>No alerts yet — add your first one to get started.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">54,58</context>
+          <context context-type="linenumber">63,67</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.type.price" datatype="html">
         <source>Price threshold</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.ts</context>
-          <context context-type="linenumber">16</context>
+          <context context-type="linenumber">17</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.type.rsi" datatype="html">
         <source>RSI threshold</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.ts</context>
-          <context context-type="linenumber">17</context>
+          <context context-type="linenumber">18</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="deleteAlertConfirm.title" datatype="html">
+        <source>Delete this alert?</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/delete-alert-confirm/delete-alert-confirm.html</context>
+          <context context-type="linenumber">1,4</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="deleteAlertConfirm.body" datatype="html">
+        <source>This action cannot be undone.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/delete-alert-confirm/delete-alert-confirm.html</context>
+          <context context-type="linenumber">18,21</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="deleteAlertConfirm.cancel" datatype="html">
+        <source>Cancel</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/delete-alert-confirm/delete-alert-confirm.html</context>
+          <context context-type="linenumber">22,23</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="deleteAlertConfirm.confirm" datatype="html">
+        <source>Delete</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/delete-alert-confirm/delete-alert-confirm.html</context>
+          <context context-type="linenumber">23,25</context>
         </context-group>
       </trans-unit>
       <trans-unit id="login.title" datatype="html">
