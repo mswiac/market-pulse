@@ -12,3 +12,6 @@ not_found_handling = "single-page-application"
 binding = "DB"
 database_name = "marketpulse-db"
 database_id = "7476d353-d0d1-4687-be8e-12cdbd01494b"
+
+[triggers]
+crons = ["0 23 * * 1-5"]

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import alertsRoutes from './routes/alerts';
 import authRoutes from './routes/auth';
+import { handleScheduled } from './scheduled';
 
 export interface Env {
   DB: D1Database;
@@ -21,4 +22,7 @@ app.get('/api/health', (c) => c.json({ ok: true }));
 // refresh on a route like `/login` 404s in the same-origin production build.
 app.get('*', (c) => c.env.ASSETS.fetch(c.req.raw));
 
-export default { fetch: app.fetch };
+export default {
+  fetch: app.fetch,
+  scheduled: (_controller: ScheduledController, env: Env, _ctx: ExecutionContext) => handleScheduled(env),
+};
