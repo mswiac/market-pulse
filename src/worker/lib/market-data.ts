@@ -66,6 +66,14 @@ export async function fetchDailyCloses(symbol: string): Promise<DailyClose[]> {
     throw new MarketDataFetchError(`Yahoo response for ${symbol} has an unexpected shape`);
   }
 
+  // calculateRSI() and "latest price" both assume ascending order — Yahoo's
+  // endpoint is unofficial, so fail loudly instead of silently trusting it.
+  for (let i = 1; i < timestamps.length; i++) {
+    if (timestamps[i] <= timestamps[i - 1]) {
+      throw new MarketDataFetchError(`Yahoo response for ${symbol} has non-ascending timestamps`);
+    }
+  }
+
   const dailyCloses: DailyClose[] = [];
   for (let i = 0; i < timestamps.length; i++) {
     const close = closes[i];

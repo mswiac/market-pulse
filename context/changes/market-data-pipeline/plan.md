@@ -12,7 +12,7 @@ Add a daily Cloudflare Cron Trigger that fetches VIX and NASDAQ-100 daily closes
 - The `alerts` table (`migrations/0005_create_alerts.sql`) already encodes `instrument` as `'VIX' | 'NASDAQ100'` and enforces "no RSI for VIX" via app validation (`src/worker/routes/alerts.ts:6-7,85-87`) and a DB `CHECK` constraint — this change reuses the same two instrument codes and the same CHECK-constraint pattern for consistency.
 - D1 access is ad hoc (`c.env.DB.prepare(...)` per call site) — no query-builder/ORM, no shared DB helper module. This change follows the same style.
 - Migrations are numbered, forward-only, one logical table per file (`migrations/0001`–`0005`). Next available number is `0006`.
-- Tests run via `vitest` + `@cloudflare/vitest-pool-workers` (`vitest.config.mts`), which auto-applies all `migrations/*.sql` before each test run (`test/setup/apply-migrations.ts`). Existing tests call `exports.default.fetch(...)` directly against the Hono app (`test/worker/auth.test.ts:1,14-19`); a `scheduled()` export is testable the same way via `exports.default.scheduled(...)`.
+- Tests run via `vitest` + `@cloudflare/vitest-pool-workers` (`vitest.config.mts`), which auto-applies all `migrations/*.sql` before each test run (`test/setup/apply-migrations.ts`). Existing tests call `exports.default.fetch(...)` directly against the Hono app (`test/worker/auth.test.ts:1,14-19`); a `scheduled()` export needs a different pattern — `exports.default.scheduled(...)` throws `DataCloneError` because `ScheduledController` isn't structured-cloneable across the `exports` RPC boundary, so `scheduled()` must be tested by importing the worker module directly and calling `worker.scheduled(...)` (confirmed during Phase 4 implementation; see `test/worker/scheduled.test.ts`).
 - `package.json` has no date/technical-indicator library — RSI must be hand-written.
 
 ## Desired End State
@@ -223,7 +223,7 @@ crons = ["0 23 * * 1-5"]
 
 #### Automated Verification:
 
-- Unit/integration tests pass: `npm run test:worker` — a `scheduled()` test (via `exports.default.scheduled(...)`, mocking `fetch` for both symbols) asserting: both `price_history` and `market_data` rows exist after a run; a mocked failure on one instrument still leaves the other instrument's rows written; re-running with an overlapping date window doesn't create duplicate `price_history` rows (UNIQUE constraint + upsert)
+- Unit/integration tests pass: `npm run test:worker` — a `scheduled()` test (via a direct `worker.scheduled(...)` call — `exports.default.scheduled(...)` isn't usable here, see Current State Analysis — mocking `fetch` for both symbols) asserting: both `price_history` and `market_data` rows exist after a run; a mocked failure on one instrument still leaves the other instrument's rows written; re-running with an overlapping date window doesn't create duplicate `price_history` rows (UNIQUE constraint + upsert)
 - Type checking passes: `npm run typecheck`
 - Migrations still apply cleanly and existing test suite (`auth.test.ts`, `alerts.test.ts`, `password.test.ts`, `smoke.test.ts`) still passes: `npm run test:worker`
 
@@ -243,7 +243,7 @@ crons = ["0 23 * * 1-5"]
 
 ### Integration Tests:
 
-- `scheduled()` end-to-end via `exports.default.scheduled(...)` with mocked Yahoo responses for both symbols — covers the full fetch → upsert → RSI → upsert chain against the real (migrated) D1 test database.
+- `scheduled()` end-to-end via a direct `worker.scheduled(...)` call (not `exports.default.scheduled(...)` — see Current State Analysis) with mocked Yahoo responses for both symbols — covers the full fetch → upsert → RSI → upsert chain against the real (migrated) D1 test database.
 - Per-instrument failure isolation: mock a failure for one symbol only, assert the other instrument's `price_history`/`market_data` rows still land.
 
 ### Manual Testing Steps:

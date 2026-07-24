@@ -1,6 +1,12 @@
 import { createExecutionContext, createScheduledController, waitOnExecutionContext } from 'cloudflare:test';
 import { env } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+// Unlike other test files (which call exports.default.fetch(...) from
+// 'cloudflare:workers'), this one imports the worker module directly:
+// exports.default.scheduled(...) throws `DataCloneError: Could not
+// serialize object of type "ScheduledController"` — that type isn't
+// structured-cloneable across the exports RPC boundary. Do not "fix" this
+// back to the exports.default pattern.
 import worker from '../../src/worker/index';
 
 function yahooBody(timestamps: number[], closes: Array<number | null>) {

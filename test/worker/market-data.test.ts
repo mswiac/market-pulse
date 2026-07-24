@@ -71,4 +71,11 @@ describe('fetchDailyCloses', () => {
 
     await expect(fetchDailyCloses('^VIX')).rejects.toThrow(MarketDataFetchError);
   });
+
+  it('throws MarketDataFetchError when timestamps are not strictly ascending', async () => {
+    const body = validChartBody([1767706600, 1767620200], [101.25, 100.5]);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, body)));
+
+    await expect(fetchDailyCloses('^VIX')).rejects.toThrow(MarketDataFetchError);
+  });
 });
