@@ -277,19 +277,19 @@ Both migrations are pure `CREATE TABLE` — no existing data to migrate, no shad
 
 #### Automated
 
-- [x] 1.1 Migrations apply cleanly: `npm run migrate:local`
-- [x] 1.2 Type checking passes: `npm run typecheck`
+- [x] 1.1 Migrations apply cleanly: `npm run migrate:local` — 8c12176
+- [x] 1.2 Type checking passes: `npm run typecheck` — 8c12176
 
 #### Manual
 
-- [x] 1.3 `.schema price_history` and `.schema market_data` show expected columns and constraints
+- [x] 1.3 `.schema price_history` and `.schema market_data` show expected columns and constraints — 8c12176
 
 ### Phase 2: Yahoo Fetch & Validation Layer
 
 #### Automated
 
-- [ ] 2.1 Unit tests pass: `npm run test:worker`
-- [ ] 2.2 Type checking passes: `npm run typecheck`
+- [x] 2.1 Unit tests pass: `npm run test:worker`
+- [x] 2.2 Type checking passes: `npm run typecheck`
 
 ### Phase 3: RSI Calculation
 
