@@ -82,6 +82,10 @@
         <source>Failed to load alerts.</source>
         <target>Nie udało się wczytać alertów.</target>
       </trans-unit>
+      <trans-unit id="alertList.deleteError" datatype="html">
+        <source>Failed to delete the alert. Please try again.</source>
+        <target>Nie udało się usunąć alertu. Spróbuj ponownie.</target>
+      </trans-unit>
       <trans-unit id="alertList.sort.instrument" datatype="html">
         <source>Instrument</source>
         <target>Walor</target>

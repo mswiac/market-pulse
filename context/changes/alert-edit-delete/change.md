@@ -1,7 +1,7 @@
 ---
 change_id: alert-edit-delete
 title: Alert edit delete
-status: implemented
+status: impl_reviewed
 created: 2026-07-24
 updated: 2026-07-24
 archived_at: null

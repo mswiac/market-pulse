@@ -44,6 +44,7 @@ export class AlertList {
   protected readonly sortBy = signal<SortableColumn | null>(null);
   protected readonly sortDirection = signal<SortDirection>('asc');
   protected readonly loadError = signal(false);
+  protected readonly deleteError = signal(false);
 
   protected readonly sortedAlerts = computed(() => {
     const alerts = this.alerts();
@@ -102,7 +103,8 @@ export class AlertList {
       .afterClosed()
       .subscribe((confirmed) => {
         if (confirmed) {
-          this.alertsService.delete(alert.id).subscribe();
+          this.deleteError.set(false);
+          this.alertsService.delete(alert.id).subscribe({ error: () => this.deleteError.set(true) });
         }
       });
   }

@@ -146,11 +146,18 @@
           <context context-type="linenumber">2,4</context>
         </context-group>
       </trans-unit>
+      <trans-unit id="alertList.deleteError" datatype="html">
+        <source>Failed to delete the alert. Please try again.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">5,7</context>
+        </context-group>
+      </trans-unit>
       <trans-unit id="alertList.sort.instrument" datatype="html">
         <source>Instrument</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">7,8</context>
+          <context context-type="linenumber">10,11</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/delete-alert-confirm/delete-alert-confirm.html</context>
@@ -161,7 +168,7 @@
         <source>Alert type</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">13,14</context>
+          <context context-type="linenumber">16,17</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/delete-alert-confirm/delete-alert-confirm.html</context>
@@ -172,7 +179,7 @@
         <source>Threshold</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">19,20</context>
+          <context context-type="linenumber">22,23</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/delete-alert-confirm/delete-alert-confirm.html</context>
@@ -183,60 +190,60 @@
         <source>Current price:</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">39</context>
+          <context context-type="linenumber">42</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.detail.noData" datatype="html">
         <source>No data</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">39,40</context>
+          <context context-type="linenumber">42,43</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">41,43</context>
+          <context context-type="linenumber">44,46</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.detail.currentRsi" datatype="html">
         <source>Current RSI:</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">41</context>
+          <context context-type="linenumber">44</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.detail.notificationEmail" datatype="html">
         <source>Notification email:</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">43,44</context>
+          <context context-type="linenumber">46,47</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.detail.lastEdited" datatype="html">
         <source>Last edited:</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">44</context>
+          <context context-type="linenumber">47</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.action.edit" datatype="html">
         <source>Edit alert</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">48,49</context>
+          <context context-type="linenumber">51,52</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.action.delete" datatype="html">
         <source>Delete alert</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">56,58</context>
+          <context context-type="linenumber">59,61</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.emptyState" datatype="html">
         <source>No alerts yet — add your first one to get started.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">63,67</context>
+          <context context-type="linenumber">66,70</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.type.price" datatype="html">

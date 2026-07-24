@@ -1,6 +1,9 @@
 @if (loadError()) {
   <p class="empty-state" i18n="@@alertList.loadError">Failed to load alerts.</p>
 } @else {
+  @if (deleteError()) {
+    <p class="delete-error" i18n="@@alertList.deleteError">Failed to delete the alert. Please try again.</p>
+  }
   @if (alerts().length > 0) {
     <div class="list-header">
       <button type="button" class="sort-col" (click)="toggleSort('instrument')">
