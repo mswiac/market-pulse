@@ -1,7 +1,10 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
+import { AlertForm } from '../alert-form/alert-form';
 import { Alert, AlertsService } from '../alerts.service';
 
 const INSTRUMENT_LABELS: Record<string, string> = {
@@ -19,12 +22,13 @@ type SortDirection = 'asc' | 'desc';
 
 @Component({
   selector: 'app-alert-list',
-  imports: [MatExpansionModule, MatIconModule, DatePipe, DecimalPipe],
+  imports: [MatExpansionModule, MatIconModule, MatButtonModule, MatDialogModule, DatePipe, DecimalPipe],
   templateUrl: './alert-list.html',
   styleUrl: './alert-list.scss',
 })
 export class AlertList {
   private readonly alertsService = inject(AlertsService);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly alerts = this.alertsService.alerts;
   protected readonly sortBy = signal<SortableColumn | null>(null);
@@ -70,5 +74,9 @@ export class AlertList {
 
   protected showCurrentRsi(instrument: string, alertType: string): boolean {
     return instrument === 'NASDAQ100' && alertType === 'RSI';
+  }
+
+  protected openEditDialog(alert: Alert): void {
+    this.dialog.open(AlertForm, { width: '32rem', data: { alert } });
   }
 }

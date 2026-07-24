@@ -264,16 +264,16 @@ No D1 migration in this plan — `PUT`/`DELETE` operate on the existing `alerts`
 
 #### Automated
 
-- [x] 2.1 Typecheck passes: `npm run typecheck`
-- [x] 2.2 Production build succeeds: `npm run build`
+- [x] 2.1 Typecheck passes: `npm run typecheck` — 8a35239
+- [x] 2.2 Production build succeeds: `npm run build` — 8a35239
 
 ### Phase 3: Frontend — Edit flow
 
 #### Automated
 
-- [ ] 3.1 Typecheck passes: `npm run typecheck`
-- [ ] 3.2 `npx ng extract-i18n --output-path src/locale` exits 0 and includes every new id from this phase
-- [ ] 3.3 Production build succeeds: `npm run build`
+- [x] 3.1 Typecheck passes: `npm run typecheck`
+- [x] 3.2 `npx ng extract-i18n --output-path src/locale` exits 0 and includes every new id from this phase
+- [x] 3.3 Production build succeeds: `npm run build`
 
 #### Manual
 

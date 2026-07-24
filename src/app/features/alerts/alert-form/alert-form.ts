@@ -2,12 +2,16 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { AuthService } from '../../../core/auth/auth.service';
-import { AlertsService } from '../alerts.service';
+import { Alert, AlertsService } from '../alerts.service';
+
+export interface AlertFormData {
+  alert?: Alert;
+}
 
 const VIX_RSI_ERROR = 'RSI is not available for VIX';
 
@@ -34,12 +38,25 @@ export class AlertForm {
   private readonly dialogRef = inject(MatDialogRef<AlertForm>);
   private readonly alertsService = inject(AlertsService);
   private readonly authService = inject(AuthService);
+  private readonly data = inject<AlertFormData | null>(MAT_DIALOG_DATA, { optional: true });
 
+  protected readonly isEditMode = !!this.data?.alert;
+
+  // Initial values (including the threshold validators matching the edited
+  // alert's alertType) are set here, in the group initializer — this runs
+  // before the constructor wires the reset-on-change subscriptions below, so
+  // pre-filling an edit never triggers them and never wipes the values.
   protected readonly form = this.fb.nonNullable.group({
-    instrument: ['VIX', Validators.required],
-    alertType: ['PRICE', Validators.required],
-    threshold: this.fb.control<number | null>(null, [Validators.required, ...priceValidators()]),
-    notificationEmail: [this.authService.currentUser()?.email ?? '', [Validators.required, Validators.email]],
+    instrument: [this.data?.alert?.instrument ?? 'VIX', Validators.required],
+    alertType: [this.data?.alert?.alertType ?? 'PRICE', Validators.required],
+    threshold: this.fb.control<number | null>(this.data?.alert?.threshold ?? null, [
+      Validators.required,
+      ...(this.data?.alert?.alertType === 'RSI' ? rsiRangeValidators() : priceValidators()),
+    ]),
+    notificationEmail: [
+      this.data?.alert?.notificationEmail ?? this.authService.currentUser()?.email ?? '',
+      [Validators.required, Validators.email],
+    ],
   });
 
   protected readonly submitting = signal(false);
@@ -84,8 +101,13 @@ export class AlertForm {
     this.formError.set(null);
     this.submitting.set(true);
     const { instrument, alertType, threshold, notificationEmail } = this.form.getRawValue();
+    const payload = { instrument, alertType, threshold: threshold as number, notificationEmail };
 
-    this.alertsService.create({ instrument, alertType, threshold: threshold as number, notificationEmail }).subscribe({
+    const request$ = this.isEditMode
+      ? this.alertsService.update(this.data!.alert!.id, payload)
+      : this.alertsService.create(payload);
+
+    request$.subscribe({
       next: () => this.dialogRef.close(true),
       error: (err: unknown) => {
         this.submitting.set(false);
@@ -98,6 +120,9 @@ export class AlertForm {
     if (err instanceof HttpErrorResponse) {
       if (err.status === 409) {
         return $localize`:@@alertForm.error.duplicateAlert:An alert like this already exists.`;
+      }
+      if (err.status === 404) {
+        return $localize`:@@alertForm.error.notFound:This alert no longer exists.`;
       }
       const serverError = (err.error as { error?: string } | null)?.error;
       if (err.status === 400 && serverError === VIX_RSI_ERROR) {

@@ -6,6 +6,10 @@
         <source>New alert</source>
         <target>Nowy alert</target>
       </trans-unit>
+      <trans-unit id="alertForm.editTitle" datatype="html">
+        <source>Edit alert</source>
+        <target>Edytuj alert</target>
+      </trans-unit>
       <trans-unit id="alertForm.instrument.label" datatype="html">
         <source>Instrument</source>
         <target>Instrument</target>
@@ -54,6 +58,10 @@
         <source> Create alert </source>
         <target> Utwórz alert </target>
       </trans-unit>
+      <trans-unit id="alertForm.submitEdit" datatype="html">
+        <source>Save changes</source>
+        <target>Zapisz zmiany</target>
+      </trans-unit>
       <trans-unit id="alertForm.error.duplicateAlert" datatype="html">
         <source>An alert like this already exists.</source>
         <target>Taki alert już istnieje.</target>
@@ -61,6 +69,10 @@
       <trans-unit id="alertForm.error.rsiUnavailableForVix" datatype="html">
         <source>RSI is not available for VIX.</source>
         <target>RSI nie jest dostępne dla VIX.</target>
+      </trans-unit>
+      <trans-unit id="alertForm.error.notFound" datatype="html">
+        <source>This alert no longer exists.</source>
+        <target>Ten alert już nie istnieje.</target>
       </trans-unit>
       <trans-unit id="alertForm.error.generic" datatype="html">
         <source>Something went wrong. Please try again.</source>
@@ -101,6 +113,10 @@
       <trans-unit id="alertList.detail.lastEdited" datatype="html">
         <source>Last edited:</source>
         <target>Ostatnia edycja:</target>
+      </trans-unit>
+      <trans-unit id="alertList.action.edit" datatype="html">
+        <source>Edit alert</source>
+        <target>Edytuj alert</target>
       </trans-unit>
       <trans-unit id="alertList.emptyState" datatype="html">
         <source>No alerts yet — add your first one to get started.</source>
