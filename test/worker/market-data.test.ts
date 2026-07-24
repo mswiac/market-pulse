@@ -25,7 +25,6 @@ afterEach(() => {
 
 describe('fetchDailyCloses', () => {
   it('returns closes parsed from a valid Yahoo response', async () => {
-    // 2026-01-05 and 2026-01-06, 13:30 UTC (market open) — only the date matters.
     const body = validChartBody([1767620200, 1767706600], [100.5, 101.25]);
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, body)));
 
