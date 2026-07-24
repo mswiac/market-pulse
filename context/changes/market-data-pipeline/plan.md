@@ -295,16 +295,16 @@ Both migrations are pure `CREATE TABLE` — no existing data to migrate, no shad
 
 #### Automated
 
-- [x] 3.1 Unit tests pass: `npm run test:worker`
-- [x] 3.2 Type checking passes: `npm run typecheck`
+- [x] 3.1 Unit tests pass: `npm run test:worker` — e17b120
+- [x] 3.2 Type checking passes: `npm run typecheck` — e17b120
 
 ### Phase 4: Cron Orchestration & Wrangler Config
 
 #### Automated
 
-- [ ] 4.1 Unit/integration tests pass: `npm run test:worker`
-- [ ] 4.2 Type checking passes: `npm run typecheck`
-- [ ] 4.3 Full existing test suite still passes: `npm run test:worker`
+- [x] 4.1 Unit/integration tests pass: `npm run test:worker`
+- [x] 4.2 Type checking passes: `npm run typecheck`
+- [x] 4.3 Full existing test suite still passes: `npm run test:worker`
 
 #### Manual
 
