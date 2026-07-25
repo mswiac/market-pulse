@@ -268,9 +268,9 @@ This is a forward-only migration with no rollback path, consistent with the proj
 
 #### Automated
 
-- [x] 2.1 Worker unit tests pass: `npm run test:worker`
-- [x] 2.2 Type checking passes: `npm run typecheck`
+- [x] 2.1 Worker unit tests pass: `npm run test:worker` — 1b2602e
+- [x] 2.2 Type checking passes: `npm run typecheck` — 1b2602e
 
 #### Manual
 
-- [x] 2.3 `curl` confirms auth gating and expected payload locally
+- [x] 2.3 `curl` confirms auth gating and expected payload locally — 1b2602e
