@@ -1,8 +1,3 @@
-export const YAHOO_SYMBOLS: Record<'VIX' | 'NASDAQ100', string> = {
-  VIX: '^VIX',
-  NASDAQ100: '^NDX',
-};
-
 export interface DailyClose {
   date: string;
   close: number;

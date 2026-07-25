@@ -1,12 +1,11 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
 import { EMAIL_PATTERN, normalizeEmail } from '../lib/email';
+import type { InstrumentRow } from '../lib/instruments';
 import { sessionMiddleware } from '../lib/session';
 
-const VALID_INSTRUMENTS = ['VIX', 'NASDAQ100'] as const;
 const VALID_ALERT_TYPES = ['PRICE', 'RSI'] as const;
 
-type Instrument = (typeof VALID_INSTRUMENTS)[number];
 type AlertType = (typeof VALID_ALERT_TYPES)[number];
 
 type Variables = { userId: number };
@@ -15,10 +14,9 @@ const alertsRoutes = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 alertsRoutes.use('*', sessionMiddleware);
 
-function normalizeInstrument(instrument: unknown): Instrument | null {
-  return typeof instrument === 'string' && (VALID_INSTRUMENTS as readonly string[]).includes(instrument)
-    ? (instrument as Instrument)
-    : null;
+async function lookupTicker(db: D1Database, ticker: unknown): Promise<InstrumentRow | null> {
+  if (typeof ticker !== 'string') return null;
+  return db.prepare('SELECT ticker, rsi_eligible FROM instruments WHERE ticker = ?').bind(ticker).first<InstrumentRow>();
 }
 
 function normalizeAlertType(alertType: unknown): AlertType | null {
@@ -36,14 +34,14 @@ function validateThreshold(alertType: AlertType, threshold: unknown): number | n
 }
 
 async function parseAlertBody(c: { req: { json: () => Promise<unknown> } }): Promise<{
-  instrument?: unknown;
+  ticker?: unknown;
   alertType?: unknown;
   threshold?: unknown;
   notificationEmail?: unknown;
 } | null> {
   try {
     return (await c.req.json()) as {
-      instrument?: unknown;
+      ticker?: unknown;
       alertType?: unknown;
       threshold?: unknown;
       notificationEmail?: unknown;
@@ -54,7 +52,7 @@ async function parseAlertBody(c: { req: { json: () => Promise<unknown> } }): Pro
 }
 
 const ALERT_ROW_COLUMNS =
-  'id, instrument, alert_type AS alertType, threshold, notification_email AS notificationEmail, created_at AS createdAt, updated_at AS updatedAt';
+  'id, ticker, alert_type AS alertType, threshold, notification_email AS notificationEmail, created_at AS createdAt, updated_at AS updatedAt';
 
 alertsRoutes.post('/', async (c) => {
   const body = await parseAlertBody(c);
@@ -62,7 +60,7 @@ alertsRoutes.post('/', async (c) => {
     return c.json({ error: 'invalid request body' }, 400);
   }
 
-  const instrument = normalizeInstrument(body.instrument);
+  const instrument = await lookupTicker(c.env.DB, body.ticker);
   if (!instrument) {
     return c.json({ error: 'invalid instrument' }, 400);
   }
@@ -82,7 +80,7 @@ alertsRoutes.post('/', async (c) => {
     return c.json({ error: 'invalid notification email' }, 400);
   }
 
-  if (instrument === 'VIX' && alertType === 'RSI') {
+  if (!instrument.rsi_eligible && alertType === 'RSI') {
     return c.json({ error: 'RSI is not available for VIX' }, 400);
   }
 
@@ -90,20 +88,17 @@ alertsRoutes.post('/', async (c) => {
 
   try {
     const inserted = await c.env.DB.prepare(
-      `INSERT INTO alerts (user_id, instrument, alert_type, threshold, notification_email)
+      `INSERT INTO alerts (user_id, ticker, alert_type, threshold, notification_email)
        VALUES (?, ?, ?, ?, ?)
        RETURNING ${ALERT_ROW_COLUMNS}`,
     )
-      .bind(userId, instrument, alertType, threshold, notificationEmail)
+      .bind(userId, instrument.ticker, alertType, threshold, notificationEmail)
       .first();
 
     return c.json(inserted, 201);
   } catch (err) {
     if (err instanceof Error && err.message.includes('UNIQUE')) {
       return c.json({ error: 'duplicate alert' }, 409);
-    }
-    if (err instanceof Error && err.message.includes('CHECK constraint failed')) {
-      return c.json({ error: 'RSI is not available for VIX' }, 400);
     }
     throw err;
   }
@@ -137,7 +132,7 @@ alertsRoutes.put('/:id', async (c) => {
     return c.json({ error: 'invalid request body' }, 400);
   }
 
-  const instrument = normalizeInstrument(body.instrument);
+  const instrument = await lookupTicker(c.env.DB, body.ticker);
   if (!instrument) {
     return c.json({ error: 'invalid instrument' }, 400);
   }
@@ -157,7 +152,7 @@ alertsRoutes.put('/:id', async (c) => {
     return c.json({ error: 'invalid notification email' }, 400);
   }
 
-  if (instrument === 'VIX' && alertType === 'RSI') {
+  if (!instrument.rsi_eligible && alertType === 'RSI') {
     return c.json({ error: 'RSI is not available for VIX' }, 400);
   }
 
@@ -166,11 +161,11 @@ alertsRoutes.put('/:id', async (c) => {
   try {
     const updated = await c.env.DB.prepare(
       `UPDATE alerts
-       SET instrument = ?, alert_type = ?, threshold = ?, notification_email = ?, updated_at = unixepoch()
+       SET ticker = ?, alert_type = ?, threshold = ?, notification_email = ?, updated_at = unixepoch()
        WHERE id = ? AND user_id = ?
        RETURNING ${ALERT_ROW_COLUMNS}`,
     )
-      .bind(instrument, alertType, threshold, notificationEmail, id, userId)
+      .bind(instrument.ticker, alertType, threshold, notificationEmail, id, userId)
       .first();
 
     if (!updated) {
@@ -181,9 +176,6 @@ alertsRoutes.put('/:id', async (c) => {
   } catch (err) {
     if (err instanceof Error && err.message.includes('UNIQUE')) {
       return c.json({ error: 'duplicate alert' }, 409);
-    }
-    if (err instanceof Error && err.message.includes('CHECK constraint failed')) {
-      return c.json({ error: 'RSI is not available for VIX' }, 400);
     }
     throw err;
   }
