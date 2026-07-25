@@ -254,23 +254,23 @@ This is a forward-only migration with no rollback path, consistent with the proj
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly: `npm run migrate:local`
-- [x] 1.2 Worker unit tests pass: `npm run test:worker`
-- [x] 1.3 Type checking passes: `npm run typecheck`
+- [x] 1.1 Migration applies cleanly: `npm run migrate:local` — 7d6670f
+- [x] 1.2 Worker unit tests pass: `npm run test:worker` — 7d6670f
+- [x] 1.3 Type checking passes: `npm run typecheck` — 7d6670f
 
 #### Manual
 
 - [ ] 1.4 Legacy-row rewrite verified by hand on scratch local D1
 - [ ] 1.5 DB no longer rejects RSI+VIX-equivalent insert at the CHECK layer
-- [x] 1.6 Existing frontend confirmed to fail against new backend (accepted regression)
+- [x] 1.6 Existing frontend confirmed to fail against new backend (accepted regression) — 7d6670f
 
 ### Phase 2: GET /api/instruments endpoint
 
 #### Automated
 
-- [ ] 2.1 Worker unit tests pass: `npm run test:worker`
-- [ ] 2.2 Type checking passes: `npm run typecheck`
+- [x] 2.1 Worker unit tests pass: `npm run test:worker`
+- [x] 2.2 Type checking passes: `npm run typecheck`
 
 #### Manual
 
-- [ ] 2.3 `curl` confirms auth gating and expected payload locally
+- [x] 2.3 `curl` confirms auth gating and expected payload locally
