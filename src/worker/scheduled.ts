@@ -1,14 +1,10 @@
 import type { Env } from './index';
+import type { InstrumentRow } from './lib/instruments';
 import { fetchDailyCloses, type DailyClose } from './lib/market-data';
 import { calculateRSI } from './lib/rsi';
 
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 300;
-
-interface InstrumentRow {
-  ticker: string;
-  rsi_eligible: number;
-}
 
 async function fetchWithRetry(symbol: string): Promise<DailyClose[]> {
   let lastError: unknown;

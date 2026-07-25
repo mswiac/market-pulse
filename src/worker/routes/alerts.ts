@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
 import { EMAIL_PATTERN, normalizeEmail } from '../lib/email';
+import type { InstrumentRow } from '../lib/instruments';
 import { sessionMiddleware } from '../lib/session';
 
 const VALID_ALERT_TYPES = ['PRICE', 'RSI'] as const;
@@ -12,11 +13,6 @@ type Variables = { userId: number };
 const alertsRoutes = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 alertsRoutes.use('*', sessionMiddleware);
-
-interface InstrumentRow {
-  ticker: string;
-  rsi_eligible: number;
-}
 
 async function lookupTicker(db: D1Database, ticker: unknown): Promise<InstrumentRow | null> {
   if (typeof ticker !== 'string') return null;

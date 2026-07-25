@@ -114,4 +114,28 @@ describe('scheduled handler', () => {
       .first<{ count: number }>();
     expect(priceHistory?.count).toBe(15);
   });
+
+  it('logs and returns without writing anything when the instruments registry query fails', async () => {
+    await env.DB.exec('DROP TABLE instruments');
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      await expect(runScheduled()).resolves.toBeUndefined();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'market-data-pipeline: failed to load instruments registry',
+        expect.anything(),
+      );
+
+      const marketData = await env.DB.prepare('SELECT * FROM market_data').all();
+      expect(marketData.results).toHaveLength(0);
+    } finally {
+      consoleErrorSpy.mockRestore();
+      // D1's exec() splits statements on newlines, not on semicolons — each
+      // statement below must stay on a single line.
+      await env.DB.exec(
+        "CREATE TABLE instruments (ticker TEXT PRIMARY KEY, name TEXT NOT NULL, type TEXT NOT NULL CHECK (type IN ('index')), rsi_eligible INTEGER NOT NULL, provider TEXT NOT NULL);\n" +
+          "INSERT INTO instruments (ticker, name, type, rsi_eligible, provider) VALUES ('^VIX', 'VIX', 'index', 0, 'yahoo'), ('^NDX', 'NASDAQ-100', 'index', 1, 'yahoo');",
+      );
+    }
+  });
 });
