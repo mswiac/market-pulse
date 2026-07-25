@@ -36,7 +36,7 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | S-02 | alert-crud            | create a price/RSI alert and view the alert list          | S-01           | FR-004, FR-005                  | done     |
 | S-03 | alert-edit-delete     | edit and delete an existing alert                         | S-02           | FR-006, FR-007                  | done     |
 | F-03 | instrument-registry   | (foundation) `instruments` table + ticker migration + registry endpoint | S-02, F-02 | —                     | done |
-| S-04 | market-data-display   | see current RSI/price value next to each alert; create an alert with instrument type + name (not raw ticker) | S-02, F-02, F-03 | FR-009 | proposed |
+| S-04 | market-data-display   | see current RSI/price value next to each alert; create an alert with instrument type + name (not raw ticker) | S-02, F-02, F-03 | FR-009 | done |
 | S-07 | instrument-history-view | view 30-day price/RSI history for any instrument via two comboboxes | F-03 | —                    | proposed |
 | S-05 | alert-notifications   | receive an email when an alert threshold is crossed       | S-04           | FR-008, FR-008a                 | proposed |
 | S-06 | trigger-history       | view a history of all previously triggered alerts         | S-05           | FR-010                          | proposed |
@@ -166,7 +166,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Serves as a smoke test for the full data pipeline before notifications go live — if values are correct here, Stooq fetch + RSI calculation are verified end-to-end without involving Resend. Depends on both the Angular alert list (S-02) and market data in D1 (F-02); both must be done before this slice can start. The type selector, name display, and ticker field additionally depend on the `instruments` registry (F-03).
-- **Status:** proposed
+- **Status:** done
 
 ### S-07: User can view 30-day price/RSI history for any instrument
 
@@ -240,3 +240,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **F-02: (foundation) Cloudflare Cron Trigger fires daily, fetches closing prices for VIX and NASDAQ-100 from Stooq, stores raw closes in the `price_history` table, and writes the latest RSI to the `market_data` table for NASDAQ-100 (VIX alerts are price-only, per FR-004 — no RSI needed for VIX).** — Archived 2026-07-24 → `context/archive/2026-07-24-market-data-pipeline/`. Lesson: —.
 - **S-03: User can update the instrument, alert type, threshold value, or notification email on an existing alert; user can permanently delete an alert.** — Archived 2026-07-24 → `context/archive/2026-07-24-alert-edit-delete/`. Lesson: —.
 - **F-03: (foundation) `instruments` table (`ticker` PK, `name`, `type`, `rsi_eligible`, `provider`) replaces the hardcoded instrument lists scattered across the backend. A forward-only D1 migration seeds `^VIX` and `^NDX` and rewrites existing `price_history`, `market_data`, and `alerts` rows from `VIX`/`NASDAQ100` to the new ticker values (`ticker` is the value actually sent to the data provider, not an internal code). `GET /api/instruments` (optionally filtered by `type`) serves the registry to the frontend. The daily cron (`scheduled.ts`) and alert validation (`alerts.ts`) read from `instruments` instead of the hardcoded `YAHOO_SYMBOLS` map and `VALID_INSTRUMENTS`/`VALID_ALERT_TYPES` arrays.** — Archived 2026-07-25 → `context/archive/2026-07-25-instrument-registry/`. Lesson: —.
+- **S-04: Each alert in the list displays the current RSI value (for RSI-type alerts) or the latest closing price (for price-type alerts) alongside the user's threshold. The alert creation/edit form gains a type selector that filters the instrument field, and the instrument field displays the instrument's name instead of its raw ticker. Alert details additionally show the underlying ticker.** — Archived 2026-07-25 → `context/archive/2026-07-25-market-data-display/`. Lesson: —.
