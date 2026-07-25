@@ -1,4 +1,4 @@
-import { exports } from 'cloudflare:workers';
+import { env, exports } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
 const BASE_URL = 'https://example.com';
@@ -67,9 +67,13 @@ describe('alerts endpoints', () => {
     const created = (await createResponse.json()) as Record<string, unknown>;
     expect(created).toMatchObject({
       ticker: '^VIX',
+      instrumentName: 'VIX',
+      instrumentType: 'index',
       alertType: 'PRICE',
       threshold: 18.42,
       notificationEmail: 'alerts@example.com',
+      currentPrice: null,
+      currentRsi: null,
     });
     expect(created['createdAt']).toBe(created['updatedAt']);
 
@@ -77,7 +81,15 @@ describe('alerts endpoints', () => {
     expect(listResponse.status).toBe(200);
     const alerts = (await listResponse.json()) as Record<string, unknown>[];
     expect(alerts).toHaveLength(1);
-    expect(alerts[0]).toMatchObject({ ticker: '^VIX', alertType: 'PRICE', threshold: 18.42 });
+    expect(alerts[0]).toMatchObject({
+      ticker: '^VIX',
+      instrumentName: 'VIX',
+      instrumentType: 'index',
+      alertType: 'PRICE',
+      threshold: 18.42,
+      currentPrice: null,
+      currentRsi: null,
+    });
   });
 
   it('creates then lists a NASDAQ-100/RSI alert', async () => {
@@ -85,10 +97,42 @@ describe('alerts endpoints', () => {
 
     const createResponse = await createAlert(cookie, { ticker: '^NDX', alertType: 'RSI', threshold: 70 });
     expect(createResponse.status).toBe(201);
-    await expect(createResponse.json()).resolves.toMatchObject({ ticker: '^NDX', alertType: 'RSI', threshold: 70 });
+    await expect(createResponse.json()).resolves.toMatchObject({
+      ticker: '^NDX',
+      instrumentName: 'NASDAQ-100',
+      instrumentType: 'index',
+      alertType: 'RSI',
+      threshold: 70,
+      currentPrice: null,
+      currentRsi: null,
+    });
 
     const listResponse = await listAlerts(cookie);
-    await expect(listResponse.json()).resolves.toMatchObject([{ ticker: '^NDX', alertType: 'RSI', threshold: 70 }]);
+    await expect(listResponse.json()).resolves.toMatchObject([
+      {
+        ticker: '^NDX',
+        instrumentName: 'NASDAQ-100',
+        instrumentType: 'index',
+        alertType: 'RSI',
+        threshold: 70,
+        currentPrice: null,
+        currentRsi: null,
+      },
+    ]);
+  });
+
+  it('returns seeded market data as currentPrice/currentRsi for a matching alert', async () => {
+    const cookie = await registerAndLogIn('market-data-join@example.com');
+    await env.DB.prepare('INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())')
+      .bind('^NDX', 4567.89, 62.5)
+      .run();
+
+    await createAlert(cookie, { ticker: '^NDX', alertType: 'RSI', threshold: 70 });
+
+    const listResponse = await listAlerts(cookie);
+    await expect(listResponse.json()).resolves.toMatchObject([
+      { ticker: '^NDX', currentPrice: 4567.89, currentRsi: 62.5 },
+    ]);
   });
 
   it('rejects an invalid instrument', async () => {
@@ -224,7 +268,16 @@ describe('alerts endpoints', () => {
     });
     expect(updateResponse.status).toBe(200);
     const updated = (await updateResponse.json()) as Record<string, unknown>;
-    expect(updated).toMatchObject({ id: created['id'], ticker: '^VIX', alertType: 'PRICE', threshold: 25 });
+    expect(updated).toMatchObject({
+      id: created['id'],
+      ticker: '^VIX',
+      instrumentName: 'VIX',
+      instrumentType: 'index',
+      alertType: 'PRICE',
+      threshold: 25,
+      currentPrice: null,
+      currentRsi: null,
+    });
     expect(updated['createdAt']).toBe(created['createdAt']);
     expect(updated['updatedAt']).toBeGreaterThanOrEqual(created['updatedAt'] as number);
 

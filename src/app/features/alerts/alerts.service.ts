@@ -4,16 +4,20 @@ import { Observable, tap } from 'rxjs';
 
 export interface Alert {
   id: number;
-  instrument: string;
+  ticker: string;
+  instrumentName: string;
+  instrumentType: string;
   alertType: string;
   threshold: number;
   notificationEmail: string;
   createdAt: number;
   updatedAt: number;
+  currentPrice: number | null;
+  currentRsi: number | null;
 }
 
 export interface CreateAlertPayload {
-  instrument: string;
+  ticker: string;
   alertType: string;
   threshold: number;
   notificationEmail: string;

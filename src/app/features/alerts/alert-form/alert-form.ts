@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { AuthService } from '../../../core/auth/auth.service';
+import { InstrumentsService } from '../../instruments/instruments.service';
 import { Alert, AlertsService } from '../alerts.service';
 
 export interface AlertFormData {
@@ -14,6 +15,10 @@ export interface AlertFormData {
 }
 
 const VIX_RSI_ERROR = 'RSI is not available for VIX';
+
+const INSTRUMENT_TYPE_LABELS: Record<string, string> = {
+  index: $localize`:@@alertForm.instrumentType.index:Index`,
+};
 
 function positiveNumberValidator(): ValidatorFn {
   return (control) => (typeof control.value === 'number' && control.value > 0 ? null : { positive: true });
@@ -38,16 +43,29 @@ export class AlertForm {
   private readonly dialogRef = inject(MatDialogRef<AlertForm>);
   private readonly alertsService = inject(AlertsService);
   private readonly authService = inject(AuthService);
+  private readonly instrumentsService = inject(InstrumentsService);
   private readonly data = inject<AlertFormData | null>(MAT_DIALOG_DATA, { optional: true });
 
   protected readonly isEditMode = !!this.data?.alert;
+
+  // Tracks the type select's current value reactively — a computed() can't
+  // read a FormControl directly. Initialized synchronously (same as the
+  // instrumentType control below), so it's already correct in edit mode
+  // before the instruments cache has even loaded.
+  protected readonly selectedInstrumentType = signal(this.data?.alert?.instrumentType ?? '');
+  protected readonly instrumentTypes = this.instrumentsService.types;
+  protected readonly instrumentOptions = computed(() =>
+    this.instrumentsService.instruments().filter((i) => i.type === this.selectedInstrumentType()),
+  );
+  protected readonly loadError = signal(false);
 
   // Initial values (including the threshold validators matching the edited
   // alert's alertType) are set here, in the group initializer — this runs
   // before the constructor wires the reset-on-change subscriptions below, so
   // pre-filling an edit never triggers them and never wipes the values.
   protected readonly form = this.fb.nonNullable.group({
-    instrument: [this.data?.alert?.instrument ?? 'VIX', Validators.required],
+    instrumentType: [this.data?.alert?.instrumentType ?? '', Validators.required],
+    ticker: [this.data?.alert?.ticker ?? '', Validators.required],
     alertType: [this.data?.alert?.alertType ?? 'PRICE', Validators.required],
     threshold: this.fb.control<number | null>(this.data?.alert?.threshold ?? null, [
       Validators.required,
@@ -63,8 +81,23 @@ export class AlertForm {
   protected readonly formError = signal<string | null>(null);
 
   constructor() {
-    this.form.controls.instrument.valueChanges.subscribe((instrument) => {
-      if (instrument === 'VIX' && this.form.controls.alertType.value === 'RSI') {
+    // These valueChanges subscriptions must be wired up before calling
+    // ensureLoaded() below: once the instruments cache is warm (any dialog
+    // open after the first), ensureLoaded() emits synchronously, and a
+    // setValue() triggered before a listener exists is silently dropped —
+    // the type→ticker cascade would never fire and the ticker control
+    // would stay empty (and invalid) on every subsequent form open.
+    this.form.controls.instrumentType.valueChanges.subscribe((type) => {
+      this.selectedInstrumentType.set(type);
+      const firstMatch = this.instrumentOptions()[0];
+      if (firstMatch) {
+        this.form.controls.ticker.setValue(firstMatch.ticker);
+      }
+    });
+
+    this.form.controls.ticker.valueChanges.subscribe((ticker) => {
+      const instrument = this.instrumentOptions().find((i) => i.ticker === ticker);
+      if (instrument && !instrument.rsiEligible && this.form.controls.alertType.value === 'RSI') {
         this.form.controls.alertType.setValue('PRICE');
       }
     });
@@ -80,10 +113,23 @@ export class AlertForm {
       // carrying it over to a type it was never entered for.
       thresholdControl.reset(null);
     });
+
+    this.instrumentsService.ensureLoaded().subscribe({
+      error: () => this.loadError.set(true),
+      next: () => {
+        if (!this.isEditMode && !this.form.controls.instrumentType.value) {
+          this.form.controls.instrumentType.setValue(this.instrumentTypes()[0]);
+        }
+      },
+    });
+  }
+
+  protected instrumentTypeLabel(type: string): string {
+    return INSTRUMENT_TYPE_LABELS[type] ?? type;
   }
 
   protected showRsiOption(): boolean {
-    return this.form.controls.instrument.value !== 'VIX';
+    return !!this.instrumentOptions().find((i) => i.ticker === this.form.controls.ticker.value)?.rsiEligible;
   }
 
   protected onThresholdBlur(event: FocusEvent): void {
@@ -96,12 +142,12 @@ export class AlertForm {
   }
 
   protected onSubmit(): void {
-    if (this.form.invalid || this.submitting()) return;
+    if (this.form.invalid || this.submitting() || this.loadError()) return;
 
     this.formError.set(null);
     this.submitting.set(true);
-    const { instrument, alertType, threshold, notificationEmail } = this.form.getRawValue();
-    const payload = { instrument, alertType, threshold: threshold as number, notificationEmail };
+    const { ticker, alertType, threshold, notificationEmail } = this.form.getRawValue();
+    const payload = { ticker, alertType, threshold: threshold as number, notificationEmail };
 
     const request$ = this.isEditMode
       ? this.alertsService.update(this.data!.alert!.id, payload)

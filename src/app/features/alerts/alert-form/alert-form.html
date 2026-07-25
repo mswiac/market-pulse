@@ -8,13 +8,29 @@
 
 <form [formGroup]="form" (ngSubmit)="onSubmit()">
   <mat-dialog-content>
-    <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
-      <mat-label i18n="@@alertForm.instrument.label">Instrument</mat-label>
-      <mat-select formControlName="instrument">
-        <mat-option value="VIX">VIX</mat-option>
-        <mat-option value="NASDAQ100">NASDAQ-100</mat-option>
-      </mat-select>
-    </mat-form-field>
+    @if (loadError()) {
+      <p class="form-error" i18n="@@alertForm.error.instrumentsLoadFailed">
+        Failed to load instruments. Please close this dialog and try again.
+      </p>
+    } @else {
+      <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+        <mat-label i18n="@@alertForm.instrumentType.label">Type</mat-label>
+        <mat-select formControlName="instrumentType">
+          @for (type of instrumentTypes(); track type) {
+            <mat-option [value]="type">{{ instrumentTypeLabel(type) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+        <mat-label i18n="@@alertForm.instrument.label">Instrument</mat-label>
+        <mat-select formControlName="ticker">
+          @for (instrument of instrumentOptions(); track instrument.ticker) {
+            <mat-option [value]="instrument.ticker">{{ instrument.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    }
 
     <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
       <mat-label i18n="@@alertForm.alertType.label">Alert type</mat-label>
@@ -55,7 +71,7 @@
 
   <mat-dialog-actions align="end">
     <button mat-button type="button" mat-dialog-close i18n="@@alertForm.cancel">Cancel</button>
-    <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || submitting()">
+    <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || submitting() || loadError()">
       @if (isEditMode) {
         <ng-container i18n="@@alertForm.submitEdit">Save changes</ng-container>
       } @else {

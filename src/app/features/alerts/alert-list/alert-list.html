@@ -6,9 +6,9 @@
   }
   @if (alerts().length > 0) {
     <div class="list-header">
-      <button type="button" class="sort-col" (click)="toggleSort('instrument')">
+      <button type="button" class="sort-col" (click)="toggleSort('instrumentName')">
         <span i18n="@@alertList.sort.instrument">Instrument</span>
-        @if (sortBy() === 'instrument') {
+        @if (sortBy() === 'instrumentName') {
           <mat-icon class="sort-icon">{{ sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
         }
       </button>
@@ -32,17 +32,32 @@
       <mat-expansion-panel>
         <mat-expansion-panel-header>
           <mat-panel-title class="alert-summary">
-            <span>{{ instrumentLabel(alert.instrument) }}</span>
+            <span>{{ alert.instrumentName }}</span>
             <span>{{ alertTypeLabel(alert.alertType) }}</span>
             <span>{{ alert.threshold | number: '1.2-2' }}</span>
           </mat-panel-title>
         </mat-expansion-panel-header>
 
         <div class="alert-detail">
-          <p><strong i18n="@@alertList.detail.currentPrice">Current price:</strong> <span i18n="@@alertList.detail.noData">No data</span></p>
-          @if (showCurrentRsi(alert.instrument, alert.alertType)) {
-            <p><strong i18n="@@alertList.detail.currentRsi">Current RSI:</strong> <span i18n="@@alertList.detail.noData">No data</span></p>
+          <p>
+            <strong i18n="@@alertList.detail.currentPrice">Current price:</strong>
+            @if (alert.currentPrice !== null) {
+              {{ alert.currentPrice | number: '1.2-2' }}
+            } @else {
+              <span i18n="@@alertList.detail.noData">No data</span>
+            }
+          </p>
+          @if (showCurrentRsi(alert.alertType)) {
+            <p>
+              <strong i18n="@@alertList.detail.currentRsi">Current RSI:</strong>
+              @if (alert.currentRsi !== null) {
+                {{ alert.currentRsi | number: '1.2-2' }}
+              } @else {
+                <span i18n="@@alertList.detail.noData">No data</span>
+              }
+            </p>
           }
+          <p><strong i18n="@@alertList.detail.ticker">Ticker:</strong> {{ alert.ticker }}</p>
           <p><strong i18n="@@alertList.detail.notificationEmail">Notification email:</strong> {{ alert.notificationEmail }}</p>
           <p><strong i18n="@@alertList.detail.lastEdited">Last edited:</strong> {{ alert.updatedAt * 1000 | date: 'dd.MM.yyyy' }}</p>
         </div>

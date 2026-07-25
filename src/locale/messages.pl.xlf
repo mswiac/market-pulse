@@ -10,9 +10,21 @@
         <source>Edit alert</source>
         <target>Edytuj alert</target>
       </trans-unit>
+      <trans-unit id="alertForm.instrumentType.label" datatype="html">
+        <source>Type</source>
+        <target>Typ</target>
+      </trans-unit>
+      <trans-unit id="alertForm.instrumentType.index" datatype="html">
+        <source>Index</source>
+        <target>Indeks</target>
+      </trans-unit>
       <trans-unit id="alertForm.instrument.label" datatype="html">
         <source>Instrument</source>
         <target>Instrument</target>
+      </trans-unit>
+      <trans-unit id="alertForm.error.instrumentsLoadFailed" datatype="html">
+        <source> Failed to load instruments. Please close this dialog and try again. </source>
+        <target> Nie udało się wczytać instrumentów. Zamknij to okno i spróbuj ponownie. </target>
       </trans-unit>
       <trans-unit id="alertForm.alertType.label" datatype="html">
         <source>Alert type</source>
@@ -109,6 +121,10 @@
       <trans-unit id="alertList.detail.currentRsi" datatype="html">
         <source>Current RSI:</source>
         <target>Aktualne RSI:</target>
+      </trans-unit>
+      <trans-unit id="alertList.detail.ticker" datatype="html">
+        <source>Ticker:</source>
+        <target>Ticker:</target>
       </trans-unit>
       <trans-unit id="alertList.detail.notificationEmail" datatype="html">
         <source>Notification email:</source>
