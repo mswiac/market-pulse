@@ -23,7 +23,7 @@ function jsonResponse(status: number, body: unknown): Response {
 }
 
 interface MarketDataRow {
-  instrument: string;
+  ticker: string;
   price: number;
   rsi: number | null;
   updated_at: number;
@@ -63,19 +63,19 @@ describe('scheduled handler', () => {
 
     await runScheduled();
 
-    const marketData = await env.DB.prepare('SELECT * FROM market_data ORDER BY instrument').all<MarketDataRow>();
+    const marketData = await env.DB.prepare('SELECT * FROM market_data ORDER BY ticker').all<MarketDataRow>();
     expect(marketData.results).toHaveLength(2);
 
-    const vix = marketData.results.find((r) => r.instrument === 'VIX');
-    const nasdaq = marketData.results.find((r) => r.instrument === 'NASDAQ100');
+    const vix = marketData.results.find((r) => r.ticker === '^VIX');
+    const nasdaq = marketData.results.find((r) => r.ticker === '^NDX');
     expect(vix?.rsi).toBeNull();
     expect(typeof nasdaq?.rsi).toBe('number');
     expect(nasdaq?.rsi).toBe(100); // strictly rising closes -> avgLoss 0 -> RSI 100
 
     const priceHistory = await env.DB.prepare(
-      'SELECT COUNT(*) as count FROM price_history WHERE instrument = ?',
+      'SELECT COUNT(*) as count FROM price_history WHERE ticker = ?',
     )
-      .bind('NASDAQ100')
+      .bind('^NDX')
       .first<{ count: number }>();
     expect(priceHistory?.count).toBe(15);
   });
@@ -93,9 +93,9 @@ describe('scheduled handler', () => {
 
     await runScheduled();
 
-    const marketData = await env.DB.prepare('SELECT * FROM market_data ORDER BY instrument').all<MarketDataRow>();
+    const marketData = await env.DB.prepare('SELECT * FROM market_data ORDER BY ticker').all<MarketDataRow>();
     expect(marketData.results).toHaveLength(1);
-    expect(marketData.results[0]?.instrument).toBe('NASDAQ100');
+    expect(marketData.results[0]?.ticker).toBe('^NDX');
   });
 
   it('does not create duplicate price_history rows on overlapping re-runs', async () => {
@@ -108,9 +108,9 @@ describe('scheduled handler', () => {
     await runScheduled();
 
     const priceHistory = await env.DB.prepare(
-      'SELECT COUNT(*) as count FROM price_history WHERE instrument = ?',
+      'SELECT COUNT(*) as count FROM price_history WHERE ticker = ?',
     )
-      .bind('NASDAQ100')
+      .bind('^NDX')
       .first<{ count: number }>();
     expect(priceHistory?.count).toBe(15);
   });
