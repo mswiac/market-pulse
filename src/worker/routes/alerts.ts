@@ -51,6 +51,43 @@ async function parseAlertBody(c: { req: { json: () => Promise<unknown> } }): Pro
   }
 }
 
+type AlertValidationResult =
+  | { ok: true; instrument: InstrumentRow; alertType: AlertType; threshold: number; notificationEmail: string }
+  | { ok: false; error: string };
+
+// Shared by POST and PUT — both need the same ticker/alertType/threshold/email/
+// RSI-eligibility checks before writing.
+async function validateAlertInput(
+  db: D1Database,
+  body: { ticker?: unknown; alertType?: unknown; threshold?: unknown; notificationEmail?: unknown },
+): Promise<AlertValidationResult> {
+  const instrument = await lookupTicker(db, body.ticker);
+  if (!instrument) {
+    return { ok: false, error: 'invalid instrument' };
+  }
+
+  const alertType = normalizeAlertType(body.alertType);
+  if (!alertType) {
+    return { ok: false, error: 'invalid alert type' };
+  }
+
+  const threshold = validateThreshold(alertType, body.threshold);
+  if (threshold === null) {
+    return { ok: false, error: 'invalid threshold' };
+  }
+
+  const notificationEmail = normalizeEmail(body.notificationEmail);
+  if (!notificationEmail || !EMAIL_PATTERN.test(notificationEmail)) {
+    return { ok: false, error: 'invalid notification email' };
+  }
+
+  if (!instrument.rsi_eligible && alertType === 'RSI') {
+    return { ok: false, error: 'RSI is not available for VIX' };
+  }
+
+  return { ok: true, instrument, alertType, threshold, notificationEmail };
+}
+
 // Shared join across alerts/instruments/market_data. LEFT JOIN market_data so an
 // alert for a ticker with no market data yet (before the first cron run) still
 // appears, with currentPrice/currentRsi as null.
@@ -78,29 +115,11 @@ alertsRoutes.post('/', async (c) => {
     return c.json({ error: 'invalid request body' }, 400);
   }
 
-  const instrument = await lookupTicker(c.env.DB, body.ticker);
-  if (!instrument) {
-    return c.json({ error: 'invalid instrument' }, 400);
+  const validation = await validateAlertInput(c.env.DB, body);
+  if (!validation.ok) {
+    return c.json({ error: validation.error }, 400);
   }
-
-  const alertType = normalizeAlertType(body.alertType);
-  if (!alertType) {
-    return c.json({ error: 'invalid alert type' }, 400);
-  }
-
-  const threshold = validateThreshold(alertType, body.threshold);
-  if (threshold === null) {
-    return c.json({ error: 'invalid threshold' }, 400);
-  }
-
-  const notificationEmail = normalizeEmail(body.notificationEmail);
-  if (!notificationEmail || !EMAIL_PATTERN.test(notificationEmail)) {
-    return c.json({ error: 'invalid notification email' }, 400);
-  }
-
-  if (!instrument.rsi_eligible && alertType === 'RSI') {
-    return c.json({ error: 'RSI is not available for VIX' }, 400);
-  }
+  const { instrument, alertType, threshold, notificationEmail } = validation;
 
   const userId = c.get('userId');
 
@@ -157,29 +176,11 @@ alertsRoutes.put('/:id', async (c) => {
     return c.json({ error: 'invalid request body' }, 400);
   }
 
-  const instrument = await lookupTicker(c.env.DB, body.ticker);
-  if (!instrument) {
-    return c.json({ error: 'invalid instrument' }, 400);
+  const validation = await validateAlertInput(c.env.DB, body);
+  if (!validation.ok) {
+    return c.json({ error: validation.error }, 400);
   }
-
-  const alertType = normalizeAlertType(body.alertType);
-  if (!alertType) {
-    return c.json({ error: 'invalid alert type' }, 400);
-  }
-
-  const threshold = validateThreshold(alertType, body.threshold);
-  if (threshold === null) {
-    return c.json({ error: 'invalid threshold' }, 400);
-  }
-
-  const notificationEmail = normalizeEmail(body.notificationEmail);
-  if (!notificationEmail || !EMAIL_PATTERN.test(notificationEmail)) {
-    return c.json({ error: 'invalid notification email' }, 400);
-  }
-
-  if (!instrument.rsi_eligible && alertType === 'RSI') {
-    return c.json({ error: 'RSI is not available for VIX' }, 400);
-  }
+  const { instrument, alertType, threshold, notificationEmail } = validation;
 
   const userId = c.get('userId');
 
