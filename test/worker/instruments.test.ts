@@ -32,7 +32,7 @@ describe('instruments endpoint', () => {
     expect(response.status).toBe(401);
   });
 
-  it('returns the seeded instruments with only ticker/name/type when authenticated', async () => {
+  it('returns the seeded instruments with ticker/name/type/rsiEligible when authenticated', async () => {
     const cookie = await registerAndLogIn('instruments-list@example.com');
 
     const response = await getInstruments(cookie);
@@ -42,12 +42,12 @@ describe('instruments endpoint', () => {
     expect(instruments).toHaveLength(2);
     expect(instruments).toEqual(
       expect.arrayContaining([
-        { ticker: '^VIX', name: 'VIX', type: 'index' },
-        { ticker: '^NDX', name: 'NASDAQ-100', type: 'index' },
+        { ticker: '^VIX', name: 'VIX', type: 'index', rsiEligible: 0 },
+        { ticker: '^NDX', name: 'NASDAQ-100', type: 'index', rsiEligible: 1 },
       ]),
     );
     for (const instrument of instruments) {
-      expect(Object.keys(instrument).sort()).toEqual(['name', 'ticker', 'type']);
+      expect(Object.keys(instrument).sort()).toEqual(['name', 'rsiEligible', 'ticker', 'type']);
     }
   });
 
