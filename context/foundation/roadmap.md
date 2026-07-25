@@ -3,7 +3,7 @@ project: MarketPulse
 version: 1
 status: draft
 created: 2026-06-21
-updated: 2026-07-24
+updated: 2026-07-25
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -35,7 +35,9 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | S-01 | auth-and-registration | register, log in, and log out                             | F-01a          | FR-001, FR-002, FR-003          | done     |
 | S-02 | alert-crud            | create a price/RSI alert and view the alert list          | S-01           | FR-004, FR-005                  | done     |
 | S-03 | alert-edit-delete     | edit and delete an existing alert                         | S-02           | FR-006, FR-007                  | done     |
-| S-04 | market-data-display   | see current RSI/price value next to each alert            | S-02, F-02     | FR-009                          | proposed |
+| F-03 | instrument-registry   | (foundation) `instruments` table + ticker migration + registry endpoint | S-02, F-02 | —                     | proposed |
+| S-04 | market-data-display   | see current RSI/price value next to each alert; create an alert with instrument type + name (not raw ticker) | S-02, F-02, F-03 | FR-009 | proposed |
+| S-07 | instrument-history-view | view 30-day price/RSI history for any instrument via two comboboxes | F-03 | —                    | proposed |
 | S-05 | alert-notifications   | receive an email when an alert threshold is crossed       | S-04           | FR-008, FR-008a                 | proposed |
 | S-06 | trigger-history       | view a history of all previously triggered alerts         | S-05           | FR-010                          | proposed |
 
@@ -46,7 +48,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | Stream | Theme                       | Chain                               | Note                                                                            |
 |--------|-----------------------------|-------------------------------------|---------------------------------------------------------------------------------|
 | A      | Auth & alert CRUD           | `F-01` → `F-01a` → `S-01` → `S-02` → `S-03`  | Delivers the north star (S-02); S-03 is a refinement slice after it lands.      |
-| B      | Data pipeline & notif.      | `F-02` → `S-04` → `S-05` → `S-06`  | F-02 branches from F-01 parallel with S-01; S-04 joins Stream A at S-02.       |
+| B      | Data pipeline & notif.      | `F-02` → `F-03` → `S-04` → `S-05` → `S-06`  | F-02 branches from F-01 parallel with S-01; S-04 joins Stream A at S-02; `F-03` also unlocks `S-07` (30-day history view), which runs parallel to S-04. |
 
 ## Baseline
 
@@ -102,6 +104,19 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Stooq has no official API contract — endpoint URL, column names, and availability can change without notice. No cron retry on failure unless implemented in application code; a silently failing cron satisfies the NFR failure condition. CPU budget on the free Workers tier (10ms) may be tight; the $5/month paid tier raises this to 15 minutes and should be budgeted before production.
 - **Status:** done
 
+### F-03: Instrument registry
+
+- **Outcome:** (foundation) `instruments` table (`ticker` PK, `name`, `type`, `rsi_eligible`, `provider`) replaces the hardcoded instrument lists scattered across the backend. A forward-only D1 migration seeds `^VIX` and `^NDX` and rewrites existing `price_history`, `market_data`, and `alerts` rows from `VIX`/`NASDAQ100` to the new ticker values (`ticker` is the value actually sent to the data provider, not an internal code). `GET /api/instruments` (optionally filtered by `type`) serves the registry to the frontend. The daily cron (`scheduled.ts`) and alert validation (`alerts.ts`) read from `instruments` instead of the hardcoded `YAHOO_SYMBOLS` map and `VALID_INSTRUMENTS`/`VALID_ALERT_TYPES` arrays.
+- **Change ID:** `instrument-registry`
+- **PRD refs:** — (internal refactor; instrument set stays VIX/NASDAQ-100, no PRD scope change)
+- **Unlocks:** S-04 (edited scope needs instrument name/type/ticker from the registry); S-07 (history view needs the registry + endpoint)
+- **Prerequisites:** S-02, F-02
+- **Parallel with:** —
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** Renames the identifier used as the join key across three existing tables (`price_history.instrument`, `market_data.instrument`, `alerts.instrument`) from `VIX`/`NASDAQ100` to `^VIX`/`^NDX` — this is a data migration on existing rows, not just a new table. The existing `alerts` `CHECK` constraint (literal `'VIX'` match) must be replaced by an `rsi_eligible` lookup (or updated to the new literal `'^VIX'`) in the same migration, or existing alerts break.
+- **Status:** proposed
+
 ## Slices
 
 ### S-01: User can register and log in
@@ -143,14 +158,26 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### S-04: User can see current RSI/price value next to each alert
 
-- **Outcome:** Each alert in the list displays the current RSI value (for RSI-type alerts) or the latest closing price (for price-type alerts) alongside the user's threshold — allowing the user to see how close the condition is to being triggered.
+- **Outcome:** Each alert in the list displays the current RSI value (for RSI-type alerts) or the latest closing price (for price-type alerts) alongside the user's threshold — allowing the user to see how close the condition is to being triggered. The alert creation/edit form additionally gains a "type" selector (instrument category — currently only "index"; GPW company added later) that filters the instrument field, and the instrument field itself displays the instrument's name (e.g. "NASDAQ-100") instead of its raw ticker (`^NDX`). Alert details additionally show the underlying ticker.
 - **Change ID:** `market-data-display`
 - **PRD refs:** FR-009
-- **Prerequisites:** S-02, F-02
+- **Prerequisites:** S-02, F-02, F-03
 - **Parallel with:** S-03
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** Serves as a smoke test for the full data pipeline before notifications go live — if values are correct here, Stooq fetch + RSI calculation are verified end-to-end without involving Resend. Depends on both the Angular alert list (S-02) and market data in D1 (F-02); both must be done before this slice can start.
+- **Risk:** Serves as a smoke test for the full data pipeline before notifications go live — if values are correct here, Stooq fetch + RSI calculation are verified end-to-end without involving Resend. Depends on both the Angular alert list (S-02) and market data in D1 (F-02); both must be done before this slice can start. The type selector, name display, and ticker field additionally depend on the `instruments` registry (F-03).
+- **Status:** proposed
+
+### S-07: User can view 30-day price/RSI history for any instrument
+
+- **Outcome:** A dedicated page lets the user pick an instrument type and a specific instrument via two comboboxes (populated from `GET /api/instruments`, the second filtered by the first) and view that instrument's closing price and RSI for each of the last 30 days.
+- **Change ID:** `instrument-history-view`
+- **PRD refs:** — (new browsing capability; not yet reflected in an FR — the current PRD only specifies "current value next to alert", FR-009/S-04)
+- **Prerequisites:** F-03
+- **Parallel with:** S-04
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** Price data already exists in `price_history` from the daily cron, but RSI here must be computed per-day across a rolling 30-day window — the existing `rsi.ts` only returns a single latest value, so this is new calculation logic, not reuse.
 - **Status:** proposed
 
 ### S-05: User receives an email notification when an alert threshold is crossed
@@ -187,7 +214,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-01       | auth-and-registration | Auth: register (email+password), login, logout      | no                    | Awaits F-01a; research password hashing in Workers during planning |
 | S-02       | alert-crud            | Alert CRUD: create alert + list view (north star)   | no                    | Awaits S-01                                                        |
 | S-03       | alert-edit-delete     | Alert management: edit and delete                   | no                    | Awaits S-02; can be planned in parallel with S-04                  |
-| S-04       | market-data-display   | Market data display: current RSI/price on alert list| no                    | Awaits S-02 + F-02                                                 |
+| F-03       | instrument-registry   | Instrument registry: instruments table + ticker migration + GET /api/instruments | no | Awaits S-02 + F-02; migrates existing `VIX`/`NASDAQ100` values to `^VIX`/`^NDX` |
+| S-04       | market-data-display   | Market data display: current RSI/price on alert list + instrument-aware alert form | no | Awaits S-02 + F-02 + F-03                                |
+| S-07       | instrument-history-view | Instrument history view: 30-day price/RSI page    | no                    | Awaits F-03; can be planned in parallel with S-04                  |
 | S-05       | alert-notifications   | Notification pipeline: alert eval + Resend email    | no                    | Awaits S-04; Stooq/RSI already validated by then                   |
 | S-06       | trigger-history       | Trigger history: list of fired alerts               | no                    | Awaits S-05                                                        |
 
