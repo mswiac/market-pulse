@@ -310,21 +310,21 @@ None — this change requires no D1 migration. Every column read or exposed here
 
 #### Manual
 
-- [x] 1.3 `curl` confirms `GET /api/alerts` returns instrumentName/instrumentType/currentPrice/currentRsi correctly
-- [x] 1.4 `curl` confirms `GET /api/instruments` includes rsiEligible
+- [x] 1.3 `curl` confirms `GET /api/alerts` returns instrumentName/instrumentType/currentPrice/currentRsi correctly — 70f8c10
+- [x] 1.4 `curl` confirms `GET /api/instruments` includes rsiEligible — 70f8c10
 
 ### Phase 2: Frontend — repair ticker fields + registry-driven form
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npm run typecheck`
-- [x] 2.2 Frontend build succeeds: `npm run build`
+- [x] 2.1 Type checking passes: `npm run typecheck` — 70f8c10
+- [x] 2.2 Frontend build succeeds: `npm run build` — 70f8c10
 
 #### Manual
 
-- [x] 2.3 Create a PRICE alert via the type→instrument cascade; correct ticker sent, name displayed
-- [x] 2.4 Create an RSI alert; RSI option correctly shown/hidden per instrument eligibility
-- [x] 2.5 Edit an existing alert; fields preselect correctly
-- [x] 2.6 Alert list detail panel shows current price/RSI (or No data) and ticker
-- [x] 2.7 Delete an alert; confirmation dialog shows instrument name correctly
-- [x] 2.8 Instruments-fetch failure shows an error and disables submission (no empty selects)
+- [x] 2.3 Create a PRICE alert via the type→instrument cascade; correct ticker sent, name displayed — 70f8c10
+- [x] 2.4 Create an RSI alert; RSI option correctly shown/hidden per instrument eligibility — 70f8c10
+- [x] 2.5 Edit an existing alert; fields preselect correctly — 70f8c10
+- [x] 2.6 Alert list detail panel shows current price/RSI (or No data) and ticker — 70f8c10
+- [x] 2.7 Delete an alert; confirmation dialog shows instrument name correctly — 70f8c10
+- [x] 2.8 Instruments-fetch failure shows an error and disables submission (no empty selects) — 70f8c10
