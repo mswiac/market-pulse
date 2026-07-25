@@ -35,7 +35,7 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | S-01 | auth-and-registration | register, log in, and log out                             | F-01a          | FR-001, FR-002, FR-003          | done     |
 | S-02 | alert-crud            | create a price/RSI alert and view the alert list          | S-01           | FR-004, FR-005                  | done     |
 | S-03 | alert-edit-delete     | edit and delete an existing alert                         | S-02           | FR-006, FR-007                  | done     |
-| F-03 | instrument-registry   | (foundation) `instruments` table + ticker migration + registry endpoint | S-02, F-02 | —                     | proposed |
+| F-03 | instrument-registry   | (foundation) `instruments` table + ticker migration + registry endpoint | S-02, F-02 | —                     | done |
 | S-04 | market-data-display   | see current RSI/price value next to each alert; create an alert with instrument type + name (not raw ticker) | S-02, F-02, F-03 | FR-009 | proposed |
 | S-07 | instrument-history-view | view 30-day price/RSI history for any instrument via two comboboxes | F-03 | —                    | proposed |
 | S-05 | alert-notifications   | receive an email when an alert threshold is crossed       | S-04           | FR-008, FR-008a                 | proposed |
@@ -115,7 +115,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Renames the identifier used as the join key across three existing tables (`price_history.instrument`, `market_data.instrument`, `alerts.instrument`) from `VIX`/`NASDAQ100` to `^VIX`/`^NDX` — this is a data migration on existing rows, not just a new table. The existing `alerts` `CHECK` constraint (literal `'VIX'` match) must be replaced by an `rsi_eligible` lookup (or updated to the new literal `'^VIX'`) in the same migration, or existing alerts break.
-- **Status:** proposed
+- **Status:** done
 
 ## Slices
 
@@ -239,3 +239,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-02: User can create an alert by selecting an instrument (VIX or NASDAQ-100), alert type, and threshold value; VIX supports price alerts only, NASDAQ-100 supports price or RSI alerts. The notification email field is pre-filled from the user's account email but is editable per alert. Created alerts appear in a persistent list.** — Archived 2026-07-19 → `context/archive/2026-07-19-alert-crud/`. Lesson: —.
 - **F-02: (foundation) Cloudflare Cron Trigger fires daily, fetches closing prices for VIX and NASDAQ-100 from Stooq, stores raw closes in the `price_history` table, and writes the latest RSI to the `market_data` table for NASDAQ-100 (VIX alerts are price-only, per FR-004 — no RSI needed for VIX).** — Archived 2026-07-24 → `context/archive/2026-07-24-market-data-pipeline/`. Lesson: —.
 - **S-03: User can update the instrument, alert type, threshold value, or notification email on an existing alert; user can permanently delete an alert.** — Archived 2026-07-24 → `context/archive/2026-07-24-alert-edit-delete/`. Lesson: —.
+- **F-03: (foundation) `instruments` table (`ticker` PK, `name`, `type`, `rsi_eligible`, `provider`) replaces the hardcoded instrument lists scattered across the backend. A forward-only D1 migration seeds `^VIX` and `^NDX` and rewrites existing `price_history`, `market_data`, and `alerts` rows from `VIX`/`NASDAQ100` to the new ticker values (`ticker` is the value actually sent to the data provider, not an internal code). `GET /api/instruments` (optionally filtered by `type`) serves the registry to the frontend. The daily cron (`scheduled.ts`) and alert validation (`alerts.ts`) read from `instruments` instead of the hardcoded `YAHOO_SYMBOLS` map and `VALID_INSTRUMENTS`/`VALID_ALERT_TYPES` arrays.** — Archived 2026-07-25 → `context/archive/2026-07-25-instrument-registry/`. Lesson: —.
