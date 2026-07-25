@@ -8,11 +8,6 @@ import { AlertForm } from '../alert-form/alert-form';
 import { Alert, AlertsService } from '../alerts.service';
 import { DeleteAlertConfirm, DeleteAlertConfirmData } from '../delete-alert-confirm/delete-alert-confirm';
 
-const INSTRUMENT_LABELS: Record<string, string> = {
-  VIX: 'VIX',
-  NASDAQ100: 'NASDAQ-100',
-};
-
 const ALERT_TYPE_LABELS: Record<string, string> = {
   PRICE: $localize`:@@alertList.type.price:Price threshold`,
   RSI: $localize`:@@alertList.type.rsi:RSI threshold`,
@@ -27,7 +22,7 @@ const ALERT_TYPE_SHORT_LABELS: Record<string, string> = {
   RSI: 'RSI',
 };
 
-type SortableColumn = 'instrument' | 'alertType' | 'threshold';
+type SortableColumn = 'instrumentName' | 'alertType' | 'threshold';
 type SortDirection = 'asc' | 'desc';
 
 @Component({
@@ -75,16 +70,12 @@ export class AlertList {
     }
   }
 
-  protected instrumentLabel(instrument: string): string {
-    return INSTRUMENT_LABELS[instrument] ?? instrument;
-  }
-
   protected alertTypeLabel(alertType: string): string {
     return ALERT_TYPE_LABELS[alertType] ?? alertType;
   }
 
-  protected showCurrentRsi(instrument: string, alertType: string): boolean {
-    return instrument === 'NASDAQ100' && alertType === 'RSI';
+  protected showCurrentRsi(alertType: string): boolean {
+    return alertType === 'RSI';
   }
 
   protected openEditDialog(alert: Alert): void {
@@ -93,7 +84,7 @@ export class AlertList {
 
   protected deleteAlert(alert: Alert): void {
     const data: DeleteAlertConfirmData = {
-      instrument: this.instrumentLabel(alert.instrument),
+      instrumentName: alert.instrumentName,
       alertType: ALERT_TYPE_SHORT_LABELS[alert.alertType] ?? alert.alertType,
       threshold: alert.threshold.toFixed(2),
     };

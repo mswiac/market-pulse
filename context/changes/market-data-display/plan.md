@@ -305,26 +305,26 @@ None — this change requires no D1 migration. Every column read or exposed here
 
 #### Automated
 
-- [x] 1.1 Worker unit tests pass: `npm run test:worker`
-- [x] 1.2 Type checking passes: `npm run typecheck`
+- [x] 1.1 Worker unit tests pass: `npm run test:worker` — 034ae1b
+- [x] 1.2 Type checking passes: `npm run typecheck` — 034ae1b
 
 #### Manual
 
-- [ ] 1.3 `curl` confirms `GET /api/alerts` returns instrumentName/instrumentType/currentPrice/currentRsi correctly
-- [ ] 1.4 `curl` confirms `GET /api/instruments` includes rsiEligible
+- [x] 1.3 `curl` confirms `GET /api/alerts` returns instrumentName/instrumentType/currentPrice/currentRsi correctly
+- [x] 1.4 `curl` confirms `GET /api/instruments` includes rsiEligible
 
 ### Phase 2: Frontend — repair ticker fields + registry-driven form
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npm run typecheck`
-- [ ] 2.2 Frontend build succeeds: `npm run build`
+- [x] 2.1 Type checking passes: `npm run typecheck`
+- [x] 2.2 Frontend build succeeds: `npm run build`
 
 #### Manual
 
-- [ ] 2.3 Create a PRICE alert via the type→instrument cascade; correct ticker sent, name displayed
-- [ ] 2.4 Create an RSI alert; RSI option correctly shown/hidden per instrument eligibility
-- [ ] 2.5 Edit an existing alert; fields preselect correctly
-- [ ] 2.6 Alert list detail panel shows current price/RSI (or No data) and ticker
-- [ ] 2.7 Delete an alert; confirmation dialog shows instrument name correctly
-- [ ] 2.8 Instruments-fetch failure shows an error and disables submission (no empty selects)
+- [x] 2.3 Create a PRICE alert via the type→instrument cascade; correct ticker sent, name displayed
+- [x] 2.4 Create an RSI alert; RSI option correctly shown/hidden per instrument eligibility
+- [x] 2.5 Edit an existing alert; fields preselect correctly
+- [x] 2.6 Alert list detail panel shows current price/RSI (or No data) and ticker
+- [x] 2.7 Delete an alert; confirmation dialog shows instrument name correctly
+- [x] 2.8 Instruments-fetch failure shows an error and disables submission (no empty selects)
