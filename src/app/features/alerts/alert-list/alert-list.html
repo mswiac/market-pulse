@@ -41,7 +41,7 @@
         <div class="alert-detail">
           <p>
             <strong i18n="@@alertList.detail.currentPrice">Current price:</strong>
-            @if (alert.currentPrice !== null) {
+            &nbsp;@if (alert.currentPrice !== null) {
               {{ alert.currentPrice | number: '1.2-2' }}
             } @else {
               <span i18n="@@alertList.detail.noData">No data</span>
@@ -50,7 +50,7 @@
           @if (showCurrentRsi(alert.alertType)) {
             <p>
               <strong i18n="@@alertList.detail.currentRsi">Current RSI:</strong>
-              @if (alert.currentRsi !== null) {
+              &nbsp;@if (alert.currentRsi !== null) {
                 {{ alert.currentRsi | number: '1.2-2' }}
               } @else {
                 <span i18n="@@alertList.detail.noData">No data</span>
