@@ -77,4 +77,19 @@ describe('market_data RSI-eligibility triggers', () => {
         .run(),
     ).resolves.toBeDefined();
   });
+
+  // Mirrors the exact upsert shape scheduled.ts uses in production, on both
+  // the no-conflict (first write) and conflict (subsequent write) paths.
+  const UPSERT_SQL = `INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())
+     ON CONFLICT (ticker) DO UPDATE SET price = excluded.price, rsi = excluded.rsi, updated_at = excluded.updated_at`;
+
+  it('blocks the production upsert shape on the no-conflict path for a non-RSI-eligible ticker (^VIX)', async () => {
+    await expect(env.DB.prepare(UPSERT_SQL).bind('^VIX', 18.5, 55).run()).rejects.toThrow();
+  });
+
+  it('blocks the production upsert shape on the conflict path for a non-RSI-eligible ticker (^VIX)', async () => {
+    await env.DB.prepare(UPSERT_SQL).bind('^VIX', 18.5, null).run();
+
+    await expect(env.DB.prepare(UPSERT_SQL).bind('^VIX', 19.0, 55).run()).rejects.toThrow();
+  });
 });

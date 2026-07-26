@@ -67,7 +67,7 @@ Close the gap where worker-side type errors or test failures can merge to `main`
 #### Automated Verification:
 
 - `npm run ci` (the new script) runs typecheck, worker tests, and build in sequence and exits 0 locally
-- `gh api repos/mswiac/market-pulse/branches/main/protection` returns the configured `required_status_checks.contexts` including `"Workers Builds: marketpulse"` (no longer a 404)
+- `gh api repos/mswiac/market-pulse/branches/main/protection` returns the configured `required_status_checks.checks` including `{"context": "Workers Builds: marketpulse", "app_id": 85455}` (no longer a 404)
 
 #### Manual Verification:
 
@@ -188,7 +188,7 @@ No table rebuild — existing rows in `alerts`/`market_data` are untouched.
 #### Automated
 
 - [x] 1.1 npm run ci script runs typecheck, worker tests, and build in sequence and exits 0 locally — 2048459
-- [x] 1.2 gh api branch protection shows required_status_checks.contexts including "Workers Builds: marketpulse" — 2048459
+- [x] 1.2 gh api branch protection shows required_status_checks.checks including "Workers Builds: marketpulse" — 2048459
 
 #### Manual
 
