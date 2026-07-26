@@ -97,6 +97,7 @@ const ALERT_SELECT = `
     a.ticker,
     i.name AS instrumentName,
     i.type AS instrumentType,
+    i.currency AS currency,
     a.alert_type AS alertType,
     a.threshold,
     a.notification_email AS notificationEmail,

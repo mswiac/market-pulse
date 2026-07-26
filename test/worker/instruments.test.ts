@@ -54,7 +54,7 @@ describe('instruments endpoint', () => {
     expect(response.status).toBe(401);
   });
 
-  it('returns the seeded instruments with ticker/name/type/rsiEligible when authenticated', async () => {
+  it('returns the seeded instruments with ticker/name/type/rsiEligible/currency when authenticated', async () => {
     const cookie = await registerAndLogIn('instruments-list@example.com');
 
     const response = await getInstruments(cookie);
@@ -64,12 +64,12 @@ describe('instruments endpoint', () => {
     expect(instruments).toHaveLength(2);
     expect(instruments).toEqual(
       expect.arrayContaining([
-        { ticker: '^VIX', name: 'VIX', type: 'index', rsiEligible: false },
-        { ticker: '^NDX', name: 'NASDAQ-100', type: 'index', rsiEligible: true },
+        { ticker: '^VIX', name: 'VIX', type: 'index', rsiEligible: false, currency: 'USD' },
+        { ticker: '^NDX', name: 'NASDAQ-100', type: 'index', rsiEligible: true, currency: 'USD' },
       ]),
     );
     for (const instrument of instruments) {
-      expect(Object.keys(instrument).sort()).toEqual(['name', 'rsiEligible', 'ticker', 'type']);
+      expect(Object.keys(instrument).sort()).toEqual(['currency', 'name', 'rsiEligible', 'ticker', 'type']);
     }
   });
 
@@ -108,20 +108,26 @@ describe('instrument history endpoint', () => {
     await expect(response.json()).resolves.toEqual({ error: 'unknown instrument' });
   });
 
-  it('returns rsiEligible: false and every rsi null for ^VIX', async () => {
+  it('returns rsiEligible: false, currency: USD, and every rsi null for ^VIX', async () => {
     const cookie = await registerAndLogIn('history-vix@example.com');
     await seedPriceHistory('^VIX', Array.from({ length: 20 }, (_, i) => 20 + i));
 
     const response = await getHistory('^VIX', cookie);
     expect(response.status).toBe(200);
-    const body = (await response.json()) as { ticker: string; rsiEligible: boolean; history: { rsi: number | null }[] };
+    const body = (await response.json()) as {
+      ticker: string;
+      rsiEligible: boolean;
+      currency: string;
+      history: { rsi: number | null }[];
+    };
 
     expect(body.rsiEligible).toBe(false);
+    expect(body.currency).toBe('USD');
     expect(body.history).toHaveLength(20);
     expect(body.history.every((day) => day.rsi === null)).toBe(true);
   });
 
-  it('returns rsiEligible: true and populates rsi once enough lookback exists for ^NDX', async () => {
+  it('returns rsiEligible: true, currency: USD, and populates rsi once enough lookback exists for ^NDX', async () => {
     const cookie = await registerAndLogIn('history-ndx-full@example.com');
     // Exactly 30 (display) + 14 (lookback) closes — every displayed day has enough history for RSI.
     await seedPriceHistory('^NDX', Array.from({ length: 44 }, (_, i) => 4000 + i));
@@ -131,10 +137,12 @@ describe('instrument history endpoint', () => {
     const body = (await response.json()) as {
       ticker: string;
       rsiEligible: boolean;
+      currency: string;
       history: { date: string; close: number; rsi: number | null }[];
     };
 
     expect(body.rsiEligible).toBe(true);
+    expect(body.currency).toBe('USD');
     expect(body.history).toHaveLength(30);
     expect(body.history.every((day) => typeof day.rsi === 'number')).toBe(true);
     // Oldest → newest, matching the seeded date sequence.

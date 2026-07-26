@@ -20,14 +20,15 @@ instrumentsRoutes.get('/', async (c) => {
   const type = c.req.query('type');
 
   const { results } = type
-    ? await c.env.DB.prepare('SELECT ticker, name, type, rsi_eligible AS rsiEligible FROM instruments WHERE type = ?')
+    ? await c.env.DB.prepare('SELECT ticker, name, type, rsi_eligible AS rsiEligible, currency FROM instruments WHERE type = ?')
         .bind(type)
-        .all<{ ticker: string; name: string; type: string; rsiEligible: number }>()
-    : await c.env.DB.prepare('SELECT ticker, name, type, rsi_eligible AS rsiEligible FROM instruments').all<{
+        .all<{ ticker: string; name: string; type: string; rsiEligible: number; currency: string }>()
+    : await c.env.DB.prepare('SELECT ticker, name, type, rsi_eligible AS rsiEligible, currency FROM instruments').all<{
         ticker: string;
         name: string;
         type: string;
         rsiEligible: number;
+        currency: string;
       }>();
 
   // Coerced to a real boolean so `rsiEligible` has the same JSON type here as
@@ -40,7 +41,7 @@ instrumentsRoutes.get('/', async (c) => {
 instrumentsRoutes.get('/:ticker/history', async (c) => {
   const ticker = c.req.param('ticker');
 
-  const instrument = await c.env.DB.prepare('SELECT ticker, rsi_eligible FROM instruments WHERE ticker = ?')
+  const instrument = await c.env.DB.prepare('SELECT ticker, rsi_eligible, currency FROM instruments WHERE ticker = ?')
     .bind(ticker)
     .first<InstrumentRow>();
 
@@ -64,7 +65,7 @@ instrumentsRoutes.get('/:ticker/history', async (c) => {
     .map((row, i) => ({ date: row.date, close: row.close, rsi: rsiSeries[i] }))
     .slice(-HISTORY_DAYS);
 
-  return c.json({ ticker, rsiEligible, history }, 200);
+  return c.json({ ticker, rsiEligible, currency: instrument.currency, history }, 200);
 });
 
 export default instrumentsRoutes;
