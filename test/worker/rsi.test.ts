@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateRSI } from '../../src/worker/lib/rsi';
+import { calculateRSI, calculateRSISeries } from '../../src/worker/lib/rsi';
 
 // Reference values below were computed independently in Python (Wilder's RSI,
 // seeded with the simple mean of the first `period` changes, then smoothed),
@@ -25,5 +25,41 @@ describe('calculateRSI', () => {
   it('returns 100 when average loss is zero (strictly increasing closes)', () => {
     const strictlyIncreasing = Array.from({ length: 16 }, (_, i) => i + 1);
     expect(calculateRSI(strictlyIncreasing)).toBe(100);
+  });
+});
+
+describe('calculateRSISeries', () => {
+  it('returns an array the same length as the input closes', () => {
+    expect(calculateRSISeries(CLOSES_20)).toHaveLength(CLOSES_20.length);
+  });
+
+  it('fills null for every index before period + 1 closes are available', () => {
+    const series = calculateRSISeries(CLOSES_20);
+    for (let i = 0; i < 14; i++) {
+      expect(series[i]).toBeNull();
+    }
+  });
+
+  it('matches calculateRSI at the seed-only index (14, exactly period + 1 closes)', () => {
+    const series = calculateRSISeries(CLOSES_15);
+    expect(series[14]).toBeCloseTo(calculateRSI(CLOSES_15)!, 9);
+  });
+
+  it('matches calculateRSI at the last index after extended smoothing (20 closes)', () => {
+    const series = calculateRSISeries(CLOSES_20);
+    expect(series[series.length - 1]).toBeCloseTo(calculateRSI(CLOSES_20)!, 9);
+  });
+
+  it('matches calculateRSI called on a truncated prefix, for an intermediate index', () => {
+    // series[17] (18 closes) must equal calling calculateRSI on those same first 18 closes —
+    // proves the running averages carried forward are equivalent to a fresh calculation up to that day.
+    const prefix = CLOSES_20.slice(0, 18);
+    const series = calculateRSISeries(CLOSES_20);
+    expect(series[17]).toBeCloseTo(calculateRSI(prefix)!, 9);
+  });
+
+  it('returns an all-null array when fewer than period + 1 closes are provided', () => {
+    const series = calculateRSISeries(CLOSES_15.slice(0, 14));
+    expect(series).toEqual(new Array(14).fill(null));
   });
 });

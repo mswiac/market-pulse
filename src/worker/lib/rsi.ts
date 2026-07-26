@@ -1,5 +1,16 @@
-export function calculateRSI(closes: number[], period = 14): number | null {
-  if (closes.length < period + 1) return null;
+function rsiFromAverages(avgGain: number, avgLoss: number): number {
+  if (avgLoss === 0) return 100;
+  const rs = avgGain / avgLoss;
+  return 100 - 100 / (1 + rs);
+}
+
+// Index-aligned with `closes`: entry i is the RSI as of closes[i], or null
+// if fewer than `period + 1` closes were available by that point. Unlike a
+// single latest-value calculation, this keeps the running Wilder averages
+// at every step so callers can read RSI for any day, not just the last.
+export function calculateRSISeries(closes: number[], period = 14): (number | null)[] {
+  const series: (number | null)[] = new Array(closes.length).fill(null);
+  if (closes.length < period + 1) return series;
 
   const changes: number[] = [];
   for (let i = 1; i < closes.length; i++) {
@@ -15,6 +26,7 @@ export function calculateRSI(closes: number[], period = 14): number | null {
   }
   avgGain /= period;
   avgLoss /= period;
+  series[period] = rsiFromAverages(avgGain, avgLoss);
 
   for (let i = period; i < changes.length; i++) {
     const change = changes[i];
@@ -22,10 +34,13 @@ export function calculateRSI(closes: number[], period = 14): number | null {
     const loss = change < 0 ? -change : 0;
     avgGain = (avgGain * (period - 1) + gain) / period;
     avgLoss = (avgLoss * (period - 1) + loss) / period;
+    series[i + 1] = rsiFromAverages(avgGain, avgLoss);
   }
 
-  if (avgLoss === 0) return 100;
+  return series;
+}
 
-  const rs = avgGain / avgLoss;
-  return 100 - 100 / (1 + rs);
+export function calculateRSI(closes: number[], period = 14): number | null {
+  const series = calculateRSISeries(closes, period);
+  return series[series.length - 1] ?? null;
 }
