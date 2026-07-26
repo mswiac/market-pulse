@@ -3,7 +3,7 @@ project: MarketPulse
 version: 1
 status: draft
 created: 2026-06-21
-updated: 2026-07-25
+updated: 2026-07-26
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -37,7 +37,7 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | S-03 | alert-edit-delete     | edit and delete an existing alert                         | S-02           | FR-006, FR-007                  | done     |
 | F-03 | instrument-registry   | (foundation) `instruments` table + ticker migration + registry endpoint | S-02, F-02 | —                     | done |
 | S-04 | market-data-display   | see current RSI/price value next to each alert; create an alert with instrument type + name (not raw ticker) | S-02, F-02, F-03 | FR-009 | done |
-| S-07 | instrument-history-view | view 30-day price/RSI history for any instrument via two comboboxes | F-03 | —                    | proposed |
+| S-07 | instrument-history-view | view 30-day price/RSI history for any instrument via two comboboxes | F-03 | —                    | done |
 | S-05 | alert-notifications   | receive an email when an alert threshold is crossed       | S-04           | FR-008, FR-008a                 | proposed |
 | S-06 | trigger-history       | view a history of all previously triggered alerts         | S-05           | FR-010                          | proposed |
 
@@ -178,7 +178,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Price data already exists in `price_history` from the daily cron, but RSI here must be computed per-day across a rolling 30-day window — the existing `rsi.ts` only returns a single latest value, so this is new calculation logic, not reuse.
-- **Status:** proposed
+- **Status:** done
 
 ### S-05: User receives an email notification when an alert threshold is crossed
 
@@ -241,3 +241,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-03: User can update the instrument, alert type, threshold value, or notification email on an existing alert; user can permanently delete an alert.** — Archived 2026-07-24 → `context/archive/2026-07-24-alert-edit-delete/`. Lesson: —.
 - **F-03: (foundation) `instruments` table (`ticker` PK, `name`, `type`, `rsi_eligible`, `provider`) replaces the hardcoded instrument lists scattered across the backend. A forward-only D1 migration seeds `^VIX` and `^NDX` and rewrites existing `price_history`, `market_data`, and `alerts` rows from `VIX`/`NASDAQ100` to the new ticker values (`ticker` is the value actually sent to the data provider, not an internal code). `GET /api/instruments` (optionally filtered by `type`) serves the registry to the frontend. The daily cron (`scheduled.ts`) and alert validation (`alerts.ts`) read from `instruments` instead of the hardcoded `YAHOO_SYMBOLS` map and `VALID_INSTRUMENTS`/`VALID_ALERT_TYPES` arrays.** — Archived 2026-07-25 → `context/archive/2026-07-25-instrument-registry/`. Lesson: —.
 - **S-04: Each alert in the list displays the current RSI value (for RSI-type alerts) or the latest closing price (for price-type alerts) alongside the user's threshold. The alert creation/edit form gains a type selector that filters the instrument field, and the instrument field displays the instrument's name instead of its raw ticker. Alert details additionally show the underlying ticker.** — Archived 2026-07-25 → `context/archive/2026-07-25-market-data-display/`. Lesson: —.
+- **S-07: A dedicated page lets the user pick an instrument type and a specific instrument via two comboboxes (populated from `GET /api/instruments`, the second filtered by the first) and view that instrument's closing price and RSI for each of the last 30 days.** — Archived 2026-07-26 → `context/archive/2026-07-26-instrument-history-view/`. Lesson: —.
