@@ -1,10 +1,10 @@
 ---
 change_id: review-followups
 title: CI pipeline, deployment-plan fix, and restored CHECK constraints
-status: impl_reviewed
+status: archived
 created: 2026-07-26
 updated: 2026-07-26
-archived_at: null
+archived_at: 2026-07-26T10:08:02Z
 ---
 
 ## Notes
