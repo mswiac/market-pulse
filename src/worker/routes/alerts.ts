@@ -16,7 +16,7 @@ alertsRoutes.use('*', sessionMiddleware);
 
 async function lookupTicker(db: D1Database, ticker: unknown): Promise<InstrumentRow | null> {
   if (typeof ticker !== 'string') return null;
-  return db.prepare('SELECT ticker, rsi_eligible FROM instruments WHERE ticker = ?').bind(ticker).first<InstrumentRow>();
+  return db.prepare('SELECT ticker, rsi_eligible, currency FROM instruments WHERE ticker = ?').bind(ticker).first<InstrumentRow>();
 }
 
 function normalizeAlertType(alertType: unknown): AlertType | null {
