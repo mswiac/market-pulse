@@ -4,6 +4,7 @@ import { fetchDailyCloses, type DailyClose } from './lib/market-data';
 import { calculateRSI } from './lib/rsi';
 
 const RETRY_ATTEMPTS = 3;
+// Fixed delay, no backoff — deliberate simplification at current volume (2 tickers/day).
 const RETRY_DELAY_MS = 300;
 
 async function fetchWithRetry(symbol: string): Promise<DailyClose[]> {

@@ -187,24 +187,24 @@ No table rebuild — existing rows in `alerts`/`market_data` are untouched.
 
 #### Automated
 
-- [x] 1.1 npm run ci script runs typecheck, worker tests, and build in sequence and exits 0 locally
-- [x] 1.2 gh api branch protection shows required_status_checks.contexts including "Workers Builds: marketpulse"
+- [x] 1.1 npm run ci script runs typecheck, worker tests, and build in sequence and exits 0 locally — 2048459
+- [x] 1.2 gh api branch protection shows required_status_checks.contexts including "Workers Builds: marketpulse" — 2048459
 
 #### Manual
 
-- [ ] 1.3 npm run ci pasted into Cloudflare dashboard Build command and saved
-- [ ] 1.4 Push confirms Cloudflare build log runs typecheck + vitest before the Angular build
+- [x] 1.3 npm run ci pasted into Cloudflare dashboard Build command and saved
+- [x] 1.4 Push confirms Cloudflare build log runs typecheck + vitest before the Angular build
 
 ### Phase 2: Deployment-plan doc fix
 
 #### Automated
 
-- [ ] 2.1 npm run typecheck passes
-- [ ] 2.2 npm run test:worker passes
+- [x] 2.1 npm run typecheck passes
+- [x] 2.2 npm run test:worker passes
 
 #### Manual
 
-- [ ] 2.3 Diff review confirms deployment-plan.md sample matches src/worker/index.ts
+- [x] 2.3 Diff review confirms deployment-plan.md sample matches src/worker/index.ts
 
 ### Phase 3: Restore RSI-eligibility enforcement via triggers
 
