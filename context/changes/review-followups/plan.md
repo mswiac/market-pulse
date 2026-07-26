@@ -210,13 +210,13 @@ No table rebuild — existing rows in `alerts`/`market_data` are untouched.
 
 #### Automated
 
-- [x] 3.1 npm run migrate:local applies 0009 cleanly
-- [x] 3.2 npm run test:worker passes including the new trigger test
-- [x] 3.3 npm run typecheck passes
+- [x] 3.1 npm run migrate:local applies 0009 cleanly — 5639c75
+- [x] 3.2 npm run test:worker passes including the new trigger test — 5639c75
+- [x] 3.3 npm run typecheck passes — 5639c75
 
 #### Manual
 
-- [x] 3.4 Pre-migration COUNT(*) and spot-check recorded against production D1 (alerts=3: id3 ^NDX/PRICE/113, id4 ^VIX/PRICE/24, id5 ^NDX/RSI/30; market_data=2: ^NDX price=28454.81/rsi=42.23, ^VIX price=18.70/rsi=null)
-- [x] 3.5 npm run migrate:remote applied
-- [x] 3.6 Post-migration COUNT(*) and spot-check confirmed unchanged against production D1 (alerts=3, market_data=2, all rows byte-identical to pre-migration spot-check)
-- [ ] 3.7 App confirmed working end-to-end on production after migration
+- [x] 3.4 Pre-migration COUNT(*) and spot-check recorded against production D1 (alerts=3: id3 ^NDX/PRICE/113, id4 ^VIX/PRICE/24, id5 ^NDX/RSI/30; market_data=2: ^NDX price=28454.81/rsi=42.23, ^VIX price=18.70/rsi=null) — 5639c75
+- [x] 3.5 npm run migrate:remote applied — 5639c75
+- [x] 3.6 Post-migration COUNT(*) and spot-check confirmed unchanged against production D1 (alerts=3, market_data=2, all rows byte-identical to pre-migration spot-check) — 5639c75
+- [x] 3.7 App confirmed working end-to-end on production after migration — 5639c75
