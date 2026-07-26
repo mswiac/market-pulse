@@ -4,8 +4,15 @@ import { authGuard } from './core/auth/auth.guard';
 export const routes: Routes = [
   {
     path: '',
-    loadComponent: () => import('./features/home/home').then((m) => m.Home),
+    loadComponent: () => import('./core/shell/shell').then((m) => m.Shell),
     canActivate: [authGuard],
+    children: [
+      { path: '', loadComponent: () => import('./features/home/home').then((m) => m.Home) },
+      {
+        path: 'history',
+        loadComponent: () => import('./features/instrument-history/instrument-history').then((m) => m.InstrumentHistory),
+      },
+    ],
   },
   {
     path: 'register',

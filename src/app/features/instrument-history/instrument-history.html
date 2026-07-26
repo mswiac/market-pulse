@@ -1,0 +1,63 @@
+<div class="instrument-history-page">
+  <h2 i18n="@@instrumentHistory.title">Instrument history</h2>
+
+  @if (loadError()) {
+    <p class="form-error" i18n="@@instrumentHistory.error.instrumentsLoadFailed">
+      Failed to load instruments. Please refresh the page and try again.
+    </p>
+  } @else {
+    <div class="filters">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label i18n="@@instrumentHistory.type.label">Type</mat-label>
+        <mat-select [value]="selectedInstrumentType()" (selectionChange)="onTypeChange($event.value)">
+          @for (type of instrumentTypes(); track type) {
+            <mat-option [value]="type">{{ instrumentTypeLabel(type) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label i18n="@@instrumentHistory.instrument.label">Instrument</mat-label>
+        <mat-select [value]="selectedTicker()" (selectionChange)="onTickerChange($event.value)">
+          @for (instrument of instrumentOptions(); track instrument.ticker) {
+            <mat-option [value]="instrument.ticker">{{ instrument.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    @if (historyError()) {
+      <p class="form-error" i18n="@@instrumentHistory.error.historyLoadFailed">
+        Failed to load history for this instrument. Please try again.
+      </p>
+    } @else if (selectedTicker()) {
+      @if (showPartialNotice()) {
+        <p class="partial-notice" i18n="@@instrumentHistory.partialNotice">Showing {{ history().length }} of last 30 days.</p>
+      }
+
+      <mat-card class="history-card" appearance="outlined">
+        <table mat-table [dataSource]="sortedHistory()">
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef i18n="@@instrumentHistory.column.date">Date</th>
+            <td mat-cell *matCellDef="let day">{{ day.date }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="close">
+            <th mat-header-cell *matHeaderCellDef class="numeric-cell" i18n="@@instrumentHistory.column.close">Close</th>
+            <td mat-cell *matCellDef="let day" class="numeric-cell">{{ day.close | number: '1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="rsi">
+            <th mat-header-cell *matHeaderCellDef class="numeric-cell" i18n="@@instrumentHistory.column.rsi">RSI</th>
+            <td mat-cell *matCellDef="let day" class="numeric-cell">
+              {{ day.rsi !== null ? (day.rsi | number: '1.2-2') : '—' }}
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns(); sticky: true"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
+        </table>
+      </mat-card>
+    }
+  }
+</div>

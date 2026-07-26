@@ -154,9 +154,21 @@
         <source>RSI threshold</source>
         <target>Próg RSI</target>
       </trans-unit>
-      <trans-unit id="home.logout" datatype="html">
+      <trans-unit id="shell.logout" datatype="html">
         <source>Log out</source>
         <target>Wyloguj</target>
+      </trans-unit>
+      <trans-unit id="shell.nav.alerts" datatype="html">
+        <source>Alerts</source>
+        <target>Alerty</target>
+      </trans-unit>
+      <trans-unit id="shell.nav.history" datatype="html">
+        <source>History</source>
+        <target>Historia</target>
+      </trans-unit>
+      <trans-unit id="shell.nav.instruments" datatype="html">
+        <source>Instruments</source>
+        <target>Walory</target>
       </trans-unit>
       <trans-unit id="home.welcomeTitle" datatype="html">
         <source>Welcome back</source>
@@ -277,6 +289,46 @@
       <trans-unit id="deleteAlertConfirm.confirm" datatype="html">
         <source>Delete</source>
         <target>Usuń</target>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.title" datatype="html">
+        <source>Instrument history</source>
+        <target>Historia walorów</target>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.error.instrumentsLoadFailed" datatype="html">
+        <source> Failed to load instruments. Please refresh the page and try again. </source>
+        <target> Nie udało się załadować instrumentów. Odśwież stronę i spróbuj ponownie. </target>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.type.label" datatype="html">
+        <source>Type</source>
+        <target>Typ</target>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.instrument.label" datatype="html">
+        <source>Instrument</source>
+        <target>Instrument</target>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.instrumentType.index" datatype="html">
+        <source>Index</source>
+        <target>Indeks</target>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.error.historyLoadFailed" datatype="html">
+        <source> Failed to load history for this instrument. Please try again. </source>
+        <target> Nie udało się załadować historii dla tego instrumentu. Spróbuj ponownie. </target>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.partialNotice" datatype="html">
+        <source>Showing <x id="INTERPOLATION" equiv-text="{{ history().length }}"/> of last 30 days.</source>
+        <target>Pokazano <x id="INTERPOLATION" equiv-text="{{ history().length }}"/> z ostatnich 30 dni.</target>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.column.date" datatype="html">
+        <source>Date</source>
+        <target>Data</target>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.column.close" datatype="html">
+        <source>Close</source>
+        <target>Zamknięcie</target>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.column.rsi" datatype="html">
+        <source>RSI</source>
+        <target>RSI</target>
       </trans-unit>
     </body>
   </file>

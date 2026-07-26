@@ -2,6 +2,34 @@
 <xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
   <file source-language="en-US" datatype="plaintext" original="ng2.template">
     <body>
+      <trans-unit id="shell.logout" datatype="html">
+        <source>Log out</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/core/shell/shell.html</context>
+          <context context-type="linenumber">7,10</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="shell.nav.alerts" datatype="html">
+        <source>Alerts</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/core/shell/shell.html</context>
+          <context context-type="linenumber">15,18</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="shell.nav.history" datatype="html">
+        <source>History</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/core/shell/shell.html</context>
+          <context context-type="linenumber">26,27</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="shell.nav.instruments" datatype="html">
+        <source>Instruments</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/core/shell/shell.html</context>
+          <context context-type="linenumber">32,35</context>
+        </context-group>
+      </trans-unit>
       <trans-unit id="alertForm.editTitle" datatype="html">
         <source>Edit alert</source>
         <context-group purpose="location">
@@ -136,28 +164,28 @@
         <source>An alert like this already exists.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.ts</context>
-          <context context-type="linenumber">162</context>
+          <context context-type="linenumber">168</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertForm.error.notFound" datatype="html">
         <source>This alert no longer exists.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.ts</context>
-          <context context-type="linenumber">165</context>
+          <context context-type="linenumber">171</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertForm.error.rsiUnavailableForVix" datatype="html">
         <source>RSI is not available for VIX.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.ts</context>
-          <context context-type="linenumber">169</context>
+          <context context-type="linenumber">175</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertForm.error.generic" datatype="html">
         <source>Something went wrong. Please try again.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.ts</context>
-          <context context-type="linenumber">172</context>
+          <context context-type="linenumber">178</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.loadError" datatype="html">
@@ -470,39 +498,102 @@
           <context context-type="linenumber">44</context>
         </context-group>
       </trans-unit>
-      <trans-unit id="home.logout" datatype="html">
-        <source>Log out</source>
-        <context-group purpose="location">
-          <context context-type="sourcefile">src/app/features/home/home.html</context>
-          <context context-type="linenumber">7,10</context>
-        </context-group>
-      </trans-unit>
       <trans-unit id="home.welcomeTitle" datatype="html">
         <source>Welcome back</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/home/home.html</context>
-          <context context-type="linenumber">13,14</context>
+          <context context-type="linenumber">4,5</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.loggedInAs" datatype="html">
         <source>Logged in as:</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/home/home.html</context>
-          <context context-type="linenumber">17</context>
+          <context context-type="linenumber">8</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.alertsSectionTitle" datatype="html">
         <source>Your alerts</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/home/home.html</context>
-          <context context-type="linenumber">23,25</context>
+          <context context-type="linenumber">14,16</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.newAlertFab" datatype="html">
         <source>New alert</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/home/home.html</context>
-          <context context-type="linenumber">30,32</context>
+          <context context-type="linenumber">21,23</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.title" datatype="html">
+        <source>Instrument history</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/instrument-history/instrument-history.html</context>
+          <context context-type="linenumber">2,5</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.error.instrumentsLoadFailed" datatype="html">
+        <source> Failed to load instruments. Please refresh the page and try again. </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/instrument-history/instrument-history.html</context>
+          <context context-type="linenumber">6,10</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.type.label" datatype="html">
+        <source>Type</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/instrument-history/instrument-history.html</context>
+          <context context-type="linenumber">11,12</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.instrument.label" datatype="html">
+        <source>Instrument</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/instrument-history/instrument-history.html</context>
+          <context context-type="linenumber">20,21</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.error.historyLoadFailed" datatype="html">
+        <source> Failed to load history for this instrument. Please try again. </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/instrument-history/instrument-history.html</context>
+          <context context-type="linenumber">31,34</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.partialNotice" datatype="html">
+        <source>Showing <x id="INTERPOLATION" equiv-text="{{ history().length }}"/> of last 30 days.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/instrument-history/instrument-history.html</context>
+          <context context-type="linenumber">35,38</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.column.date" datatype="html">
+        <source>Date</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/instrument-history/instrument-history.html</context>
+          <context context-type="linenumber">41,42</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.column.close" datatype="html">
+        <source>Close</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/instrument-history/instrument-history.html</context>
+          <context context-type="linenumber">46,47</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.column.rsi" datatype="html">
+        <source>RSI</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/instrument-history/instrument-history.html</context>
+          <context context-type="linenumber">52</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.instrumentType.index" datatype="html">
+        <source>Index</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/instrument-history/instrument-history.ts</context>
+          <context context-type="linenumber">13</context>
         </context-group>
       </trans-unit>
     </body>

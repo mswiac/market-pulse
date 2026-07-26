@@ -122,7 +122,9 @@ Build the routed `/history` page (two comboboxes + table) and add a toolbar drop
 
 **Intent**: Standalone component reusing `InstrumentsService.ensureLoaded()`/`types`/`instruments` exactly as `AlertForm` does, but with plain signals instead of `ReactiveFormsModule` (this page has no form to submit — just two filters), since it's a read-only browsing view rather than a data-entry form. On instrument selection, call `InstrumentHistoryService.getHistory()` and render a `mat-table` with `date`/`close` columns always, plus a `rsi` column only when the loaded response's `rsiEligible` is `true`. Show a caption noting how many of the last 30 days are actually available (e.g. "Showing 22 of last 30 days") whenever fewer than 30 rows come back.
 
-**Contract**: Selector `app-instrument-history`; component class `InstrumentHistory` (matches the existing no-`Component`-suffix naming of `Home`, `AlertList`, `AlertForm`). Signals: `selectedInstrumentType`, `selectedTicker`, `instrumentOptions` (computed, filtered like `alert-form.ts:57-59`), `history`, `rsiEligible`, `loadError` (instruments failed to load), `historyError` (history fetch failed). `displayedColumns` computed from `rsiEligible`.
+*Revised during implementation*: manual testing showed the raw table read poorly and displayed oldest-day-first, which is backwards for how a user actually wants to scan history (most recent first). The endpoint's `history` order (oldest→newest) is a correctness requirement — RSI's Wilder smoothing must be computed in that order — so the reversal happens purely in the component as a presentation-only `sortedHistory = computed(() => [...history()].reverse())`, bound as the table's `dataSource` instead of `history()` directly. Table styling was also revised per current Angular Material table guidance (right-align numeric columns with `tabular-nums`, sticky header row, wrapped in an outlined `mat-card` for visual grouping) instead of a bare unstyled `<table>`.
+
+**Contract**: Selector `app-instrument-history`; component class `InstrumentHistory` (matches the existing no-`Component`-suffix naming of `Home`, `AlertList`, `AlertForm`). Signals: `selectedInstrumentType`, `selectedTicker`, `instrumentOptions` (computed, filtered like `alert-form.ts:57-59`), `history` (raw, oldest→newest, as returned by the API), `sortedHistory` (computed, reversed — what the table actually binds to), `rsiEligible`, `loadError` (instruments failed to load), `historyError` (history fetch failed). `displayedColumns` computed from `rsiEligible`.
 
 #### 3. Route registration
 
@@ -130,15 +132,19 @@ Build the routed `/history` page (two comboboxes + table) and add a toolbar drop
 
 **Intent**: Add a lazy-loaded route for the new page, guarded the same way `''` (home) is.
 
-**Contract**: `{ path: 'history', loadComponent: () => import('./features/instrument-history/instrument-history').then((m) => m.InstrumentHistory), canActivate: [authGuard] }`, inserted before the `**` wildcard redirect.
+*Revised during implementation*: see item 4 below — the guard now lives on a shared parent `Shell` route, with `Home` and `InstrumentHistory` as its lazy-loaded children, rather than each carrying its own `canActivate`.
 
-#### 4. Toolbar navigation menu
+**Contract**: `{ path: '', loadComponent: () => import('./core/shell/shell').then((m) => m.Shell), canActivate: [authGuard], children: [{ path: '', loadComponent: () => Home }, { path: 'history', loadComponent: () => InstrumentHistory }] }`, with `register`/`login`/`**` as siblings of this parent route, unchanged.
 
-**File**: `src/app/features/home/home.ts`, `src/app/features/home/home.html`
+#### 4. Persistent app shell and navigation
 
-**Intent**: Replace the current bare toolbar (logout button only) with a `mat-menu` dropdown (first use in the app) containing one item, "Instrument history", linking to `/history`. Structure it as a generic menu now so future entries (trigger history once S-06 ships, an eventual admin panel) can be appended as additional `mat-menu-item` entries later — but build only this one entry.
+**File**: `src/app/core/shell/shell.ts`, `shell.html`, `shell.scss` (new); `src/app/features/home/home.ts`, `home.html`, `home.scss` (stripped down); `src/app/app.routes.ts`
 
-**Contract**: `home.ts` adds `MatMenuModule` and `RouterLink` to its `imports` array. `home.html` adds a menu-trigger icon button (`mat-icon-button` + `matMenuTriggerFor`) to the existing `mat-toolbar`, and a `<mat-menu>` with one `<a mat-menu-item routerLink="/history">` entry, alongside the existing logout button (not replacing it).
+**Intent**: Add a persistent left-side navigation menu with entries **Alerts** and **History**, plus a toolbar (app name, user email, logout) that stays visible across every authenticated page — not just embedded in `Home`. Structure the nav list so future entries (trigger history once S-06 ships, an eventual admin panel) can be appended as additional `mat-nav-list` items later — but build only these two now.
+
+*Revised twice during implementation*: the plan originally specified a `mat-menu` dropdown anchored to a toolbar icon button, scoped to `Home` only. Manual testing surfaced two problems: (1) the trigger was easy to miss next to the logout button, and (2) because the menu lived inside `Home`, navigating to `/history` lost the toolbar entirely — no logout button, no user info, no way back to alerts. Both were fixed by (a) replacing the dropdown with a permanently-open `mat-sidenav` (`mode="side"`, not a toggleable overlay — confirmed against material.angular.dev and current tutorials as the standard pattern for persistent side navigation) listing both **Alerts** and **History**, and (b) lifting the toolbar + sidenav out of `Home` entirely into a new shared `Shell` component that wraps both pages via nested routing, so the chrome persists across navigation instead of being re-mounted per page.
+
+**Contract**: `Shell` (`src/app/core/shell/shell.ts`) is a new standalone component: `imports: [MatToolbarModule, MatButtonModule, MatSidenavModule, MatListModule, RouterOutlet, RouterLink, RouterLinkActive]`; owns `AuthService.currentUser` and `onLogout()` (moved out of `Home`). Its template renders the toolbar (unchanged content) followed by `<mat-sidenav-container>` with `<mat-sidenav mode="side" [opened]="true" position="start">` containing a `<mat-nav-list>` of two `routerLink` items (`/` → "Alerts", `/history` → "History", both with `routerLinkActive` highlighting), and `<mat-sidenav-content>` holding a bare `<router-outlet />`. `app.routes.ts` nests `Home` and `InstrumentHistory` as children of a `Shell` parent route (see item 3). `Home` no longer owns any toolbar/nav/logout code — it now renders only the welcome card, alert list, and "New alert" FAB.
 
 ### Success Criteria:
 
@@ -150,10 +156,11 @@ Build the routed `/history` page (two comboboxes + table) and add a toolbar drop
 
 #### Manual Verification:
 
-- Log in, open the toolbar menu, click "Instrument history", land on `/history`.
-- Select type "Index", then `^NDX` — table shows date/close/RSI rows, most recent day last or first (confirm ordering reads naturally), RSI populated for rows with enough lookback.
+- Log in, click "History" in the persistent left-side nav to expand it, click "Instruments" underneath, land on `/history`. Toolbar (logout, user email) stays visible.
+- Select type "Index", then `^NDX` — table shows date/close/RSI rows with the most recent day first, RSI populated for rows with enough lookback.
 - Switch to `^VIX` — RSI column disappears entirely; only date/close remain.
 - Confirm the "Showing N of last 30 days" caption appears and matches the actual row count when fewer than 30 days exist.
+- Click "Alerts" in the nav — navigates back to the alert list, toolbar and nav unchanged (not re-mounted/flickering).
 - Refresh directly on `/history` (not via in-app navigation) — page loads correctly (route guard + lazy-load work on direct navigation).
 - Log out and try navigating directly to `/history` — redirected to `/login`.
 
@@ -204,26 +211,27 @@ No database migration required — `instruments` and `price_history` already hav
 
 #### Automated
 
-- [x] 2.1 Type checking passes: npm run typecheck
-- [x] 2.2 Worker unit tests pass: npm run test:worker (new instrument-history endpoint tests)
+- [x] 2.1 Type checking passes: npm run typecheck — 621bc71
+- [x] 2.2 Worker unit tests pass: npm run test:worker (new instrument-history endpoint tests) — 621bc71
 
 #### Manual
 
-- [x] 2.3 curl/browser fetch against /api/instruments/^NDX/history and /api/instruments/^VIX/history on local dev returns correctly-ordered data
+- [x] 2.3 curl/browser fetch against /api/instruments/^NDX/history and /api/instruments/^VIX/history on local dev returns correctly-ordered data — 621bc71
 
 ### Phase 3: Frontend history page and navigation
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: npm run typecheck
-- [ ] 3.2 Production build succeeds: npm run build
-- [ ] 3.3 Full CI script passes: npm run ci
+- [x] 3.1 Type checking passes: npm run typecheck
+- [x] 3.2 Production build succeeds: npm run build
+- [x] 3.3 Full CI script passes: npm run ci
 
 #### Manual
 
-- [ ] 3.4 Log in, open toolbar menu, navigate to /history via "Instrument history" entry
-- [ ] 3.5 Select ^NDX — table shows date/close/RSI, ordering reads naturally, RSI populated where lookback allows
-- [ ] 3.6 Switch to ^VIX — RSI column disappears entirely
-- [ ] 3.7 "Showing N of last 30 days" caption appears and matches actual row count
-- [ ] 3.8 Direct refresh on /history works correctly
-- [ ] 3.9 Logged out, direct navigation to /history redirects to /login
+- [x] 3.4 Log in, expand "History" in persistent left nav, click "Instruments", land on /history with toolbar still visible
+- [x] 3.5 Select ^NDX — table shows date/close/RSI newest-first, RSI populated where lookback allows
+- [x] 3.6 Switch to ^VIX — RSI column disappears entirely
+- [x] 3.7 "Showing N of last 30 days" caption appears and matches actual row count
+- [x] 3.8 Click "Alerts" in nav — returns to alert list, toolbar/nav persist without remount
+- [x] 3.9 Direct refresh on /history works correctly
+- [x] 3.10 Logged out, direct navigation to /history redirects to /login
