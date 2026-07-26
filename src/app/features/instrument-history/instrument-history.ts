@@ -42,6 +42,7 @@ export class InstrumentHistory {
   protected readonly history = signal<InstrumentHistoryEntry[]>([]);
   protected readonly sortedHistory = computed(() => [...this.history()].reverse());
   protected readonly rsiEligible = signal(false);
+  protected readonly currency = signal('');
   protected readonly displayedColumns = computed(() => (this.rsiEligible() ? ['date', 'close', 'rsi'] : ['date', 'close']));
   protected readonly showPartialNotice = computed(() => {
     const count = this.history().length;
@@ -87,6 +88,7 @@ export class InstrumentHistory {
       next: (response) => {
         if (this.selectedTicker() !== ticker) return;
         this.rsiEligible.set(response.rsiEligible);
+        this.currency.set(response.currency);
         this.history.set(response.history);
       },
       error: () => {

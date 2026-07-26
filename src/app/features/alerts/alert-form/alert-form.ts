@@ -132,6 +132,12 @@ export class AlertForm {
     return !!this.instrumentOptions().find((i) => i.ticker === this.form.controls.ticker.value)?.rsiEligible;
   }
 
+  // Read-only, informational only — not part of the threshold control's value
+  // and never submitted as part of the form payload.
+  protected selectedInstrumentCurrency(): string {
+    return this.instrumentOptions().find((i) => i.ticker === this.form.controls.ticker.value)?.currency ?? '';
+  }
+
   protected onThresholdBlur(event: FocusEvent): void {
     const value = this.form.controls.threshold.value;
     if (typeof value === 'number' && Number.isFinite(value)) {

@@ -115,9 +115,9 @@ Thread `currency` through the frontend `Instrument`/`Alert`/history types and re
 
 **Files**: `src/app/features/alerts/alert-list/alert-list.html`
 
-**Intent**: Append the ISO currency code after the threshold value in the summary row (`mat-panel-title`) and after both `currentPrice` and `currentRsi` values in the detail panel — matching the existing `| number: '1.2-2'` formatting, suffixed with a space and `{{ alert.currency }}`. RSI is a dimensionless indicator (0-100), not a monetary value, but the earlier round of questions confirmed "everywhere" (summary + detail) as the intended placement, so `currentRsi` keeps the suffix per that instruction rather than being special-cased out — call this out in the manual verification step so it's consciously checked, not just implemented on autopilot.
+**Intent**: Append the ISO currency code after the threshold value in the summary row (`mat-panel-title`) and after `currentPrice` in the detail panel — matching the existing `| number: '1.2-2'` formatting, suffixed with a space and `{{ alert.currency }}`. *Revised during manual verification*: the plan originally also suffixed `currentRsi` with the currency code (per the "everywhere" placement decision from planning), but manual testing confirmed this reads wrong — RSI is a dimensionless 0-100 indicator, not a monetary value — so `currentRsi` was special-cased out and stays a bare number.
 
-**Contract**: Summary row reads e.g. `150.25 USD`; detail panel's "Current price"/"Current RSI" lines each read e.g. `150.25 USD`. No `i18n` string changes needed — `currency` is data, not template copy.
+**Contract**: Summary row reads e.g. `150.25 USD` (threshold is always a price, regardless of alert type). Detail panel's "Current price" line reads e.g. `150.25 USD`; "Current RSI" reads e.g. `62.50` with no currency suffix. No `i18n` string changes needed — `currency` is data, not template copy.
 
 #### 3. Instrument history table display
 
@@ -131,7 +131,7 @@ Thread `currency` through the frontend `Instrument`/`Alert`/history types and re
 
 **Files**: `src/app/features/alerts/alert-form/alert-form.ts`, `src/app/features/alerts/alert-form/alert-form.html`
 
-**Intent**: Add a `computed()` (e.g. `selectedInstrumentCurrency`) that looks up the currently-selected ticker in `instrumentOptions()` the same way `showRsiOption()` does, returning its `currency`. Render it next to the threshold `mat-form-field` as a `mat-hint` (or adjacent read-only text) — informational only, not part of the `formControlName="threshold"` input's editable value, and not submitted as part of the form payload.
+**Intent**: Add a method (e.g. `selectedInstrumentCurrency()`) that looks up the currently-selected ticker in `instrumentOptions()` the same way `showRsiOption()` does, returning its `currency`. Render it next to the threshold `mat-form-field` as a `matTextSuffix` — informational only, not part of the `formControlName="threshold"` input's editable value, and not submitted as part of the form payload. *Revised during manual verification*: the same threshold input is shared between PRICE and RSI alert types (only its validators swap), so the currency suffix is gated on `form.controls.alertType.value !== 'RSI'` — an RSI threshold is a dimensionless 0-100 value, not a price, and showing a currency code next to it would be wrong for the same reason `currentRsi` (item 2 above) doesn't get one.
 
 **Contract**: The threshold field shows its instrument's currency code alongside it; `form.getRawValue()` and the submitted `CreateAlertPayload` are unchanged (no `currency` key added to the payload — the backend already knows the instrument's currency via `ticker`).
 
@@ -145,9 +145,9 @@ Thread `currency` through the frontend `Instrument`/`Alert`/history types and re
 
 #### Manual Verification:
 
-- Alert list: both `^VIX` and `^NDX` alerts show `USD` next to the threshold in the summary row
-- Alert list detail panel: `USD` appears next to both "Current price" and "Current RSI" values (confirm this reads sensibly for an RSI alert, since RSI isn't a monetary value — flag if it looks wrong so we can revisit)
-- Alert form: opening create/edit shows `USD` next to the threshold field, read-only, and submitting the form still works (currency isn't part of the editable input or the request payload)
+- Alert list: both `^VIX` and `^NDX` PRICE alerts show `USD` next to the threshold in the summary row; RSI alerts show the threshold with no currency suffix
+- Alert list detail panel: `USD` appears next to "Current price"; "Current RSI" shows no currency suffix
+- Alert form: opening a PRICE alert shows `USD` next to the threshold field (read-only); opening an RSI alert shows no currency suffix; submitting the form still works either way (currency isn't part of the editable input or the request payload)
 - Instrument history page: `/history` for both `^VIX` and `^NDX` shows `USD` suffixed on every row's Close value
 
 ---
@@ -190,12 +190,12 @@ Migration `0010_instrument_currency.sql` adds the column with `DEFAULT 'USD'`, b
 
 #### Automated
 
-- [ ] 1.1 Type checking passes: npm run typecheck
-- [ ] 1.2 Worker unit tests pass: npm run test:worker
+- [x] 1.1 Type checking passes: npm run typecheck — feef55e
+- [x] 1.2 Worker unit tests pass: npm run test:worker — feef55e
 
 #### Manual
 
-- [ ] 1.3 Apply migration 0010 locally and confirm ^VIX/^NDX read back currency = 'USD'
+- [x] 1.3 Apply migration 0010 locally and confirm ^VIX/^NDX read back currency = 'USD' — feef55e
 
 ### Phase 2: Frontend display
 
@@ -207,7 +207,7 @@ Migration `0010_instrument_currency.sql` adds the column with `DEFAULT 'USD'`, b
 
 #### Manual
 
-- [ ] 2.4 Alert list summary row shows USD next to threshold for both instruments
-- [ ] 2.5 Alert list detail panel shows USD next to Current price and Current RSI
-- [ ] 2.6 Alert form shows USD read-only next to threshold field; submit still works
+- [ ] 2.4 Alert list summary row shows USD next to threshold for PRICE alerts; no suffix for RSI alerts
+- [ ] 2.5 Alert list detail panel shows USD next to Current price; no suffix on Current RSI
+- [ ] 2.6 Alert form shows USD read-only next to threshold field for PRICE alerts, no suffix for RSI; submit still works
 - [ ] 2.7 Instrument history table shows USD suffix on every row's Close value for both instruments

@@ -7,6 +7,7 @@ export interface Alert {
   ticker: string;
   instrumentName: string;
   instrumentType: string;
+  currency: string;
   alertType: string;
   threshold: number;
   notificationEmail: string;

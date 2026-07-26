@@ -34,7 +34,7 @@
           <mat-panel-title class="alert-summary">
             <span>{{ alert.instrumentName }}</span>
             <span>{{ alertTypeLabel(alert.alertType) }}</span>
-            <span>{{ alert.threshold | number: '1.2-2' }}</span>
+            <span>{{ alert.threshold | number: '1.2-2' }} @if (!showCurrentRsi(alert.alertType)) { {{ alert.currency }} }</span>
           </mat-panel-title>
         </mat-expansion-panel-header>
 
@@ -42,7 +42,7 @@
           <p>
             <strong i18n="@@alertList.detail.currentPrice">Current price:</strong>
             &nbsp;@if (alert.currentPrice !== null) {
-              {{ alert.currentPrice | number: '1.2-2' }}
+              {{ alert.currentPrice | number: '1.2-2' }} {{ alert.currency }}
             } @else {
               <span i18n="@@alertList.detail.noData">No data</span>
             }
