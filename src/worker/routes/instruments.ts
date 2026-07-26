@@ -22,10 +22,19 @@ instrumentsRoutes.get('/', async (c) => {
   const { results } = type
     ? await c.env.DB.prepare('SELECT ticker, name, type, rsi_eligible AS rsiEligible FROM instruments WHERE type = ?')
         .bind(type)
-        .all()
-    : await c.env.DB.prepare('SELECT ticker, name, type, rsi_eligible AS rsiEligible FROM instruments').all();
+        .all<{ ticker: string; name: string; type: string; rsiEligible: number }>()
+    : await c.env.DB.prepare('SELECT ticker, name, type, rsi_eligible AS rsiEligible FROM instruments').all<{
+        ticker: string;
+        name: string;
+        type: string;
+        rsiEligible: number;
+      }>();
 
-  return c.json(results, 200);
+  // Coerced to a real boolean so `rsiEligible` has the same JSON type here as
+  // on GET /:ticker/history, rather than leaking SQLite's raw 0/1 integer.
+  const instruments = results.map((row) => ({ ...row, rsiEligible: !!row.rsiEligible }));
+
+  return c.json(instruments, 200);
 });
 
 instrumentsRoutes.get('/:ticker/history', async (c) => {

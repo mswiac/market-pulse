@@ -73,6 +73,7 @@ export class InstrumentHistory {
     } else {
       this.selectedTicker.set('');
       this.history.set([]);
+      this.historyError.set(false);
     }
   }
 
@@ -81,11 +82,17 @@ export class InstrumentHistory {
     this.historyError.set(false);
 
     this.instrumentHistoryService.getHistory(ticker).subscribe({
+      // Rapid switching can let responses arrive out of order — only apply
+      // this one if its ticker is still the one currently selected.
       next: (response) => {
+        if (this.selectedTicker() !== ticker) return;
         this.rsiEligible.set(response.rsiEligible);
         this.history.set(response.history);
       },
-      error: () => this.historyError.set(true),
+      error: () => {
+        if (this.selectedTicker() !== ticker) return;
+        this.historyError.set(true);
+      },
     });
   }
 }

@@ -1,7 +1,7 @@
 ---
 change_id: instrument-history-view
 title: Instrument history view
-status: implemented
+status: impl_reviewed
 created: 2026-07-26
 updated: 2026-07-26
 archived_at: null

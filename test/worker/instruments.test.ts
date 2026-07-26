@@ -64,8 +64,8 @@ describe('instruments endpoint', () => {
     expect(instruments).toHaveLength(2);
     expect(instruments).toEqual(
       expect.arrayContaining([
-        { ticker: '^VIX', name: 'VIX', type: 'index', rsiEligible: 0 },
-        { ticker: '^NDX', name: 'NASDAQ-100', type: 'index', rsiEligible: 1 },
+        { ticker: '^VIX', name: 'VIX', type: 'index', rsiEligible: false },
+        { ticker: '^NDX', name: 'NASDAQ-100', type: 'index', rsiEligible: true },
       ]),
     );
     for (const instrument of instruments) {
