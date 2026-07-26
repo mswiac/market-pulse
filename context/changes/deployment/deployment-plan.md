@@ -340,18 +340,13 @@ The Worker must export a `scheduled` handler alongside the default HTTP handler:
 
 ```typescript
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    // Hono HTTP handler
-  },
+  fetch: app.fetch, // Hono HTTP handler
 
-  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-    // Daily job: fetch Stooq → calculate RSI → evaluate alerts → send emails
-    ctx.waitUntil(runDailyJob(env));
-  },
+  scheduled: (_controller: ScheduledController, env: Env, _ctx: ExecutionContext) => handleScheduled(env),
 };
 ```
 
-`ctx.waitUntil()` is required — it tells the Workers runtime to keep the isolate alive until the async job completes, even after the scheduled event itself returns.
+`ctx.waitUntil()` is not needed here — the Workers runtime awaits the promise returned from `scheduled()` regardless, so returning `handleScheduled(env)` directly keeps the isolate alive until the job completes without an explicit `waitUntil()` call.
 
 ### Test the cron locally
 
