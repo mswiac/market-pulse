@@ -6,7 +6,7 @@ export interface Instrument {
   ticker: string;
   name: string;
   type: string;
-  rsiEligible: number;
+  rsiEligible: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

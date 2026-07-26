@@ -1,0 +1,80 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.user-email {
+  margin-right: 1rem;
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+.app-sidenav-container {
+  flex: 1 1 auto;
+}
+
+mat-sidenav {
+  width: 15rem;
+}
+
+mat-nav-list {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+// M3-style pill-shaped active indicator/hover, rather than a square/full-width highlight —
+// applies to both nav links and the "History" toggle button so the whole list reads as one menu.
+mat-nav-list [mat-list-item] {
+  border-radius: 1.75rem;
+}
+
+.active-link {
+  background-color: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}
+
+// A raw <button> keeps the browser's default border/appearance/padding unless
+// reset — unlike <a mat-list-item>, which has none to begin with. Only
+// resetting decoration here (not `display`) — overriding display broke
+// Material's own internal flex layout for the projected icon/title content.
+.nav-toggle {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+// The caret lives *inside* matListItemTitle (not as a third top-level
+// projected child) so Material still sees the same single-line item shape as
+// "Alerts" — an extra top-level projected node was triggering a taller,
+// multi-line item layout.
+.nav-toggle-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.nav-toggle-caret {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// Indents the "Instrument history" item under its "History" parent toggle.
+.nested-item {
+  --mat-list-list-item-leading-icon-start-space: 2.5rem;
+  padding-left: 2.5rem;
+}

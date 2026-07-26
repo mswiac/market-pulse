@@ -1,12 +1,3 @@
-<mat-toolbar color="primary">
-  <span>MarketPulse</span>
-  <span class="spacer"></span>
-  @if (user(); as currentUser) {
-    <span class="user-email">{{ currentUser.email }}</span>
-  }
-  <button mat-button (click)="onLogout()" i18n="@@home.logout">Log out</button>
-</mat-toolbar>
-
 <div class="home-content">
   <mat-card class="welcome-card">
     <mat-card-header>

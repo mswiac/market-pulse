@@ -1,0 +1,44 @@
+<mat-toolbar color="primary">
+  <span>MarketPulse</span>
+  <span class="spacer"></span>
+  @if (user(); as currentUser) {
+    <span class="user-email">{{ currentUser.email }}</span>
+  }
+  <button mat-button (click)="onLogout()" i18n="@@shell.logout">Log out</button>
+</mat-toolbar>
+
+<mat-sidenav-container class="app-sidenav-container">
+  <mat-sidenav mode="side" [opened]="true" position="start">
+    <mat-nav-list>
+      <a mat-list-item routerLink="/" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true }">
+        <mat-icon matListItemIcon>notifications</mat-icon>
+        <span matListItemTitle i18n="@@shell.nav.alerts">Alerts</span>
+      </a>
+
+      <button
+        mat-list-item
+        type="button"
+        class="nav-toggle"
+        (click)="historyExpanded.set(!historyExpanded())"
+        [attr.aria-expanded]="historyExpanded()"
+        aria-controls="history-nav-panel"
+      >
+        <mat-icon matListItemIcon>history</mat-icon>
+        <span matListItemTitle class="nav-toggle-title">
+          <span i18n="@@shell.nav.history">History</span>
+          <mat-icon class="nav-toggle-caret">{{ historyExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+        </span>
+      </button>
+
+      @if (historyExpanded()) {
+        <a mat-list-item id="history-nav-panel" class="nested-item" routerLink="/history" routerLinkActive="active-link">
+          <span matListItemTitle i18n="@@shell.nav.instruments">Instruments</span>
+        </a>
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <router-outlet />
+  </mat-sidenav-content>
+</mat-sidenav-container>
