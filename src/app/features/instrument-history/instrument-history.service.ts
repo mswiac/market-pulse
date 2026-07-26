@@ -11,6 +11,7 @@ export interface InstrumentHistoryEntry {
 export interface InstrumentHistoryResponse {
   ticker: string;
   rsiEligible: boolean;
+  currency: string;
   history: InstrumentHistoryEntry[];
 }
 

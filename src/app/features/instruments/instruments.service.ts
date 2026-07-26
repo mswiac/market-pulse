@@ -7,6 +7,7 @@ export interface Instrument {
   name: string;
   type: string;
   rsiEligible: boolean;
+  currency: string;
 }
 
 @Injectable({ providedIn: 'root' })
