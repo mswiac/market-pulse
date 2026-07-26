@@ -1,5 +1,5 @@
-import { exports } from 'cloudflare:workers';
-import { describe, expect, it } from 'vitest';
+import { env, exports } from 'cloudflare:workers';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 const BASE_URL = 'https://example.com';
 const PASSWORD = 'correct horse battery staple';
@@ -24,6 +24,28 @@ async function getInstruments(cookie?: string, type?: string): Promise<Response>
   return exports.default.fetch(url, {
     headers: cookie ? { Cookie: cookie } : {},
   });
+}
+
+async function getHistory(ticker: string, cookie?: string): Promise<Response> {
+  return exports.default.fetch(`${BASE_URL}/api/instruments/${ticker}/history`, {
+    headers: cookie ? { Cookie: cookie } : {},
+  });
+}
+
+// Seeds `closes.length` consecutive daily rows for `ticker`, oldest starting
+// at 2020-01-01, so tests control exactly how much lookback history exists.
+async function seedPriceHistory(ticker: string, closes: number[]): Promise<void> {
+  const start = new Date('2020-01-01T00:00:00Z');
+  const statements = closes.map((close, i) => {
+    const date = new Date(start);
+    date.setUTCDate(date.getUTCDate() + i);
+    return env.DB.prepare('INSERT INTO price_history (ticker, date, close) VALUES (?, ?, ?)').bind(
+      ticker,
+      date.toISOString().slice(0, 10),
+      close,
+    );
+  });
+  await env.DB.batch(statements);
 }
 
 describe('instruments endpoint', () => {
@@ -65,5 +87,81 @@ describe('instruments endpoint', () => {
     const response = await getInstruments(cookie, 'gpw_company');
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual([]);
+  });
+});
+
+describe('instrument history endpoint', () => {
+  beforeEach(async () => {
+    await env.DB.prepare('DELETE FROM price_history').run();
+  });
+
+  it('rejects a request without a session cookie', async () => {
+    const response = await getHistory('^NDX');
+    expect(response.status).toBe(401);
+  });
+
+  it('returns 404 for an unknown ticker', async () => {
+    const cookie = await registerAndLogIn('history-unknown-ticker@example.com');
+
+    const response = await getHistory('^FOO', cookie);
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({ error: 'unknown instrument' });
+  });
+
+  it('returns rsiEligible: false and every rsi null for ^VIX', async () => {
+    const cookie = await registerAndLogIn('history-vix@example.com');
+    await seedPriceHistory('^VIX', Array.from({ length: 20 }, (_, i) => 20 + i));
+
+    const response = await getHistory('^VIX', cookie);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { ticker: string; rsiEligible: boolean; history: { rsi: number | null }[] };
+
+    expect(body.rsiEligible).toBe(false);
+    expect(body.history).toHaveLength(20);
+    expect(body.history.every((day) => day.rsi === null)).toBe(true);
+  });
+
+  it('returns rsiEligible: true and populates rsi once enough lookback exists for ^NDX', async () => {
+    const cookie = await registerAndLogIn('history-ndx-full@example.com');
+    // Exactly 30 (display) + 14 (lookback) closes — every displayed day has enough history for RSI.
+    await seedPriceHistory('^NDX', Array.from({ length: 44 }, (_, i) => 4000 + i));
+
+    const response = await getHistory('^NDX', cookie);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      ticker: string;
+      rsiEligible: boolean;
+      history: { date: string; close: number; rsi: number | null }[];
+    };
+
+    expect(body.rsiEligible).toBe(true);
+    expect(body.history).toHaveLength(30);
+    expect(body.history.every((day) => typeof day.rsi === 'number')).toBe(true);
+    // Oldest → newest, matching the seeded date sequence.
+    expect(body.history[0].date < body.history[body.history.length - 1].date).toBe(true);
+  });
+
+  it('caps history at 30 entries even when more than 44 rows of price_history exist', async () => {
+    const cookie = await registerAndLogIn('history-ndx-overflow@example.com');
+    await seedPriceHistory('^NDX', Array.from({ length: 60 }, (_, i) => 4000 + i));
+
+    const response = await getHistory('^NDX', cookie);
+    const body = (await response.json()) as { history: unknown[] };
+    expect(body.history).toHaveLength(30);
+  });
+
+  it('returns fewer than 30 entries with a partial rsi ramp-up when less history exists', async () => {
+    const cookie = await registerAndLogIn('history-ndx-partial@example.com');
+    // Mirrors current production reality: ~22 days of history, well short of the 44-day full lookback.
+    await seedPriceHistory('^NDX', Array.from({ length: 22 }, (_, i) => 4000 + i));
+
+    const response = await getHistory('^NDX', cookie);
+    const body = (await response.json()) as { rsiEligible: boolean; history: { rsi: number | null }[] };
+
+    expect(body.rsiEligible).toBe(true);
+    expect(body.history).toHaveLength(22);
+    // First 14 days (period) can't have enough lookback yet; the remaining 8 can.
+    expect(body.history.slice(0, 14).every((day) => day.rsi === null)).toBe(true);
+    expect(body.history.slice(14).every((day) => typeof day.rsi === 'number')).toBe(true);
   });
 });

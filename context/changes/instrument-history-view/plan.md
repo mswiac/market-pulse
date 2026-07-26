@@ -197,19 +197,19 @@ No database migration required — `instruments` and `price_history` already hav
 
 #### Automated
 
-- [x] 1.1 Type checking passes: npm run typecheck
-- [x] 1.2 Worker unit tests pass: npm run test:worker
+- [x] 1.1 Type checking passes: npm run typecheck — 7487c70
+- [x] 1.2 Worker unit tests pass: npm run test:worker — 7487c70
 
 ### Phase 2: Instrument history endpoint
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: npm run typecheck
-- [ ] 2.2 Worker unit tests pass: npm run test:worker (new instrument-history endpoint tests)
+- [x] 2.1 Type checking passes: npm run typecheck
+- [x] 2.2 Worker unit tests pass: npm run test:worker (new instrument-history endpoint tests)
 
 #### Manual
 
-- [ ] 2.3 curl/browser fetch against /api/instruments/^NDX/history and /api/instruments/^VIX/history on local dev returns correctly-ordered data
+- [x] 2.3 curl/browser fetch against /api/instruments/^NDX/history and /api/instruments/^VIX/history on local dev returns correctly-ordered data
 
 ### Phase 3: Frontend history page and navigation
 
