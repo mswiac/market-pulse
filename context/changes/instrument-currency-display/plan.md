@@ -201,13 +201,13 @@ Migration `0010_instrument_currency.sql` adds the column with `DEFAULT 'USD'`, b
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: npm run typecheck
-- [ ] 2.2 Production build succeeds: npm run build
-- [ ] 2.3 Full CI script passes: npm run ci
+- [x] 2.1 Type checking passes: npm run typecheck — 140290c
+- [x] 2.2 Production build succeeds: npm run build — 140290c
+- [x] 2.3 Full CI script passes: npm run ci — 140290c
 
 #### Manual
 
-- [ ] 2.4 Alert list summary row shows USD next to threshold for PRICE alerts; no suffix for RSI alerts
-- [ ] 2.5 Alert list detail panel shows USD next to Current price; no suffix on Current RSI
-- [ ] 2.6 Alert form shows USD read-only next to threshold field for PRICE alerts, no suffix for RSI; submit still works
-- [ ] 2.7 Instrument history table shows USD suffix on every row's Close value for both instruments
+- [x] 2.4 Alert list summary row shows USD next to threshold for PRICE alerts; no suffix for RSI alerts — 140290c
+- [x] 2.5 Alert list detail panel shows USD next to Current price; no suffix on Current RSI — 140290c
+- [x] 2.6 Alert form shows USD read-only next to threshold field for PRICE alerts, no suffix for RSI; submit still works — 140290c
+- [x] 2.7 Instrument history table shows USD suffix on every row's Close value for both instruments — 140290c
