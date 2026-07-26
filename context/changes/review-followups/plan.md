@@ -192,31 +192,31 @@ No table rebuild — existing rows in `alerts`/`market_data` are untouched.
 
 #### Manual
 
-- [x] 1.3 npm run ci pasted into Cloudflare dashboard Build command and saved
-- [x] 1.4 Push confirms Cloudflare build log runs typecheck + vitest before the Angular build
+- [x] 1.3 npm run ci pasted into Cloudflare dashboard Build command and saved — 56a5d43
+- [x] 1.4 Push confirms Cloudflare build log runs typecheck + vitest before the Angular build — 56a5d43
 
 ### Phase 2: Deployment-plan doc fix
 
 #### Automated
 
-- [x] 2.1 npm run typecheck passes
-- [x] 2.2 npm run test:worker passes
+- [x] 2.1 npm run typecheck passes — 56a5d43
+- [x] 2.2 npm run test:worker passes — 56a5d43
 
 #### Manual
 
-- [x] 2.3 Diff review confirms deployment-plan.md sample matches src/worker/index.ts
+- [x] 2.3 Diff review confirms deployment-plan.md sample matches src/worker/index.ts — 56a5d43
 
 ### Phase 3: Restore RSI-eligibility enforcement via triggers
 
 #### Automated
 
-- [ ] 3.1 npm run migrate:local applies 0009 cleanly
-- [ ] 3.2 npm run test:worker passes including the new trigger test
-- [ ] 3.3 npm run typecheck passes
+- [x] 3.1 npm run migrate:local applies 0009 cleanly
+- [x] 3.2 npm run test:worker passes including the new trigger test
+- [x] 3.3 npm run typecheck passes
 
 #### Manual
 
-- [ ] 3.4 Pre-migration COUNT(*) and spot-check recorded against production D1
-- [ ] 3.5 npm run migrate:remote applied
-- [ ] 3.6 Post-migration COUNT(*) and spot-check confirmed unchanged against production D1
+- [x] 3.4 Pre-migration COUNT(*) and spot-check recorded against production D1 (alerts=3: id3 ^NDX/PRICE/113, id4 ^VIX/PRICE/24, id5 ^NDX/RSI/30; market_data=2: ^NDX price=28454.81/rsi=42.23, ^VIX price=18.70/rsi=null)
+- [x] 3.5 npm run migrate:remote applied
+- [x] 3.6 Post-migration COUNT(*) and spot-check confirmed unchanged against production D1 (alerts=3, market_data=2, all rows byte-identical to pre-migration spot-check)
 - [ ] 3.7 App confirmed working end-to-end on production after migration
