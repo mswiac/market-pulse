@@ -222,16 +222,16 @@ No database migration required — `instruments` and `price_history` already hav
 
 #### Automated
 
-- [x] 3.1 Type checking passes: npm run typecheck
-- [x] 3.2 Production build succeeds: npm run build
-- [x] 3.3 Full CI script passes: npm run ci
+- [x] 3.1 Type checking passes: npm run typecheck — ef4376b
+- [x] 3.2 Production build succeeds: npm run build — ef4376b
+- [x] 3.3 Full CI script passes: npm run ci — ef4376b
 
 #### Manual
 
-- [x] 3.4 Log in, expand "History" in persistent left nav, click "Instruments", land on /history with toolbar still visible
-- [x] 3.5 Select ^NDX — table shows date/close/RSI newest-first, RSI populated where lookback allows
-- [x] 3.6 Switch to ^VIX — RSI column disappears entirely
-- [x] 3.7 "Showing N of last 30 days" caption appears and matches actual row count
-- [x] 3.8 Click "Alerts" in nav — returns to alert list, toolbar/nav persist without remount
-- [x] 3.9 Direct refresh on /history works correctly
-- [x] 3.10 Logged out, direct navigation to /history redirects to /login
+- [x] 3.4 Log in, expand "History" in persistent left nav, click "Instruments", land on /history with toolbar still visible — ef4376b
+- [x] 3.5 Select ^NDX — table shows date/close/RSI newest-first, RSI populated where lookback allows — ef4376b
+- [x] 3.6 Switch to ^VIX — RSI column disappears entirely — ef4376b
+- [x] 3.7 "Showing N of last 30 days" caption appears and matches actual row count — ef4376b
+- [x] 3.8 Click "Alerts" in nav — returns to alert list, toolbar/nav persist without remount — ef4376b
+- [x] 3.9 Direct refresh on /history works correctly — ef4376b
+- [x] 3.10 Logged out, direct navigation to /history redirects to /login — ef4376b
