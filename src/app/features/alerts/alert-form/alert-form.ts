@@ -71,6 +71,7 @@ export class AlertForm {
       Validators.required,
       ...(this.data?.alert?.alertType === 'RSI' ? rsiRangeValidators() : priceValidators()),
     ]),
+    direction: [this.data?.alert?.direction ?? 'up', Validators.required],
     notificationEmail: [
       this.data?.alert?.notificationEmail ?? this.authService.currentUser()?.email ?? '',
       [Validators.required, Validators.email],
@@ -152,8 +153,8 @@ export class AlertForm {
 
     this.formError.set(null);
     this.submitting.set(true);
-    const { ticker, alertType, threshold, notificationEmail } = this.form.getRawValue();
-    const payload = { ticker, alertType, threshold: threshold as number, notificationEmail };
+    const { ticker, alertType, threshold, direction, notificationEmail } = this.form.getRawValue();
+    const payload = { ticker, alertType, threshold: threshold as number, direction, notificationEmail };
 
     const request$ = this.isEditMode
       ? this.alertsService.update(this.data!.alert!.id, payload)

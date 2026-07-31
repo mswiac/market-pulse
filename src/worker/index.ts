@@ -8,6 +8,8 @@ export interface Env {
   DB: D1Database;
   PASSWORD_PEPPER: string;
   ASSETS: Fetcher;
+  RESEND_API_KEY: string;
+  RESEND_VERIFIED_EMAIL: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();

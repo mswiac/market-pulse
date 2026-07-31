@@ -30,7 +30,7 @@
   <mat-accordion>
     @for (alert of sortedAlerts(); track alert.id) {
       <mat-expansion-panel>
-        <mat-expansion-panel-header>
+        <mat-expansion-panel-header [class.inactive]="!alert.active">
           <mat-panel-title class="alert-summary">
             <span>{{ alert.instrumentName }}</span>
             <span>{{ alertTypeLabel(alert.alertType) }}</span>
@@ -40,8 +40,7 @@
 
         <div class="alert-detail">
           <p>
-            <strong i18n="@@alertList.detail.currentPrice">Current price:</strong>
-            &nbsp;@if (alert.currentPrice !== null) {
+            <strong i18n="@@alertList.detail.currentPrice">Current price:</strong>&nbsp;@if (alert.currentPrice !== null) {
               {{ alert.currentPrice | number: '1.2-2' }} {{ alert.currency }}
             } @else {
               <span i18n="@@alertList.detail.noData">No data</span>
@@ -49,8 +48,7 @@
           </p>
           @if (showCurrentRsi(alert.alertType)) {
             <p>
-              <strong i18n="@@alertList.detail.currentRsi">Current RSI:</strong>
-              &nbsp;@if (alert.currentRsi !== null) {
+              <strong i18n="@@alertList.detail.currentRsi">Current RSI:</strong>&nbsp;@if (alert.currentRsi !== null) {
                 {{ alert.currentRsi | number: '1.2-2' }}
               } @else {
                 <span i18n="@@alertList.detail.noData">No data</span>
@@ -58,6 +56,20 @@
             </p>
           }
           <p><strong i18n="@@alertList.detail.ticker">Ticker:</strong> {{ alert.ticker }}</p>
+          <p>
+            <strong i18n="@@alertList.detail.direction">Direction:</strong>&nbsp;@if (alert.direction === 'up') {
+              <span i18n="@@alertForm.direction.up">Rises above threshold</span>
+            } @else {
+              <span i18n="@@alertForm.direction.down">Falls below threshold</span>
+            }
+          </p>
+          <p>
+            <strong i18n="@@alertList.detail.status">Status:</strong>&nbsp;@if (alert.active) {
+              <span i18n="@@alertList.status.active">Active</span>
+            } @else {
+              <span i18n="@@alertList.status.inactive">Inactive</span>
+            }
+          </p>
           <p><strong i18n="@@alertList.detail.notificationEmail">Notification email:</strong> {{ alert.notificationEmail }}</p>
           <p><strong i18n="@@alertList.detail.lastEdited">Last edited:</strong> {{ alert.updatedAt * 1000 | date: 'dd.MM.yyyy' }}</p>
         </div>

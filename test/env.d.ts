@@ -3,6 +3,8 @@ declare namespace Cloudflare {
     DB: D1Database;
     PASSWORD_PEPPER: string;
     ASSETS: Fetcher;
+    RESEND_API_KEY: string;
+    RESEND_VERIFIED_EMAIL: string;
     TEST_MIGRATIONS: import("cloudflare:test").D1Migration[];
   }
   interface GlobalProps {

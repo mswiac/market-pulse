@@ -130,10 +130,12 @@ Six months after deployment the project grows: 140 GPW stocks + 30 stocks from o
    crons = ["0 18 * * 1-5"]
    ```
 
-4. **Add Resend API key as a secret:**
+4. **Add Resend secrets:**
    ```bash
    wrangler secret put RESEND_API_KEY
+   wrangler secret put RESEND_VERIFIED_EMAIL
    ```
+   Both are required — `RESEND_VERIFIED_EMAIL` is the address the Resend account was created with. This project runs on Resend's sandbox (no custom domain verified), which restricts delivery to **only that one address**: any alert whose `notification_email` doesn't match it will have its email attempt rejected before a network call is even made, and the rejection is recorded in `trigger_events` rather than delivered. Lifting this restriction requires verifying a custom domain in Resend (DNS records for SPF/DKIM) — deliberately out of scope for the MVP; see `context/changes/alert-notifications/plan.md`'s "What We're NOT Doing".
 
 5. **Deploy:**
    ```bash

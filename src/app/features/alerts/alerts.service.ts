@@ -10,6 +10,8 @@ export interface Alert {
   currency: string;
   alertType: string;
   threshold: number;
+  direction: string;
+  active: boolean;
   notificationEmail: string;
   createdAt: number;
   updatedAt: number;
@@ -22,6 +24,7 @@ export interface CreateAlertPayload {
   alertType: string;
   threshold: number;
   notificationEmail: string;
+  direction: string;
 }
 
 @Injectable({ providedIn: 'root' })

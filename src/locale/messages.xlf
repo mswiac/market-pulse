@@ -20,14 +20,14 @@
         <source>History</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/core/shell/shell.html</context>
-          <context context-type="linenumber">26,27</context>
+          <context context-type="linenumber">28,29</context>
         </context-group>
       </trans-unit>
       <trans-unit id="shell.nav.instruments" datatype="html">
         <source>Instruments</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/core/shell/shell.html</context>
-          <context context-type="linenumber">32,35</context>
+          <context context-type="linenumber">35,38</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertForm.editTitle" datatype="html">
@@ -94,63 +94,92 @@
         <source>Field required.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
-          <context context-type="linenumber">49,50</context>
+          <context context-type="linenumber">52,53</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertForm.threshold.errorRange" datatype="html">
         <source>Value must be between 0 and 100.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
-          <context context-type="linenumber">51,52</context>
+          <context context-type="linenumber">54,55</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertForm.threshold.errorPositive" datatype="html">
         <source>Value must be greater than 0.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
-          <context context-type="linenumber">53,57</context>
+          <context context-type="linenumber">56,60</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertForm.direction.label" datatype="html">
+        <source>Direction</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
+          <context context-type="linenumber">61,62</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertForm.direction.up" datatype="html">
+        <source>Rises above threshold</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
+          <context context-type="linenumber">63,64</context>
+        </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">64,66</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertForm.direction.down" datatype="html">
+        <source>Falls below threshold</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
+          <context context-type="linenumber">64,66</context>
+        </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">66,69</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertForm.notificationEmail.label" datatype="html">
         <source>Notification email</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
-          <context context-type="linenumber">58,59</context>
+          <context context-type="linenumber">69,70</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertForm.notificationEmail.errorRequired" datatype="html">
         <source>Field required.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
-          <context context-type="linenumber">61,62</context>
+          <context context-type="linenumber">72,73</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertForm.notificationEmail.errorInvalid" datatype="html">
         <source>Enter a valid email address.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
-          <context context-type="linenumber">63,67</context>
+          <context context-type="linenumber">74,78</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertForm.cancel" datatype="html">
         <source>Cancel</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
-          <context context-type="linenumber">73,74</context>
+          <context context-type="linenumber">84,85</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertForm.submitEdit" datatype="html">
         <source>Save changes</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
-          <context context-type="linenumber">76,78</context>
+          <context context-type="linenumber">87,89</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertForm.submit" datatype="html">
         <source>Create alert</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.html</context>
-          <context context-type="linenumber">78,80</context>
+          <context context-type="linenumber">89,91</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertForm.instrumentType.index" datatype="html">
@@ -164,28 +193,28 @@
         <source>An alert like this already exists.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.ts</context>
-          <context context-type="linenumber">168</context>
+          <context context-type="linenumber">175</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertForm.error.notFound" datatype="html">
         <source>This alert no longer exists.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.ts</context>
-          <context context-type="linenumber">171</context>
+          <context context-type="linenumber">178</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertForm.error.rsiUnavailableForVix" datatype="html">
         <source>RSI is not available for VIX.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.ts</context>
-          <context context-type="linenumber">175</context>
+          <context context-type="linenumber">182</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertForm.error.generic" datatype="html">
         <source>Something went wrong. Please try again.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-form/alert-form.ts</context>
-          <context context-type="linenumber">178</context>
+          <context context-type="linenumber">185</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.loadError" datatype="html">
@@ -267,39 +296,67 @@
           <context context-type="linenumber">60,61</context>
         </context-group>
       </trans-unit>
+      <trans-unit id="alertList.detail.direction" datatype="html">
+        <source>Direction:</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">62,63</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.detail.status" datatype="html">
+        <source>Status:</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">70,71</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.status.active" datatype="html">
+        <source>Active</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">72,74</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.status.inactive" datatype="html">
+        <source>Inactive</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">74,77</context>
+        </context-group>
+      </trans-unit>
       <trans-unit id="alertList.detail.notificationEmail" datatype="html">
         <source>Notification email:</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">61,62</context>
+          <context context-type="linenumber">77,78</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.detail.lastEdited" datatype="html">
         <source>Last edited:</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">62</context>
+          <context context-type="linenumber">78</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.action.edit" datatype="html">
         <source>Edit alert</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">66,67</context>
+          <context context-type="linenumber">82,83</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.action.delete" datatype="html">
         <source>Delete alert</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">74,76</context>
+          <context context-type="linenumber">90,92</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.emptyState" datatype="html">
         <source>No alerts yet — add your first one to get started.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">81,85</context>
+          <context context-type="linenumber">97,101</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.type.price" datatype="html">
