@@ -12,6 +12,14 @@ const ALERT_TYPE_LABELS: Record<string, string> = {
   RSI: $localize`:@@triggerHistory.type.rsi:RSI threshold`,
 };
 
+// Maps the small, fixed set of error strings the backend can actually
+// produce (see src/worker/lib/resend.ts) to a translated label. Resend's own
+// API error responses aren't enumerable, so unknown messages fall back to
+// the raw (untranslated) text rather than being silently hidden.
+const KNOWN_EMAIL_ERROR_LABELS: Record<string, string> = {
+  'recipient not verified in Resend sandbox': $localize`:@@triggerHistory.emailError.recipientNotVerified:The recipient's email address is not verified in the Resend sandbox.`,
+};
+
 const DISPLAYED_COLUMNS = ['triggeredAt', 'instrumentName', 'alertType', 'direction', 'threshold', 'valueAtTrigger', 'emailStatus'];
 
 @Component({
@@ -57,5 +65,10 @@ export class TriggerHistory {
 
   protected showCurrency(alertType: string): boolean {
     return alertType !== 'RSI';
+  }
+
+  protected emailErrorLabel(error: string | null): string {
+    if (!error) return '';
+    return KNOWN_EMAIL_ERROR_LABELS[error] ?? error;
   }
 }

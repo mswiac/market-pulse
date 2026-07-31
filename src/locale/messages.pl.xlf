@@ -200,7 +200,7 @@
       </trans-unit>
       <trans-unit id="shell.nav.triggerHistory" datatype="html">
         <source>Triggered alerts</source>
-        <target>Wyzwolone alerty</target>
+        <target>Uruchomione alerty</target>
       </trans-unit>
       <trans-unit id="home.welcomeTitle" datatype="html">
         <source>Welcome back</source>
@@ -364,7 +364,7 @@
       </trans-unit>
       <trans-unit id="triggerHistory.title" datatype="html">
         <source>Triggered alerts</source>
-        <target>Wyzwolone alerty</target>
+        <target>Uruchomione alerty</target>
       </trans-unit>
       <trans-unit id="triggerHistory.error.loadFailed" datatype="html">
         <source> Failed to load trigger history. Please refresh the page and try again. </source>
@@ -416,7 +416,11 @@
       </trans-unit>
       <trans-unit id="triggerHistory.emptyState" datatype="html">
         <source>No triggered alerts yet.</source>
-        <target>Brak jeszcze wyzwolonych alertów.</target>
+        <target>Brak jeszcze uruchomionych alertów.</target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.emailError.recipientNotVerified" datatype="html">
+        <source>The recipient&apos;s email address is not verified in the Resend sandbox.</source>
+        <target>Adres e-mail odbiorcy nie jest zweryfikowany w trybie testowym (sandbox) Resend.</target>
       </trans-unit>
       <trans-unit id="triggerHistory.type.price" datatype="html">
         <source>Price threshold</source>

@@ -25,6 +25,11 @@ td.numeric-cell {
   font-variant-numeric: tabular-nums;
 }
 
+th.centered-cell,
+td.centered-cell {
+  text-align: center;
+}
+
 // Matches the alert list's / instrument history's header color for visual consistency.
 tr.mat-mdc-header-row {
   background-color: var(--mat-sys-secondary-container);

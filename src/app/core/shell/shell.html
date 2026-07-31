@@ -31,7 +31,14 @@
       </button>
 
       @if (historyExpanded()) {
-        <a mat-list-item id="history-nav-panel" class="nested-item" routerLink="/history" routerLinkActive="active-link">
+        <a
+          mat-list-item
+          id="history-nav-panel"
+          class="nested-item"
+          routerLink="/history"
+          routerLinkActive="active-link"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
           <span matListItemTitle i18n="@@shell.nav.instruments">Instruments</span>
         </a>
         <a mat-list-item class="nested-item" routerLink="/history/triggers" routerLinkActive="active-link">
