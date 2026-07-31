@@ -87,6 +87,12 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "development-pl": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "localize": ["pl"]
             }
           },
           "defaultConfiguration": "production"
@@ -99,6 +105,10 @@
             },
             "development": {
               "buildTarget": "market-pulse:build:development",
+              "proxyConfig": "proxy.conf.json"
+            },
+            "development-pl": {
+              "buildTarget": "market-pulse:build:development-pl",
               "proxyConfig": "proxy.conf.json"
             }
           },
