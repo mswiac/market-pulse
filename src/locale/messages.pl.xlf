@@ -198,6 +198,10 @@
         <source>Instruments</source>
         <target>Walory</target>
       </trans-unit>
+      <trans-unit id="shell.nav.triggerHistory" datatype="html">
+        <source>Triggered alerts</source>
+        <target>Wyzwolone alerty</target>
+      </trans-unit>
       <trans-unit id="home.welcomeTitle" datatype="html">
         <source>Welcome back</source>
         <target>Witaj ponownie</target>
@@ -357,6 +361,70 @@
       <trans-unit id="instrumentHistory.column.rsi" datatype="html">
         <source>RSI</source>
         <target>RSI</target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.title" datatype="html">
+        <source>Triggered alerts</source>
+        <target>Wyzwolone alerty</target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.error.loadFailed" datatype="html">
+        <source> Failed to load trigger history. Please refresh the page and try again. </source>
+        <target> Nie udało się załadować historii alertów. Odśwież stronę i spróbuj ponownie. </target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.column.date" datatype="html">
+        <source>Date</source>
+        <target>Data</target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.column.instrument" datatype="html">
+        <source>Instrument</source>
+        <target>Instrument</target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.column.alertType" datatype="html">
+        <source>Alert type</source>
+        <target>Typ alertu</target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.column.direction" datatype="html">
+        <source>Direction</source>
+        <target>Kierunek</target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.column.threshold" datatype="html">
+        <source>Threshold</source>
+        <target>Próg</target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.column.valueAtTrigger" datatype="html">
+        <source>Value</source>
+        <target>Wartość</target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.column.emailStatus" datatype="html">
+        <source>Notification</source>
+        <target>Powiadomienie</target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.emailStatus.sent" datatype="html">
+        <source>Email sent</source>
+        <target>E-mail wysłany</target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.emailStatus.failed" datatype="html">
+        <source>Email failed to send</source>
+        <target>Nie udało się wysłać e-maila</target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.error.loadMoreFailed" datatype="html">
+        <source>Failed to load more trigger events. Please try again.</source>
+        <target>Nie udało się załadować kolejnych zdarzeń. Spróbuj ponownie.</target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.loadMore" datatype="html">
+        <source>Load more</source>
+        <target>Załaduj więcej</target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.emptyState" datatype="html">
+        <source>No triggered alerts yet.</source>
+        <target>Brak jeszcze wyzwolonych alertów.</target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.type.price" datatype="html">
+        <source>Price threshold</source>
+        <target>Próg cenowy</target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.type.rsi" datatype="html">
+        <source>RSI threshold</source>
+        <target>Próg RSI</target>
       </trans-unit>
     </body>
   </file>

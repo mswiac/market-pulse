@@ -12,6 +12,10 @@ export const routes: Routes = [
         path: 'history',
         loadComponent: () => import('./features/instrument-history/instrument-history').then((m) => m.InstrumentHistory),
       },
+      {
+        path: 'history/triggers',
+        loadComponent: () => import('./features/trigger-history/trigger-history').then((m) => m.TriggerHistory),
+      },
     ],
   },
   {

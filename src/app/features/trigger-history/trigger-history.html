@@ -1,0 +1,83 @@
+<div class="trigger-history-page">
+  <h2 i18n="@@triggerHistory.title">Triggered alerts</h2>
+
+  @if (loadError()) {
+    <p class="form-error" i18n="@@triggerHistory.error.loadFailed">
+      Failed to load trigger history. Please refresh the page and try again.
+    </p>
+  } @else if (events().length > 0) {
+    <mat-card class="history-card" appearance="outlined">
+      <table mat-table [dataSource]="events()">
+        <ng-container matColumnDef="triggeredAt">
+          <th mat-header-cell *matHeaderCellDef i18n="@@triggerHistory.column.date">Date</th>
+          <td mat-cell *matCellDef="let event">{{ event.triggeredAt * 1000 | date: 'dd.MM.yyyy' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="instrumentName">
+          <th mat-header-cell *matHeaderCellDef i18n="@@triggerHistory.column.instrument">Instrument</th>
+          <td mat-cell *matCellDef="let event">{{ event.instrumentName }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="alertType">
+          <th mat-header-cell *matHeaderCellDef i18n="@@triggerHistory.column.alertType">Alert type</th>
+          <td mat-cell *matCellDef="let event">{{ alertTypeLabel(event.alertType) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="direction">
+          <th mat-header-cell *matHeaderCellDef i18n="@@triggerHistory.column.direction">Direction</th>
+          <td mat-cell *matCellDef="let event">
+            @if (event.direction === 'up') {
+              <span i18n="@@alertForm.direction.up">Rises above threshold</span>
+            } @else {
+              <span i18n="@@alertForm.direction.down">Falls below threshold</span>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="threshold">
+          <th mat-header-cell *matHeaderCellDef class="numeric-cell" i18n="@@triggerHistory.column.threshold">Threshold</th>
+          <td mat-cell *matCellDef="let event" class="numeric-cell">
+            {{ event.threshold | number: '1.2-2' }} @if (showCurrency(event.alertType)) { {{ event.currency }} }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="valueAtTrigger">
+          <th mat-header-cell *matHeaderCellDef class="numeric-cell" i18n="@@triggerHistory.column.valueAtTrigger">Value</th>
+          <td mat-cell *matCellDef="let event" class="numeric-cell">
+            {{ event.valueAtTrigger | number: '1.2-2' }} @if (showCurrency(event.alertType)) { {{ event.currency }} }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="emailStatus">
+          <th mat-header-cell *matHeaderCellDef i18n="@@triggerHistory.column.emailStatus">Notification</th>
+          <td mat-cell *matCellDef="let event">
+            @if (event.emailStatus === 'sent') {
+              <mat-icon i18n-aria-label="@@triggerHistory.emailStatus.sent" aria-label="Email sent">mark_email_read</mat-icon>
+            } @else {
+              <mat-icon
+                color="warn"
+                [matTooltip]="event.emailError ?? ''"
+                i18n-aria-label="@@triggerHistory.emailStatus.failed"
+                aria-label="Email failed to send"
+                >error_outline</mat-icon
+              >
+            }
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+    </mat-card>
+
+    @if (loadMoreError()) {
+      <p class="form-error" i18n="@@triggerHistory.error.loadMoreFailed">Failed to load more trigger events. Please try again.</p>
+    }
+
+    @if (hasMore()) {
+      <button mat-button type="button" (click)="loadMore()" i18n="@@triggerHistory.loadMore">Load more</button>
+    }
+  } @else {
+    <p class="empty-state" i18n="@@triggerHistory.emptyState">No triggered alerts yet.</p>
+  }
+</div>

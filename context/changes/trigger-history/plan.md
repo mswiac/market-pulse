@@ -198,9 +198,9 @@ The new composite index (`user_id, triggered_at DESC`) keeps the paginated query
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly: `npm run migrate:local`
-- [x] 1.2 Worker typecheck passes: `npm run typecheck`
-- [x] 1.3 New and existing worker tests pass: `npm run test:worker`
+- [x] 1.1 Migration applies cleanly: `npm run migrate:local` — bcfb9c3
+- [x] 1.2 Worker typecheck passes: `npm run typecheck` — bcfb9c3
+- [x] 1.3 New and existing worker tests pass: `npm run test:worker` — bcfb9c3
 
 #### Manual
 
@@ -210,8 +210,8 @@ The new composite index (`user_id, triggered_at DESC`) keeps the paginated query
 
 #### Automated
 
-- [ ] 2.1 Frontend build succeeds: `npm run build`
-- [ ] 2.2 Full CI pipeline passes: `npm run ci`
+- [x] 2.1 Frontend build succeeds: `npm run build`
+- [x] 2.2 Full CI pipeline passes: `npm run ci`
 
 #### Manual
 
