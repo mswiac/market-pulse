@@ -39,7 +39,7 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | S-04 | market-data-display   | see current RSI/price value next to each alert; create an alert with instrument type + name (not raw ticker) | S-02, F-02, F-03 | FR-009 | done |
 | S-07 | instrument-history-view | view 30-day price/RSI history for any instrument via two comboboxes | F-03 | —                    | done |
 | S-05 | alert-notifications   | receive an email when an alert threshold is crossed       | S-04           | FR-008, FR-008a                 | done     |
-| S-06 | trigger-history       | view a history of all previously triggered alerts         | S-05           | FR-010                          | proposed |
+| S-06 | trigger-history       | view a history of all previously triggered alerts         | S-05           | FR-010                          | done     |
 
 ## Streams
 
@@ -202,7 +202,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Straightforward read from the `trigger_events` table introduced in S-05. Low risk; if the `trigger_events` schema changes during S-05 implementation, this slice needs to adjust accordingly.
-- **Status:** proposed
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -243,3 +243,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-04: Each alert in the list displays the current RSI value (for RSI-type alerts) or the latest closing price (for price-type alerts) alongside the user's threshold. The alert creation/edit form gains a type selector that filters the instrument field, and the instrument field displays the instrument's name instead of its raw ticker. Alert details additionally show the underlying ticker.** — Archived 2026-07-25 → `context/archive/2026-07-25-market-data-display/`. Lesson: —.
 - **S-07: A dedicated page lets the user pick an instrument type and a specific instrument via two comboboxes (populated from `GET /api/instruments`, the second filtered by the first) and view that instrument's closing price and RSI for each of the last 30 days.** — Archived 2026-07-26 → `context/archive/2026-07-26-instrument-history-view/`. Lesson: —.
 - **S-05: The cron job reads pre-computed RSI and latest closes from the `market_data` table, evaluates all active alerts against the current values, and sends an email via Resend to each alert's designated address when the threshold condition is met. Each trigger event is recorded in the `trigger_events` table.** — Archived 2026-07-31 → `context/archive/2026-07-31-alert-notifications/`. Lesson: —.
+- **S-06: User can see a chronological log of previously triggered alerts showing timestamp, instrument, alert type, and the index value at the time the threshold was crossed.** — Archived 2026-07-31 → `context/archive/2026-07-31-trigger-history/`. Lesson: —.
