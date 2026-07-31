@@ -204,20 +204,20 @@ The new composite index (`user_id, triggered_at DESC`) keeps the paginated query
 
 #### Manual
 
-- [ ] 1.4 Seed local D1 trigger_events rows (incl. missing-instrument and failed-email cases) and manually verify `GET /api/trigger-events` response shape, ordering, fallback, and `hasMore` boundary
+- [x] 1.4 Seed local D1 trigger_events rows (incl. missing-instrument and failed-email cases) and manually verify `GET /api/trigger-events` response shape, ordering, fallback, and `hasMore` boundary
 
 ### Phase 2: Frontend — Triggered alerts page
 
 #### Automated
 
-- [x] 2.1 Frontend build succeeds: `npm run build`
-- [x] 2.2 Full CI pipeline passes: `npm run ci`
+- [x] 2.1 Frontend build succeeds: `npm run build` — 37bd8ba
+- [x] 2.2 Full CI pipeline passes: `npm run ci` — 37bd8ba
 
 #### Manual
 
-- [ ] 2.3 Page renders correct columns/formatting/labels for seeded data
-- [ ] 2.4 Empty state renders for zero trigger events
-- [ ] 2.5 "Load more" fetches/appends and disappears once `hasMore` is false
-- [ ] 2.6 Failed-email tooltip shows the actual `email_error` text
-- [ ] 2.7 Direct refresh on `/history/triggers` keeps auth and expands the History nav section
+- [x] 2.3 Page renders correct columns/formatting/labels for seeded data
+- [x] 2.4 Empty state renders for zero trigger events
+- [x] 2.5 "Load more" fetches/appends and disappears once `hasMore` is false
+- [x] 2.6 Failed-email tooltip shows the actual `email_error` text
+- [x] 2.7 Direct refresh on `/history/triggers` keeps auth and expands the History nav section
 - [ ] 2.8 Failed "load more" request shows an inline error banner without clearing already-loaded rows

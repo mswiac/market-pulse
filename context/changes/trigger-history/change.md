@@ -1,7 +1,7 @@
 ---
 change_id: trigger-history
 title: Trigger history
-status: implementing
+status: implemented
 created: 2026-07-31
 updated: 2026-07-31
 archived_at: null
