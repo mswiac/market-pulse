@@ -1,7 +1,8 @@
 import type { Env } from '../index';
 import { sendAlertEmail } from './resend';
 
-const RE_ARM_MARGIN_FRACTION = 0.1;
+const PRICE_RE_ARM_MARGIN_FRACTION = 0.1;
+const RSI_RE_ARM_MARGIN_POINTS = 10;
 
 interface AlertEvalRow {
   id: number;
@@ -77,7 +78,11 @@ export async function evaluateAlerts(env: Env): Promise<void> {
       const value = alert.alert_type === 'RSI' ? alert.rsi : alert.price;
       if (value === null) continue;
 
-      const margin = alert.threshold * RE_ARM_MARGIN_FRACTION;
+      // A pure percentage margin shrinks to near-zero for low RSI thresholds
+      // (RSI is a bounded 0-100 index, not a monetary value) — RSI uses a
+      // fixed point margin instead, matching the scale it's actually read on.
+      const margin =
+        alert.alert_type === 'RSI' ? RSI_RE_ARM_MARGIN_POINTS : alert.threshold * PRICE_RE_ARM_MARGIN_FRACTION;
 
       if (alert.armed === 1) {
         if (!conditionMet(alert.direction, value, alert.threshold)) continue;

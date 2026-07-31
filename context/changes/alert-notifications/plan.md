@@ -163,6 +163,12 @@ Add a minimal, dependency-free Resend client (raw `fetch`, no SDK) with the sand
 
 **Intent**: Add dummy values for both vars to `miniflare.bindings` (alongside the existing `PASSWORD_PEPPER`) so tests don't need real Resend credentials — Phase 6 stubs `fetch`, so these values are never actually sent anywhere in tests.
 
+**File**: `test/env.d.ts`
+
+**Intent**: Add the same two fields to the ambient `Cloudflare.Env` type used by `cloudflare:test` — a mechanical consequence of extending the real `Env` interface above; without this, `npm run typecheck` fails on worker test files that read `env` from `cloudflare:workers`.
+
+**Contract**: `Cloudflare.Env` gains `RESEND_API_KEY: string; RESEND_VERIFIED_EMAIL: string;`, mirroring `src/worker/index.ts`'s `Env`.
+
 ### Success Criteria:
 
 #### Automated Verification:
@@ -258,7 +264,7 @@ Add the direction selector to the alert form and the active/inactive indicator t
 
 **Intent**: Add Polish `<target>` entries for every new `i18n`/`i18n-*` key introduced above, following the existing file's format.
 
-**Contract**: Run `npm run extract-i18n` after the template changes to regenerate the source-language entries, then add the Polish translations by hand (same workflow implied by the existing populated file).
+**Contract**: Run `npm run extract-i18n` after the template changes to regenerate the source-language entries, then add the Polish translations by hand (same workflow implied by the existing populated file). This also regenerates `src/locale/messages.xlf` (the source-language file) as a mechanical byproduct — expected, not a separate change to author by hand.
 
 ### Success Criteria:
 

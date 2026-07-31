@@ -148,7 +148,7 @@ describe('evaluateAlerts', () => {
     expect((await getAlert(alertId)).armed).toBe(0);
   });
 
-  it('does not re-arm until the value retreats past the 10% margin', async () => {
+  it('does not re-arm a PRICE alert until the value retreats past the 10%-of-threshold margin', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('margin-not-enough@example.com');
     const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
@@ -160,6 +160,41 @@ describe('evaluateAlerts', () => {
     await seedMarketData('^VIX', 19);
     await evaluateAlerts(env);
     expect((await getAlert(alertId)).armed).toBe(0);
+  });
+
+  it('uses a fixed 10-point margin for RSI alerts instead of 10% of threshold', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('rsi-fixed-margin@example.com');
+    // A 10%-of-threshold margin here would be 0.7 (threshold 7) — a fixed
+    // 10-point margin means re-arm requires rsi <= threshold - 10 = -3, i.e.
+    // never, for this low a threshold. 5 isn't nearly enough to re-arm.
+    const alertId = await seedAlert(userId, { ticker: '^NDX', alertType: 'RSI', threshold: 7, direction: 'up', armed: 1 });
+    await seedMarketData('^NDX', 4500, 10);
+    await evaluateAlerts(env);
+    expect((await getAlert(alertId)).armed).toBe(0);
+
+    await seedMarketData('^NDX', 4500, 5);
+    await evaluateAlerts(env);
+    expect((await getAlert(alertId)).armed).toBe(0); // 5 > 7 - 10 = -3, not retreated far enough
+  });
+
+  it('re-arms an RSI alert once it retreats past the fixed 10-point margin', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('rsi-margin-rearm@example.com');
+    const alertId = await seedAlert(userId, { ticker: '^NDX', alertType: 'RSI', threshold: 70, direction: 'up', armed: 1 });
+    await seedMarketData('^NDX', 4500, 75);
+    await evaluateAlerts(env);
+    expect((await getAlert(alertId)).armed).toBe(0);
+
+    // Margin is a fixed 10 points, so re-arm requires rsi <= 60. 65 isn't enough.
+    await seedMarketData('^NDX', 4500, 65);
+    await evaluateAlerts(env);
+    expect((await getAlert(alertId)).armed).toBe(0);
+
+    // 60 clears the fixed margin — re-arms.
+    await seedMarketData('^NDX', 4500, 60);
+    await evaluateAlerts(env);
+    expect((await getAlert(alertId)).armed).toBe(1);
   });
 
   it('re-arms and fires again once the value retreats past the margin and re-crosses', async () => {
