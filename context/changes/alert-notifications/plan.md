@@ -387,8 +387,8 @@ Alert evaluation runs once per day against at most a few dozen rows (single-user
 
 #### Manual
 
-- [x] 4.3 Email arrives at the verified address when an alert fires; `trigger_events` recorded for both a successful and a rejected recipient (verified via `alert-evaluation.test.ts`'s deterministic coverage + Phase 3's real Resend delivery — no separate live-cron E2E run)
-- [x] 4.4 Alert re-arms and fires again after a margin-crossing retreat and re-cross (verified via `alert-evaluation.test.ts`'s deterministic coverage — no separate live-cron E2E run)
+- [x] 4.3 Email arrives at the verified address when an alert fires; `trigger_events` recorded for both a successful and a rejected recipient (verified via `alert-evaluation.test.ts`'s deterministic coverage + Phase 3's real Resend delivery — no separate live-cron E2E run) — e6d5282
+- [x] 4.4 Alert re-arms and fires again after a margin-crossing retreat and re-cross (verified via `alert-evaluation.test.ts`'s deterministic coverage — no separate live-cron E2E run) — e6d5282
 
 ### Phase 5: Frontend — Alert Form and List
 
@@ -399,12 +399,12 @@ Alert evaluation runs once per day against at most a few dozen rows (single-user
 
 #### Manual
 
-- [x] 5.3 Already-crossed alert shows inactive immediately on creation
-- [x] 5.4 Editing threshold/direction across the current value flips active/inactive display
-- [x] 5.5 Both direction options persist through create, edit, and reload
+- [x] 5.3 Already-crossed alert shows inactive immediately on creation — e6d5282
+- [x] 5.4 Editing threshold/direction across the current value flips active/inactive display — e6d5282
+- [x] 5.5 Both direction options persist through create, edit, and reload — e6d5282
 
 ### Phase 6: Documentation
 
 #### Manual
 
-- [x] 6.1 Infrastructure doc accurately documents both secrets and the sandbox constraint
+- [x] 6.1 Infrastructure doc accurately documents both secrets and the sandbox constraint — e6d5282
