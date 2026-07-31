@@ -1,10 +1,10 @@
 ---
 change_id: alert-notifications
 title: Alert notifications
-status: impl_reviewed
+status: archived
 created: 2026-07-31
 updated: 2026-07-31
-archived_at: null
+archived_at: 2026-07-31T13:44:53Z
 ---
 
 ## Notes
