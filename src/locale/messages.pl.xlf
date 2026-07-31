@@ -50,6 +50,18 @@
         <source>Value must be greater than 0.</source>
         <target>Wartość musi być większa od 0.</target>
       </trans-unit>
+      <trans-unit id="alertForm.direction.label" datatype="html">
+        <source>Direction</source>
+        <target>Kierunek</target>
+      </trans-unit>
+      <trans-unit id="alertForm.direction.up" datatype="html">
+        <source>Rises above threshold</source>
+        <target>Wzrost powyżej progu</target>
+      </trans-unit>
+      <trans-unit id="alertForm.direction.down" datatype="html">
+        <source>Falls below threshold</source>
+        <target>Spadek poniżej progu</target>
+      </trans-unit>
       <trans-unit id="alertForm.notificationEmail.label" datatype="html">
         <source>Notification email</source>
         <target>E-mail do powiadomień</target>
@@ -125,6 +137,22 @@
       <trans-unit id="alertList.detail.ticker" datatype="html">
         <source>Ticker:</source>
         <target>Ticker:</target>
+      </trans-unit>
+      <trans-unit id="alertList.detail.direction" datatype="html">
+        <source>Direction:</source>
+        <target>Kierunek:</target>
+      </trans-unit>
+      <trans-unit id="alertList.detail.status" datatype="html">
+        <source>Status:</source>
+        <target>Status:</target>
+      </trans-unit>
+      <trans-unit id="alertList.status.active" datatype="html">
+        <source>Active</source>
+        <target>Aktywny</target>
+      </trans-unit>
+      <trans-unit id="alertList.status.inactive" datatype="html">
+        <source>Inactive</source>
+        <target>Nieaktywny</target>
       </trans-unit>
       <trans-unit id="alertList.detail.notificationEmail" datatype="html">
         <source>Notification email:</source>

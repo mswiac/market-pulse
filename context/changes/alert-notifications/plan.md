@@ -382,8 +382,8 @@ Alert evaluation runs once per day against at most a few dozen rows (single-user
 
 #### Automated
 
-- [x] 4.1 `alert-evaluation.test.ts` covers fire/disarm/re-arm/fire-again and best-effort per-alert error handling: `npm run test:worker`
-- [x] 4.2 Type checking passes: `npm run typecheck`
+- [x] 4.1 `alert-evaluation.test.ts` covers fire/disarm/re-arm/fire-again and best-effort per-alert error handling: `npm run test:worker` — b8749c8
+- [x] 4.2 Type checking passes: `npm run typecheck` — b8749c8
 
 #### Manual
 
@@ -394,8 +394,8 @@ Alert evaluation runs once per day against at most a few dozen rows (single-user
 
 #### Automated
 
-- [ ] 5.1 Type checking passes: `npm run typecheck`
-- [ ] 5.2 Production build succeeds: `npm run build`
+- [x] 5.1 Type checking passes: `npm run typecheck`
+- [x] 5.2 Production build succeeds: `npm run build`
 
 #### Manual
 

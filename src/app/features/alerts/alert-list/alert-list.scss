@@ -20,6 +20,11 @@ mat-expansion-panel {
 mat-expansion-panel-header {
   background-color: var(--mat-sys-secondary-container) !important;
   color: var(--mat-sys-on-secondary-container);
+
+  &.inactive {
+    background-color: var(--mat-sys-surface-container-low) !important;
+    color: var(--mat-sys-on-surface-variant);
+  }
 }
 
 .list-header {
