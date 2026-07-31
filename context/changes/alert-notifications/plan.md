@@ -371,19 +371,19 @@ Alert evaluation runs once per day against at most a few dozen rows (single-user
 
 #### Automated
 
-- [x] 3.1 Type checking passes: `npm run typecheck`
+- [x] 3.1 Type checking passes: `npm run typecheck` — 7c8bc2a
 
 #### Manual
 
-- [x] 3.2 Resend account created; both secrets set on the deployed Worker
-- [x] 3.3 Manual send to the verified address delivers; send to any other address is pre-flight-rejected
+- [x] 3.2 Resend account created; both secrets set on the deployed Worker — 7c8bc2a
+- [x] 3.3 Manual send to the verified address delivers; send to any other address is pre-flight-rejected — 7c8bc2a
 
 ### Phase 4: Cron Evaluation and Notification Logic
 
 #### Automated
 
-- [ ] 4.1 `alert-evaluation.test.ts` covers fire/disarm/re-arm/fire-again and best-effort per-alert error handling: `npm run test:worker`
-- [ ] 4.2 Type checking passes: `npm run typecheck`
+- [x] 4.1 `alert-evaluation.test.ts` covers fire/disarm/re-arm/fire-again and best-effort per-alert error handling: `npm run test:worker`
+- [x] 4.2 Type checking passes: `npm run typecheck`
 
 #### Manual
 

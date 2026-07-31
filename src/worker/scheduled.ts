@@ -1,4 +1,5 @@
 import type { Env } from './index';
+import { evaluateAlerts } from './lib/alert-evaluation';
 import type { InstrumentRow } from './lib/instruments';
 import { fetchDailyCloses, type DailyClose } from './lib/market-data';
 import { calculateRSI } from './lib/rsi';
@@ -59,4 +60,6 @@ export async function handleScheduled(env: Env): Promise<void> {
       console.error(`market-data-pipeline: failed to process ${ticker}`, err);
     }
   }
+
+  await evaluateAlerts(env);
 }
