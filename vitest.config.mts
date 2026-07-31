@@ -9,7 +9,14 @@ export default defineConfig(async () => {
       cloudflareTest({
         wrangler: { configPath: "./wrangler.toml" },
         miniflare: {
-          bindings: { TEST_MIGRATIONS: migrations, PASSWORD_PEPPER: "test-pepper-do-not-use-in-prod" },
+          bindings: {
+            TEST_MIGRATIONS: migrations,
+            PASSWORD_PEPPER: "test-pepper-do-not-use-in-prod",
+            // Never actually sent anywhere — tests stub `fetch` before any
+            // Resend call is made (see test/worker/alert-evaluation.test.ts).
+            RESEND_API_KEY: "test-resend-api-key",
+            RESEND_VERIFIED_EMAIL: "verified@example.com",
+          },
         },
       }),
     ],

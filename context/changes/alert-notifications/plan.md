@@ -360,8 +360,8 @@ Alert evaluation runs once per day against at most a few dozen rows (single-user
 
 #### Automated
 
-- [x] 2.1 `alerts.test.ts` covers direction validation and armed computation: `npm run test:worker`
-- [x] 2.2 Type checking passes: `npm run typecheck`
+- [x] 2.1 `alerts.test.ts` covers direction validation and armed computation: `npm run test:worker` — 6e15c5e
+- [x] 2.2 Type checking passes: `npm run typecheck` — 6e15c5e
 
 #### Manual
 
@@ -371,12 +371,12 @@ Alert evaluation runs once per day against at most a few dozen rows (single-user
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npm run typecheck`
+- [x] 3.1 Type checking passes: `npm run typecheck`
 
 #### Manual
 
-- [ ] 3.2 Resend account created; both secrets set on the deployed Worker
-- [ ] 3.3 Manual send to the verified address delivers; send to any other address is pre-flight-rejected
+- [x] 3.2 Resend account created; both secrets set on the deployed Worker
+- [x] 3.3 Manual send to the verified address delivers; send to any other address is pre-flight-rejected
 
 ### Phase 4: Cron Evaluation and Notification Logic
 
