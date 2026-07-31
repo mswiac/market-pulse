@@ -347,21 +347,21 @@ Alert evaluation runs once per day against at most a few dozen rows (single-user
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly locally: `npm run migrate:local`
-- [x] 1.2 Existing alert tests still pass post-migration: `npm run test:worker`
-- [x] 1.3 Type checking passes: `npm run typecheck`
+- [x] 1.1 Migration applies cleanly locally: `npm run migrate:local` — c48525d
+- [x] 1.2 Existing alert tests still pass post-migration: `npm run test:worker` — c48525d
+- [x] 1.3 Type checking passes: `npm run typecheck` — c48525d
 
 #### Manual
 
-- [x] 1.4 Pre-existing local alerts show sensible `direction`/`armed` values
-- [x] 1.5 Migration applied to remote D1 as a separate explicit step
+- [x] 1.4 Pre-existing local alerts show sensible `direction`/`armed` values — c48525d
+- [x] 1.5 Migration applied to remote D1 as a separate explicit step — c48525d
 
 ### Phase 2: Backend Alert CRUD Updates
 
 #### Automated
 
-- [ ] 2.1 `alerts.test.ts` covers direction validation and armed computation: `npm run test:worker`
-- [ ] 2.2 Type checking passes: `npm run typecheck`
+- [x] 2.1 `alerts.test.ts` covers direction validation and armed computation: `npm run test:worker`
+- [x] 2.2 Type checking passes: `npm run typecheck`
 
 #### Manual
 

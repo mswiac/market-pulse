@@ -5,8 +5,10 @@ import type { InstrumentRow } from '../lib/instruments';
 import { sessionMiddleware } from '../lib/session';
 
 const VALID_ALERT_TYPES = ['PRICE', 'RSI'] as const;
+const VALID_DIRECTIONS = ['up', 'down'] as const;
 
 type AlertType = (typeof VALID_ALERT_TYPES)[number];
+type Direction = (typeof VALID_DIRECTIONS)[number];
 
 type Variables = { userId: number };
 
@@ -25,6 +27,12 @@ function normalizeAlertType(alertType: unknown): AlertType | null {
     : null;
 }
 
+function normalizeDirection(direction: unknown): Direction | null {
+  return typeof direction === 'string' && (VALID_DIRECTIONS as readonly string[]).includes(direction)
+    ? (direction as Direction)
+    : null;
+}
+
 function validateThreshold(alertType: AlertType, threshold: unknown): number | null {
   if (typeof threshold !== 'number' || !Number.isFinite(threshold)) return null;
   if (alertType === 'RSI') {
@@ -38,6 +46,7 @@ async function parseAlertBody(c: { req: { json: () => Promise<unknown> } }): Pro
   alertType?: unknown;
   threshold?: unknown;
   notificationEmail?: unknown;
+  direction?: unknown;
 } | null> {
   try {
     return (await c.req.json()) as {
@@ -45,6 +54,7 @@ async function parseAlertBody(c: { req: { json: () => Promise<unknown> } }): Pro
       alertType?: unknown;
       threshold?: unknown;
       notificationEmail?: unknown;
+      direction?: unknown;
     };
   } catch {
     return null;
@@ -52,14 +62,21 @@ async function parseAlertBody(c: { req: { json: () => Promise<unknown> } }): Pro
 }
 
 type AlertValidationResult =
-  | { ok: true; instrument: InstrumentRow; alertType: AlertType; threshold: number; notificationEmail: string }
+  | {
+      ok: true;
+      instrument: InstrumentRow;
+      alertType: AlertType;
+      threshold: number;
+      notificationEmail: string;
+      direction: Direction;
+    }
   | { ok: false; error: string };
 
 // Shared by POST and PUT — both need the same ticker/alertType/threshold/email/
 // RSI-eligibility checks before writing.
 async function validateAlertInput(
   db: D1Database,
-  body: { ticker?: unknown; alertType?: unknown; threshold?: unknown; notificationEmail?: unknown },
+  body: { ticker?: unknown; alertType?: unknown; threshold?: unknown; notificationEmail?: unknown; direction?: unknown },
 ): Promise<AlertValidationResult> {
   const instrument = await lookupTicker(db, body.ticker);
   if (!instrument) {
@@ -81,11 +98,41 @@ async function validateAlertInput(
     return { ok: false, error: 'invalid notification email' };
   }
 
+  const direction = normalizeDirection(body.direction);
+  if (!direction) {
+    return { ok: false, error: 'invalid direction' };
+  }
+
   if (!instrument.rsi_eligible && alertType === 'RSI') {
     return { ok: false, error: 'RSI is not available for VIX' };
   }
 
-  return { ok: true, instrument, alertType, threshold, notificationEmail };
+  return { ok: true, instrument, alertType, threshold, notificationEmail, direction };
+}
+
+interface CurrentMarketValue {
+  price: number;
+  rsi: number | null;
+}
+
+// Computed server-side from the ticker's current market_data row, never
+// trusted from the request — an alert starts disarmed if the direction's
+// condition is already true against today's value (so it doesn't fire
+// immediately on stale/pre-existing data), armed otherwise. No market_data
+// row yet (before the first cron run for a fresh ticker) defaults to armed.
+async function computeArmed(
+  db: D1Database,
+  ticker: string,
+  alertType: AlertType,
+  threshold: number,
+  direction: Direction,
+): Promise<number> {
+  const row = await db.prepare('SELECT price, rsi FROM market_data WHERE ticker = ?').bind(ticker).first<CurrentMarketValue>();
+  const value = row ? (alertType === 'RSI' ? row.rsi : row.price) : null;
+  if (value === null) return 1;
+
+  const conditionAlreadyMet = direction === 'up' ? value >= threshold : value <= threshold;
+  return conditionAlreadyMet ? 0 : 1;
 }
 
 // Shared join across alerts/instruments/market_data. LEFT JOIN market_data so an
@@ -100,6 +147,8 @@ const ALERT_SELECT = `
     i.currency AS currency,
     a.alert_type AS alertType,
     a.threshold,
+    a.direction AS direction,
+    a.armed AS active,
     a.notification_email AS notificationEmail,
     a.created_at AS createdAt,
     a.updated_at AS updatedAt,
@@ -109,6 +158,12 @@ const ALERT_SELECT = `
   JOIN instruments i ON i.ticker = a.ticker
   LEFT JOIN market_data m ON m.ticker = a.ticker
 `;
+
+// D1 returns raw 0/1 for the `armed` INTEGER column — convert to a real
+// JSON boolean at the response boundary so the frontend gets `active: boolean`.
+function toAlertResponse(row: Record<string, unknown>): Record<string, unknown> {
+  return { ...row, active: row['active'] === 1 };
+}
 
 alertsRoutes.post('/', async (c) => {
   const body = await parseAlertBody(c);
@@ -120,9 +175,10 @@ alertsRoutes.post('/', async (c) => {
   if (!validation.ok) {
     return c.json({ error: validation.error }, 400);
   }
-  const { instrument, alertType, threshold, notificationEmail } = validation;
+  const { instrument, alertType, threshold, notificationEmail, direction } = validation;
 
   const userId = c.get('userId');
+  const armed = await computeArmed(c.env.DB, instrument.ticker, alertType, threshold, direction);
 
   try {
     // RETURNING can't reference joined tables, and a separate sequential
@@ -132,17 +188,14 @@ alertsRoutes.post('/', async (c) => {
     // depends on the other's result.
     const [, selectResult] = await c.env.DB.batch([
       c.env.DB.prepare(
-        `INSERT INTO alerts (user_id, ticker, alert_type, threshold, notification_email) VALUES (?, ?, ?, ?, ?)`,
-      ).bind(userId, instrument.ticker, alertType, threshold, notificationEmail),
-      c.env.DB.prepare(`${ALERT_SELECT} WHERE a.user_id = ? AND a.ticker = ? AND a.alert_type = ? AND a.threshold = ?`).bind(
-        userId,
-        instrument.ticker,
-        alertType,
-        threshold,
-      ),
+        `INSERT INTO alerts (user_id, ticker, alert_type, threshold, notification_email, direction, armed) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(userId, instrument.ticker, alertType, threshold, notificationEmail, direction, armed),
+      c.env.DB.prepare(
+        `${ALERT_SELECT} WHERE a.user_id = ? AND a.ticker = ? AND a.alert_type = ? AND a.threshold = ? AND a.direction = ?`,
+      ).bind(userId, instrument.ticker, alertType, threshold, direction),
     ]);
 
-    return c.json(selectResult.results[0], 201);
+    return c.json(toAlertResponse(selectResult.results[0] as Record<string, unknown>), 201);
   } catch (err) {
     if (err instanceof Error && err.message.includes('UNIQUE')) {
       return c.json({ error: 'duplicate alert' }, 409);
@@ -158,7 +211,10 @@ alertsRoutes.get('/', async (c) => {
     .bind(userId)
     .all();
 
-  return c.json(results, 200);
+  return c.json(
+    results.map((row) => toAlertResponse(row as Record<string, unknown>)),
+    200,
+  );
 });
 
 function parseAlertId(idParam: string): number | null {
@@ -181,19 +237,22 @@ alertsRoutes.put('/:id', async (c) => {
   if (!validation.ok) {
     return c.json({ error: validation.error }, 400);
   }
-  const { instrument, alertType, threshold, notificationEmail } = validation;
+  const { instrument, alertType, threshold, notificationEmail, direction } = validation;
 
   const userId = c.get('userId');
+  const armed = await computeArmed(c.env.DB, instrument.ticker, alertType, threshold, direction);
 
   try {
     // Same batch()-based atomicity as POST above. A non-matching id/user_id
     // pair yields zero rows from both statements, so checking the select
     // result covers "doesn't exist" and "belongs to another user" alike,
-    // identical to the old RETURNING-based null check.
+    // identical to the old RETURNING-based null check. direction/armed are
+    // always recomputed on every edit — not just when threshold/ticker
+    // changed — keeping the create and edit code paths identical.
     const [, selectResult] = await c.env.DB.batch([
       c.env.DB.prepare(
-        `UPDATE alerts SET ticker = ?, alert_type = ?, threshold = ?, notification_email = ?, updated_at = unixepoch() WHERE id = ? AND user_id = ?`,
-      ).bind(instrument.ticker, alertType, threshold, notificationEmail, id, userId),
+        `UPDATE alerts SET ticker = ?, alert_type = ?, threshold = ?, notification_email = ?, direction = ?, armed = ?, updated_at = unixepoch() WHERE id = ? AND user_id = ?`,
+      ).bind(instrument.ticker, alertType, threshold, notificationEmail, direction, armed, id, userId),
       c.env.DB.prepare(`${ALERT_SELECT} WHERE a.id = ? AND a.user_id = ?`).bind(id, userId),
     ]);
 
@@ -202,7 +261,7 @@ alertsRoutes.put('/:id', async (c) => {
       return c.json({ error: 'alert not found' }, 404);
     }
 
-    return c.json(updated, 200);
+    return c.json(toAlertResponse(updated as Record<string, unknown>), 200);
   } catch (err) {
     if (err instanceof Error && err.message.includes('UNIQUE')) {
       return c.json({ error: 'duplicate alert' }, 409);
