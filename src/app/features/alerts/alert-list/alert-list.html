@@ -40,8 +40,7 @@
 
         <div class="alert-detail">
           <p>
-            <strong i18n="@@alertList.detail.currentPrice">Current price:</strong>
-            &nbsp;@if (alert.currentPrice !== null) {
+            <strong i18n="@@alertList.detail.currentPrice">Current price:</strong>&nbsp;@if (alert.currentPrice !== null) {
               {{ alert.currentPrice | number: '1.2-2' }} {{ alert.currency }}
             } @else {
               <span i18n="@@alertList.detail.noData">No data</span>
@@ -49,8 +48,7 @@
           </p>
           @if (showCurrentRsi(alert.alertType)) {
             <p>
-              <strong i18n="@@alertList.detail.currentRsi">Current RSI:</strong>
-              &nbsp;@if (alert.currentRsi !== null) {
+              <strong i18n="@@alertList.detail.currentRsi">Current RSI:</strong>&nbsp;@if (alert.currentRsi !== null) {
                 {{ alert.currentRsi | number: '1.2-2' }}
               } @else {
                 <span i18n="@@alertList.detail.noData">No data</span>
@@ -59,16 +57,14 @@
           }
           <p><strong i18n="@@alertList.detail.ticker">Ticker:</strong> {{ alert.ticker }}</p>
           <p>
-            <strong i18n="@@alertList.detail.direction">Direction:</strong>
-            @if (alert.direction === 'up') {
+            <strong i18n="@@alertList.detail.direction">Direction:</strong>&nbsp;@if (alert.direction === 'up') {
               <span i18n="@@alertForm.direction.up">Rises above threshold</span>
             } @else {
               <span i18n="@@alertForm.direction.down">Falls below threshold</span>
             }
           </p>
           <p>
-            <strong i18n="@@alertList.detail.status">Status:</strong>
-            @if (alert.active) {
+            <strong i18n="@@alertList.detail.status">Status:</strong>&nbsp;@if (alert.active) {
               <span i18n="@@alertList.status.active">Active</span>
             } @else {
               <span i18n="@@alertList.status.inactive">Inactive</span>

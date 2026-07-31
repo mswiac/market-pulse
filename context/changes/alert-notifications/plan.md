@@ -365,7 +365,7 @@ Alert evaluation runs once per day against at most a few dozen rows (single-user
 
 #### Manual
 
-- [ ] 2.3 Alert created with an already-crossed threshold is inactive (cross-check after Phase 5)
+- [x] 2.3 Alert created with an already-crossed threshold is inactive (cross-check after Phase 5)
 
 ### Phase 3: Resend Integration
 
@@ -394,8 +394,8 @@ Alert evaluation runs once per day against at most a few dozen rows (single-user
 
 #### Automated
 
-- [x] 5.1 Type checking passes: `npm run typecheck`
-- [x] 5.2 Production build succeeds: `npm run build`
+- [x] 5.1 Type checking passes: `npm run typecheck` — 4d4ac9d
+- [x] 5.2 Production build succeeds: `npm run build` — 4d4ac9d
 
 #### Manual
 
