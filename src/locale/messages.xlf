@@ -133,7 +133,7 @@
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">61,63</context>
+          <context context-type="linenumber">77,79</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/trigger-history/trigger-history.html</context>
@@ -148,7 +148,7 @@
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">63,66</context>
+          <context context-type="linenumber">79,82</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/trigger-history/trigger-history.html</context>
@@ -296,82 +296,104 @@
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
           <context context-type="linenumber">54,56</context>
         </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">61,63</context>
+        </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">70,72</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.detail.currentHigh" datatype="html">
+        <source>Today&apos;s high:</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">51</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.detail.currentLow" datatype="html">
+        <source>Today&apos;s low:</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">58</context>
+        </context-group>
       </trans-unit>
       <trans-unit id="alertList.detail.currentRsi" datatype="html">
         <source>Current RSI:</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">51</context>
+          <context context-type="linenumber">67</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.detail.ticker" datatype="html">
         <source>Ticker:</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">58,59</context>
+          <context context-type="linenumber">74,75</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.detail.direction" datatype="html">
         <source>Direction:</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">60</context>
+          <context context-type="linenumber">76</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.detail.status" datatype="html">
         <source>Status:</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">67,68</context>
+          <context context-type="linenumber">83,84</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.status.active" datatype="html">
         <source>Active</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">68,70</context>
+          <context context-type="linenumber">84,86</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.status.inactive" datatype="html">
         <source>Inactive</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">70,73</context>
+          <context context-type="linenumber">86,89</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.detail.notificationEmail" datatype="html">
         <source>Notification email:</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">73,74</context>
+          <context context-type="linenumber">89,90</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.detail.lastEdited" datatype="html">
         <source>Last edited:</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">74</context>
+          <context context-type="linenumber">90</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.action.edit" datatype="html">
         <source>Edit alert</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">78,79</context>
+          <context context-type="linenumber">94,95</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.action.delete" datatype="html">
         <source>Delete alert</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">86,88</context>
+          <context context-type="linenumber">102,104</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.emptyState" datatype="html">
         <source>No alerts yet — add your first one to get started.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
-          <context context-type="linenumber">93,97</context>
+          <context context-type="linenumber">109,113</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.type.price" datatype="html">
@@ -654,11 +676,25 @@
           <context context-type="linenumber">46,47</context>
         </context-group>
       </trans-unit>
+      <trans-unit id="instrumentHistory.column.high" datatype="html">
+        <source>High</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/instrument-history/instrument-history.html</context>
+          <context context-type="linenumber">51,52</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.column.low" datatype="html">
+        <source>Low</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/instrument-history/instrument-history.html</context>
+          <context context-type="linenumber">63</context>
+        </context-group>
+      </trans-unit>
       <trans-unit id="instrumentHistory.column.rsi" datatype="html">
         <source>RSI</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/instrument-history/instrument-history.html</context>
-          <context context-type="linenumber">52</context>
+          <context context-type="linenumber">74</context>
         </context-group>
       </trans-unit>
       <trans-unit id="instrumentHistory.instrumentType.index" datatype="html">
@@ -724,46 +760,60 @@
           <context context-type="linenumber">45,46</context>
         </context-group>
       </trans-unit>
+      <trans-unit id="triggerHistory.column.highAtTrigger" datatype="html">
+        <source>High</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/trigger-history/trigger-history.html</context>
+          <context context-type="linenumber">52,53</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="triggerHistory.column.lowAtTrigger" datatype="html">
+        <source>Low</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/trigger-history/trigger-history.html</context>
+          <context context-type="linenumber">64</context>
+        </context-group>
+      </trans-unit>
       <trans-unit id="triggerHistory.column.emailStatus" datatype="html">
         <source>Notification</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/trigger-history/trigger-history.html</context>
-          <context context-type="linenumber">52,53</context>
+          <context context-type="linenumber">74,75</context>
         </context-group>
       </trans-unit>
       <trans-unit id="triggerHistory.emailStatus.sent" datatype="html">
         <source>Email sent</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/trigger-history/trigger-history.html</context>
-          <context context-type="linenumber">55,56</context>
+          <context context-type="linenumber">77,78</context>
         </context-group>
       </trans-unit>
       <trans-unit id="triggerHistory.emailStatus.failed" datatype="html">
         <source>Email failed to send</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/trigger-history/trigger-history.html</context>
-          <context context-type="linenumber">61,63</context>
+          <context context-type="linenumber">83,85</context>
         </context-group>
       </trans-unit>
       <trans-unit id="triggerHistory.error.loadMoreFailed" datatype="html">
         <source>Failed to load more trigger events. Please try again.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/trigger-history/trigger-history.html</context>
-          <context context-type="linenumber">74,78</context>
+          <context context-type="linenumber">96,100</context>
         </context-group>
       </trans-unit>
       <trans-unit id="triggerHistory.loadMore" datatype="html">
         <source>Load more</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/trigger-history/trigger-history.html</context>
-          <context context-type="linenumber">78,81</context>
+          <context context-type="linenumber">100,103</context>
         </context-group>
       </trans-unit>
       <trans-unit id="triggerHistory.emptyState" datatype="html">
         <source>No triggered alerts yet.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/trigger-history/trigger-history.html</context>
-          <context context-type="linenumber">81,84</context>
+          <context context-type="linenumber">103,106</context>
         </context-group>
       </trans-unit>
       <trans-unit id="triggerHistory.type.price" datatype="html">

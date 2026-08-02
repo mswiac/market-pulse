@@ -130,6 +130,14 @@
         <source>No data</source>
         <target>Brak danych</target>
       </trans-unit>
+      <trans-unit id="alertList.detail.currentHigh" datatype="html">
+        <source>Today&apos;s high:</source>
+        <target>Dzisiejsze maksimum:</target>
+      </trans-unit>
+      <trans-unit id="alertList.detail.currentLow" datatype="html">
+        <source>Today&apos;s low:</source>
+        <target>Dzisiejsze minimum:</target>
+      </trans-unit>
       <trans-unit id="alertList.detail.currentRsi" datatype="html">
         <source>Current RSI:</source>
         <target>Aktualne RSI:</target>
@@ -358,6 +366,14 @@
         <source>Close</source>
         <target>Zamknięcie</target>
       </trans-unit>
+      <trans-unit id="instrumentHistory.column.high" datatype="html">
+        <source>High</source>
+        <target>Maksimum</target>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.column.low" datatype="html">
+        <source>Low</source>
+        <target>Minimum</target>
+      </trans-unit>
       <trans-unit id="instrumentHistory.column.rsi" datatype="html">
         <source>RSI</source>
         <target>RSI</target>
@@ -393,6 +409,14 @@
       <trans-unit id="triggerHistory.column.valueAtTrigger" datatype="html">
         <source>Value</source>
         <target>Wartość</target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.column.highAtTrigger" datatype="html">
+        <source>High</source>
+        <target>Maksimum</target>
+      </trans-unit>
+      <trans-unit id="triggerHistory.column.lowAtTrigger" datatype="html">
+        <source>Low</source>
+        <target>Minimum</target>
       </trans-unit>
       <trans-unit id="triggerHistory.column.emailStatus" datatype="html">
         <source>Notification</source>

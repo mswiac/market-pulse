@@ -20,7 +20,17 @@ const KNOWN_EMAIL_ERROR_LABELS: Record<string, string> = {
   'recipient not verified in Resend sandbox': $localize`:@@triggerHistory.emailError.recipientNotVerified:The recipient's email address is not verified in the Resend sandbox.`,
 };
 
-const DISPLAYED_COLUMNS = ['triggeredAt', 'instrumentName', 'alertType', 'direction', 'threshold', 'valueAtTrigger', 'emailStatus'];
+const DISPLAYED_COLUMNS = [
+  'triggeredAt',
+  'instrumentName',
+  'alertType',
+  'direction',
+  'threshold',
+  'valueAtTrigger',
+  'highAtTrigger',
+  'lowAtTrigger',
+  'emailStatus',
+];
 
 @Component({
   selector: 'app-trigger-history',

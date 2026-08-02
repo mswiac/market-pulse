@@ -78,6 +78,10 @@ export class AlertList {
     return alertType === 'RSI';
   }
 
+  protected showCurrentHighLow(alertType: string): boolean {
+    return alertType === 'PRICE';
+  }
+
   protected openEditDialog(alert: Alert): void {
     this.dialog.open(AlertForm, { width: '32rem', data: { alert } });
   }

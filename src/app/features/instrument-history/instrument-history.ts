@@ -43,7 +43,9 @@ export class InstrumentHistory {
   protected readonly sortedHistory = computed(() => [...this.history()].reverse());
   protected readonly rsiEligible = signal(false);
   protected readonly currency = signal('');
-  protected readonly displayedColumns = computed(() => (this.rsiEligible() ? ['date', 'close', 'rsi'] : ['date', 'close']));
+  protected readonly displayedColumns = computed(() =>
+    this.rsiEligible() ? ['date', 'close', 'high', 'low', 'rsi'] : ['date', 'close', 'high', 'low'],
+  );
   protected readonly showPartialNotice = computed(() => {
     const count = this.history().length;
     return count > 0 && count < HISTORY_DAYS;

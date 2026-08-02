@@ -400,15 +400,15 @@ Per project convention, D1 migrations are not auto-applied on deploy — `wrangl
 
 #### Automated
 
-- [x] 4.1 `npm run test:worker` passes, including new/extended cases
-- [x] 4.2 Type checking passes
+- [x] 4.1 `npm run test:worker` passes, including new/extended cases — b532067
+- [x] 4.2 Type checking passes — b532067
 
 ### Phase 5: Frontend Display
 
 #### Automated
 
-- [ ] 5.1 Frontend build succeeds
-- [ ] 5.2 `npm run test:worker` still green
+- [x] 5.1 Frontend build succeeds
+- [x] 5.2 `npm run test:worker` still green
 
 #### Manual
 

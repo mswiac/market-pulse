@@ -5,6 +5,8 @@ import { Observable } from 'rxjs';
 export interface InstrumentHistoryEntry {
   date: string;
   close: number;
+  high: number | null;
+  low: number | null;
   rsi: number | null;
 }
 
