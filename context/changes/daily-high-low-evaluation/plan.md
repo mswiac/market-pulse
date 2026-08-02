@@ -378,8 +378,8 @@ Per project convention, D1 migrations are not auto-applied on deploy — `wrangl
 
 #### Automated
 
-- [x] 2.1 `npm run test:worker` passes, including new/extended cases
-- [x] 2.2 Type checking passes
+- [x] 2.1 `npm run test:worker` passes, including new/extended cases — 25c7a6b
+- [x] 2.2 Type checking passes — 25c7a6b
 
 #### Manual
 
@@ -389,8 +389,8 @@ Per project convention, D1 migrations are not auto-applied on deploy — `wrangl
 
 #### Automated
 
-- [ ] 3.1 `npm run test:worker` passes, including new/extended cases
-- [ ] 3.2 Type checking passes
+- [x] 3.1 `npm run test:worker` passes, including new/extended cases
+- [x] 3.2 Type checking passes
 
 #### Manual
 

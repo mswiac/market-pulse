@@ -262,6 +262,21 @@ describe('alerts endpoints', () => {
     await expect(response.json()).resolves.toMatchObject({ active: false });
   });
 
+  it('starts a "down" alert inactive when only the day\'s low (not the close) already meets the threshold', async () => {
+    const cookie = await registerAndLogIn('armed-down-low-already-met@example.com');
+    // Close (25) is still above the threshold — only the intraday low (18) has
+    // crossed it. computeArmed must use the same high/low-aware rule as the
+    // cron, not just close, or this alert would start armed and then
+    // immediately disagree with the very next evaluation run.
+    await env.DB.prepare('INSERT INTO market_data (ticker, price, rsi, high, low, updated_at) VALUES (?, ?, ?, ?, ?, unixepoch())')
+      .bind('^VIX', 25, null, 26, 18)
+      .run();
+
+    const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'down' });
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({ active: false });
+  });
+
   it('starts an "up" alert active when the current price has not yet reached the threshold', async () => {
     const cookie = await registerAndLogIn('armed-up-not-met@example.com');
     await env.DB.prepare('INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())')
