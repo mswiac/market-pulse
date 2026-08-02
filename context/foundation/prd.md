@@ -64,6 +64,8 @@ Insight: market platforms deliberately limit the durability and depth of alerts 
 - FR-008: The system sends an email notification to the alert's designated email address when the threshold is crossed. Priority: must-have
   > Socrates: Counter-argument considered: "Email is unreliable and hard to test locally — a UI log would suffice for MVP." Resolution: both; email is the core value of the product, but a trigger history log in the app is also kept (FR-010 promoted to must-have).
 - FR-008a: The system records each alert trigger event (timestamp, instrument, value at time of trigger) in persistent storage. Priority: must-have
+- FR-012: Price-type alerts are evaluated against the daily high and low, not only the closing price, so a threshold crossed at any point during the trading day triggers a notification even if the price closes back on the other side of the threshold (e.g. threshold 100, price rises to 102 intraday, closes at 99 — the alert must still fire). RSI alerts are unaffected, since RSI is inherently derived from closing values. Priority: must-have
+  > Socrates: Counter-argument considered: "This is intraday/real-time data, which the PRD already excludes as a Non-Goal." Resolution: not the same thing — evaluation stays a once-daily batch job; the daily high/low come from the same single daily data-provider fetch that already supplies the close, just reading two more fields from it. No polling frequency change, no new data source.
 
 ### Nice-to-have
 - FR-009: User can view the current index value alongside each alert on the list. Priority: nice-to-have
@@ -81,7 +83,7 @@ Insight: market platforms deliberately limit the durability and depth of alerts 
 The system fetches daily market data, calculates indicators, and sends a notification when a user-defined threshold is crossed — requiring the user to act only once, at alert creation.
 
 Supporting detail:
-- **Inputs**: daily closing data for VIX and NASDAQ-100 sourced from a market data provider on a daily schedule. For RSI alerts (NASDAQ-100 only, see FR-004), RSI is derived from a sequence of recent daily closing values; for price alerts, no additional calculation is needed.
+- **Inputs**: daily closing, high, and low prices for VIX and NASDAQ-100 sourced from a market data provider on a daily schedule (one fetch per day supplies all three). For RSI alerts (NASDAQ-100 only, see FR-004), RSI is derived from a sequence of recent daily closing values; for price alerts, the threshold is checked against the day's high (for "up" alerts) or low (for "down" alerts), per FR-012.
 - **Output**: an email sent to the address designated on the alert, triggered at most once per day per alert when the threshold condition is met.
 - **User encounter**: the user configures an alert once (instrument, type, threshold, email) and receives an email notification the day the condition is first satisfied, with no further action required.
 
@@ -94,7 +96,7 @@ Email address and password at registration. Login uses the email address and pas
 - No support for instruments other than VIX and NASDAQ-100 — stocks, other indices, and crypto are out of MVP scope. Rationale: limiting instruments constrains data sourcing and keeps the MVP shippable.
 - No indicators other than price and RSI — MACD, Bollinger Bands, volume-based indicators are post-MVP. Rationale: RSI requires custom calculation; adding more indicators before validating the core flow is premature.
 - No push notifications, SMS, or webhooks — email only. Rationale: additional notification channels add integration complexity without validating the core value.
-- No intraday data or real-time alerts — daily data only, evaluated once per day. Rationale: real-time data requires a different (paid) data source and a fundamentally different architecture.
+- No intraday data or real-time alerts — evaluation stays a once-per-day batch job on data from a single daily fetch (see FR-012, which reads the daily high/low from that same fetch — not a new polling frequency or data source). Rationale: real-time data requires a different (paid) data source and a fundamentally different architecture.
 
 ## Open Questions
 
