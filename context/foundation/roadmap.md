@@ -41,7 +41,7 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | S-05 | alert-notifications   | receive an email when an alert threshold is crossed       | S-04           | FR-008, FR-008a                 | done     |
 | S-06 | trigger-history       | view a history of all previously triggered alerts         | S-05           | FR-010                          | done     |
 | S-08 | daily-high-low-evaluation | get an alert notification even when the threshold was only crossed intraday, not at close | S-05      | FR-012                          | done     |
-| S-09 | admin-panel            | (admin-only) manually fetch/backfill market data for a chosen instrument over a chosen date range | S-01, F-02, F-03 | —                       | planned  |
+| S-09 | admin-panel            | (admin-only) manually fetch/backfill market data for a chosen instrument over a chosen date range | S-01, F-02, F-03 | —                       | done  |
 
 ## Streams
 
@@ -228,7 +228,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** First authorization tier beyond the flat "each user manages only their own alerts" model documented in `CLAUDE.md` — that doc needs updating alongside this slice. `ADMIN_EMAILS` living in env/secret (not a DB table) means adding/removing an admin requires a redeploy or secret update, not a UI action — deliberate minimal choice for a single-action admin panel. Reshaping `fetchDailyCloses`'s signature touches the existing cron call site — must verify the default `from`/`to` values reproduce today's cron behavior exactly. Directly resolves the "self-backfill window" gap flagged during `S-08` plan review (44-day RSI lookback vs. the cron's ~21-trading-day fetch) by giving a way to manually backfill deeper history.
-- **Status:** planned
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -273,3 +273,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-05: The cron job reads pre-computed RSI and latest closes from the `market_data` table, evaluates all active alerts against the current values, and sends an email via Resend to each alert's designated address when the threshold condition is met. Each trigger event is recorded in the `trigger_events` table.** — Archived 2026-07-31 → `context/archive/2026-07-31-alert-notifications/`. Lesson: —.
 - **S-06: User can see a chronological log of previously triggered alerts showing timestamp, instrument, alert type, and the index value at the time the threshold was crossed.** — Archived 2026-07-31 → `context/archive/2026-07-31-trigger-history/`. Lesson: —.
 - **S-08: Price-type alerts on VIX and NASDAQ-100 fire when the daily high or low crosses the threshold, not only when the closing price does. Example: threshold 100 ("up" alert), price rises to 102 intraday, closes at 99 — today this never fires; after this slice it fires. RSI alerts are unaffected (RSI is inherently derived from closes).** — Archived 2026-08-02 → `context/archive/2026-08-02-daily-high-low-evaluation/`. Lesson: —.
+- **S-09: An administrator — identified by an `ADMIN_EMAILS` allowlist stored as an environment variable / secret — sees an additional sidebar tile below "Historia", opening a panel visible only to them. The panel lets an admin pick a category and an instrument via the same two-combobox pattern as the instrument history page (F-03/S-07), pick a date range (from–to), and fetch. `fetchDailyCloses` moves from its fixed lookback window to an explicit `from`/`to` date-range parameter; the daily cron keeps its existing default range (today − 30 days, today) unchanged. Fetched rows overwrite existing `price_history` rows for those dates (deliberately never `market_data`, to avoid regressing the "current value" alerts are evaluated against). Framed as extensible: more admin actions can land in this panel later.** — Archived 2026-08-02 → `context/archive/2026-08-02-admin-panel/`. Lesson: —.
