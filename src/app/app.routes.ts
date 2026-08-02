@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { adminGuard } from './core/auth/admin.guard';
 import { authGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
@@ -15,6 +16,11 @@ export const routes: Routes = [
       {
         path: 'history/triggers',
         loadComponent: () => import('./features/trigger-history/trigger-history').then((m) => m.TriggerHistory),
+      },
+      {
+        path: 'admin',
+        loadComponent: () => import('./features/admin/admin-panel').then((m) => m.AdminPanel),
+        canActivate: [adminGuard],
       },
     ],
   },

@@ -210,6 +210,10 @@
         <source>Triggered alerts</source>
         <target>Uruchomione alerty</target>
       </trans-unit>
+      <trans-unit id="shell.nav.admin" datatype="html">
+        <source>Admin</source>
+        <target>Administrator</target>
+      </trans-unit>
       <trans-unit id="home.welcomeTitle" datatype="html">
         <source>Welcome back</source>
         <target>Witaj ponownie</target>

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -18,6 +18,7 @@ export class Shell {
   private readonly router = inject(Router);
 
   protected readonly user = this.authService.currentUser;
+  protected readonly isAdmin = computed(() => this.user()?.isAdmin ?? false);
   // Starts expanded when landing directly on a History route (e.g. a page
   // refresh on /history) so the active section isn't hidden behind a
   // collapsed toggle with no visual trace of where the user actually is.

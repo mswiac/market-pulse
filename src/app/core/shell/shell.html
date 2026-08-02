@@ -45,6 +45,13 @@
           <span matListItemTitle i18n="@@shell.nav.triggerHistory">Triggered alerts</span>
         </a>
       }
+
+      @if (isAdmin()) {
+        <a mat-list-item routerLink="/admin" routerLinkActive="active-link">
+          <mat-icon matListItemIcon>admin_panel_settings</mat-icon>
+          <span matListItemTitle i18n="@@shell.nav.admin">Admin</span>
+        </a>
+      }
     </mat-nav-list>
   </mat-sidenav>
 

@@ -317,26 +317,26 @@ After this ships, `CLAUDE.md`'s Architecture section ("flat role model — each 
 
 #### Automated
 
-- [x] 2.1 Typecheck passes: `npm run typecheck`
-- [x] 2.2 New route tests pass: `npm run test:worker -- admin`
-- [x] 2.3 Full worker suite still green: `npm run test:worker`
+- [x] 2.1 Typecheck passes: `npm run typecheck` — 3a6fb4a
+- [x] 2.2 New route tests pass: `npm run test:worker -- admin` — 3a6fb4a
+- [x] 2.3 Full worker suite still green: `npm run test:worker` — 3a6fb4a
 
 #### Manual
 
-- [x] 2.4 Admin curl request against local dev writes/overwrites price_history correctly with matching daysWritten
-- [x] 2.5 Same request from a non-admin session returns 403
+- [x] 2.4 Admin curl request against local dev writes/overwrites price_history correctly with matching daysWritten — 3a6fb4a
+- [x] 2.5 Same request from a non-admin session returns 403 — 3a6fb4a
 
 ### Phase 3: Frontend — routing, guard, sidebar visibility
 
 #### Automated
 
-- [ ] 3.1 Typecheck passes: `npm run typecheck`
-- [ ] 3.2 Production build succeeds: `npm run build`
+- [x] 3.1 Typecheck passes: `npm run typecheck`
+- [x] 3.2 Production build succeeds: `npm run build`
 
 #### Manual
 
-- [ ] 3.3 Admin account sees sidebar tile and can reach /admin
-- [ ] 3.4 Non-admin account: tile absent, direct navigation to /admin redirects to /
+- [x] 3.3 Admin account sees sidebar tile and can reach /admin
+- [x] 3.4 Non-admin account: tile absent, direct navigation to /admin redirects to /
 
 ### Phase 4: Frontend — admin panel UI
 
