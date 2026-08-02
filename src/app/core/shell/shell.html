@@ -45,6 +45,29 @@
           <span matListItemTitle i18n="@@shell.nav.triggerHistory">Triggered alerts</span>
         </a>
       }
+
+      @if (isAdmin()) {
+        <button
+          mat-list-item
+          type="button"
+          class="nav-toggle"
+          (click)="adminExpanded.set(!adminExpanded())"
+          [attr.aria-expanded]="adminExpanded()"
+          aria-controls="admin-nav-panel"
+        >
+          <mat-icon matListItemIcon>admin_panel_settings</mat-icon>
+          <span matListItemTitle class="nav-toggle-title">
+            <span i18n="@@shell.nav.admin">Admin</span>
+            <mat-icon class="nav-toggle-caret">{{ adminExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </span>
+        </button>
+
+        @if (adminExpanded()) {
+          <a mat-list-item id="admin-nav-panel" class="nested-item" routerLink="/admin" routerLinkActive="active-link">
+            <span matListItemTitle i18n="@@shell.nav.adminMarketData">Market data</span>
+          </a>
+        }
+      }
     </mat-nav-list>
   </mat-sidenav>
 

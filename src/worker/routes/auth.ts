@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { getCookie } from 'hono/cookie';
 import type { Env } from '../index';
+import { isAdminEmail } from '../lib/admin';
 import { EMAIL_PATTERN, normalizeEmail } from '../lib/email';
 import { hashPassword, verifyPassword } from '../lib/password';
 import {
@@ -69,7 +70,7 @@ authRoutes.post('/register', async (c) => {
   const session = await createSession(c.env.DB, userId);
   setSessionCookie(c, session.id);
 
-  return c.json({ id: userId, email }, 201);
+  return c.json({ id: userId, email, isAdmin: isAdminEmail(c.env.ADMIN_EMAILS, email) }, 201);
 });
 
 authRoutes.post('/login', async (c) => {
@@ -94,7 +95,7 @@ authRoutes.post('/login', async (c) => {
   const session = await createSession(c.env.DB, user.id);
   setSessionCookie(c, session.id);
 
-  return c.json({ id: user.id, email }, 200);
+  return c.json({ id: user.id, email, isAdmin: isAdminEmail(c.env.ADMIN_EMAILS, email) }, 200);
 });
 
 authRoutes.post('/logout', async (c) => {
@@ -116,7 +117,7 @@ authRoutes.get('/me', sessionMiddleware, async (c) => {
     return c.json({ error: 'unauthorized' }, 401);
   }
 
-  return c.json(user, 200);
+  return c.json({ ...user, isAdmin: isAdminEmail(c.env.ADMIN_EMAILS, user.email) }, 200);
 });
 
 export default authRoutes;

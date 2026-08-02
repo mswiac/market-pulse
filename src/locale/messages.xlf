@@ -34,7 +34,162 @@
         <source>Triggered alerts</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/core/shell/shell.html</context>
-          <context context-type="linenumber">45,48</context>
+          <context context-type="linenumber">45,49</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="shell.nav.admin" datatype="html">
+        <source>Admin</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/core/shell/shell.html</context>
+          <context context-type="linenumber">60,61</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="shell.nav.adminMarketData" datatype="html">
+        <source>Market data</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/core/shell/shell.html</context>
+          <context context-type="linenumber">67,70</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="adminPanel.title" datatype="html">
+        <source>Admin panel</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.html</context>
+          <context context-type="linenumber">2,5</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.error.instrumentsLoadFailed" datatype="html">
+        <source> Failed to load instruments. Please refresh the page and try again. </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.html</context>
+          <context context-type="linenumber">6,9</context>
+        </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/instrument-history/instrument-history.html</context>
+          <context context-type="linenumber">6,10</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="adminPanel.type.label" datatype="html">
+        <source>Type</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.html</context>
+          <context context-type="linenumber">12,13</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="adminPanel.instrument.label" datatype="html">
+        <source>Instrument</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.html</context>
+          <context context-type="linenumber">21,22</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="adminPanel.from.label" datatype="html">
+        <source>From</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.html</context>
+          <context context-type="linenumber">32,33</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="adminPanel.to.label" datatype="html">
+        <source>To</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.html</context>
+          <context context-type="linenumber">39,40</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="adminPanel.submit" datatype="html">
+        <source> Fetch market data </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.html</context>
+          <context context-type="linenumber">47,49</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="instrumentHistory.instrumentType.index" datatype="html">
+        <source>Index</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.ts</context>
+          <context context-type="linenumber">21</context>
+        </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/instrument-history/instrument-history.ts</context>
+          <context context-type="linenumber">13</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="adminPanel.error.tickerRequired" datatype="html">
+        <source>Please select an instrument.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.ts</context>
+          <context context-type="linenumber">28</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="adminPanel.error.invalidDates" datatype="html">
+        <source>Please select valid from/to dates.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.ts</context>
+          <context context-type="linenumber">29</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="adminPanel.error.invalidRangeOrder" datatype="html">
+        <source>The start date must not be after the end date.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.ts</context>
+          <context context-type="linenumber">30</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="adminPanel.error.futureToDate" datatype="html">
+        <source>The end date must not be in the future.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.ts</context>
+          <context context-type="linenumber">31</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="adminPanel.error.rangeTooLarge" datatype="html">
+        <source>The selected range is too large (max 730 days).</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.ts</context>
+          <context context-type="linenumber">32</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="adminPanel.error.unknownInstrument" datatype="html">
+        <source>Unknown instrument.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.ts</context>
+          <context context-type="linenumber">33</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="adminPanel.error.fetchFailed" datatype="html">
+        <source>Fetching market data failed. Please try again.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.ts</context>
+          <context context-type="linenumber">34</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="adminPanel.error.writeFailed" datatype="html">
+        <source>Saving market data failed. Please try again.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.ts</context>
+          <context context-type="linenumber">35</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="adminPanel.error.forbidden" datatype="html">
+        <source>You don&apos;t have permission to do this.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.ts</context>
+          <context context-type="linenumber">36</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="adminPanel.result.errorGeneric" datatype="html">
+        <source>Something went wrong. Please try again.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.ts</context>
+          <context context-type="linenumber">39</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="adminPanel.result.success" datatype="html">
+        <source>Saved <x id="INTERPOLATION" equiv-text="result.daysWritten"/> day(s) for <x id="INTERPOLATION_1" equiv-text="result.ticker"/> (<x id="INTERPOLATION_2" equiv-text="result.from"/> – <x id="INTERPOLATION_3" equiv-text="result.to"/>).</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.ts</context>
+          <context context-type="linenumber">128</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertForm.editTitle" datatype="html">
@@ -627,13 +782,6 @@
           <context context-type="linenumber">2,5</context>
         </context-group>
       </trans-unit>
-      <trans-unit id="instrumentHistory.error.instrumentsLoadFailed" datatype="html">
-        <source> Failed to load instruments. Please refresh the page and try again. </source>
-        <context-group purpose="location">
-          <context context-type="sourcefile">src/app/features/instrument-history/instrument-history.html</context>
-          <context context-type="linenumber">6,10</context>
-        </context-group>
-      </trans-unit>
       <trans-unit id="instrumentHistory.type.label" datatype="html">
         <source>Type</source>
         <context-group purpose="location">
@@ -695,13 +843,6 @@
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/instrument-history/instrument-history.html</context>
           <context context-type="linenumber">74</context>
-        </context-group>
-      </trans-unit>
-      <trans-unit id="instrumentHistory.instrumentType.index" datatype="html">
-        <source>Index</source>
-        <context-group purpose="location">
-          <context context-type="sourcefile">src/app/features/instrument-history/instrument-history.ts</context>
-          <context context-type="linenumber">13</context>
         </context-group>
       </trans-unit>
       <trans-unit id="triggerHistory.title" datatype="html">

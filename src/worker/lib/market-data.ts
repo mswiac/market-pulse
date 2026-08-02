@@ -30,8 +30,17 @@ function toIsoDate(unixSeconds: number): string {
   return new Date(unixSeconds * 1000).toISOString().slice(0, 10);
 }
 
-export async function fetchDailyCloses(symbol: string): Promise<DailyClose[]> {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1mo&interval=1d`;
+// UTC midnight for the given YYYY-MM-DD, in whole seconds — matches Yahoo's
+// period1/period2 units and keeps the conversion independent of the host's
+// local timezone.
+function toUnixSeconds(isoDate: string): number {
+  return Date.parse(`${isoDate}T00:00:00Z`) / 1000;
+}
+
+export async function fetchDailyCloses(symbol: string, from: string, to: string): Promise<DailyClose[]> {
+  const period1 = toUnixSeconds(from);
+  const period2 = toUnixSeconds(to);
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=1d`;
 
   const response = await fetch(url, {
     headers: {
@@ -66,6 +75,15 @@ export async function fetchDailyCloses(symbol: string): Promise<DailyClose[]> {
     throw new MarketDataFetchError(`Yahoo response for ${symbol} has an unexpected shape`);
   }
 
+  // A date range with no trading days (e.g. a weekend-only admin backfill
+  // request) is a valid "zero results" outcome, not a fetch failure — Yahoo
+  // returns an empty timestamp array rather than an error for this case.
+  // This is distinct from the "every close is null" case below, where
+  // timestamps exist but the data itself looks broken — that still throws.
+  if (timestamps.length === 0) {
+    return [];
+  }
+
   // calculateRSI() and "latest price" both assume ascending order — Yahoo's
   // endpoint is unofficial, so fail loudly instead of silently trusting it.
   for (let i = 1; i < timestamps.length; i++) {
@@ -91,4 +109,19 @@ export async function fetchDailyCloses(symbol: string): Promise<DailyClose[]> {
   }
 
   return dailyCloses;
+}
+
+// Pure statement-building — no db.batch() call here, so this stays testable
+// without a live D1 round-trip and lets each caller decide how to batch
+// (the cron bundles its own market_data statement into the same batch; the
+// admin endpoint batches only these).
+export function upsertPriceHistory(db: D1Database, ticker: string, closes: DailyClose[]): D1PreparedStatement[] {
+  return closes.map(({ date, close, high, low }) =>
+    db
+      .prepare(
+        `INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT (ticker, date) DO UPDATE SET close = excluded.close, high = excluded.high, low = excluded.low`,
+      )
+      .bind(ticker, date, close, high, low),
+  );
 }

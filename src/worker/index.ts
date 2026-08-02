@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import adminRoutes from './routes/admin';
 import alertsRoutes from './routes/alerts';
 import authRoutes from './routes/auth';
 import instrumentsRoutes from './routes/instruments';
@@ -11,6 +12,7 @@ export interface Env {
   ASSETS: Fetcher;
   RESEND_API_KEY: string;
   RESEND_VERIFIED_EMAIL: string;
+  ADMIN_EMAILS: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -19,6 +21,7 @@ app.route('/api', authRoutes);
 app.route('/api/alerts', alertsRoutes);
 app.route('/api/instruments', instrumentsRoutes);
 app.route('/api/trigger-events', triggerEventsRoutes);
+app.route('/api/admin', adminRoutes);
 app.get('/api/health', (c) => c.json({ ok: true }));
 
 // Anything that isn't an API route is a client-side (Angular Router) path.

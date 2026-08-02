@@ -5,6 +5,7 @@ import { Observable, tap } from 'rxjs';
 export interface AuthUser {
   id: number;
   email: string;
+  isAdmin: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

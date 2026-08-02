@@ -5,6 +5,7 @@ declare namespace Cloudflare {
     ASSETS: Fetcher;
     RESEND_API_KEY: string;
     RESEND_VERIFIED_EMAIL: string;
+    ADMIN_EMAILS: string;
     TEST_MIGRATIONS: import("cloudflare:test").D1Migration[];
   }
   interface GlobalProps {

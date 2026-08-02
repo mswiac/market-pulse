@@ -1,18 +1,28 @@
 import type { Env } from './index';
 import { evaluateAlerts } from './lib/alert-evaluation';
 import type { InstrumentRow } from './lib/instruments';
-import { fetchDailyCloses, type DailyClose } from './lib/market-data';
+import { fetchDailyCloses, upsertPriceHistory, type DailyClose } from './lib/market-data';
 import { calculateRSI } from './lib/rsi';
 
 const RETRY_ATTEMPTS = 3;
 // Fixed delay, no backoff — deliberate simplification at current volume (2 tickers/day).
 const RETRY_DELAY_MS = 300;
+// Cron's fixed lookback window, expressed as explicit dates now that
+// fetchDailyCloses takes a date range instead of an implicit default.
+const CRON_LOOKBACK_DAYS = 30;
+
+function dateToIsoDateString(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
 
 async function fetchWithRetry(symbol: string): Promise<DailyClose[]> {
+  const to = dateToIsoDateString(new Date());
+  const from = dateToIsoDateString(new Date(Date.now() - CRON_LOOKBACK_DAYS * 24 * 60 * 60 * 1000));
+
   let lastError: unknown;
   for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
     try {
-      return await fetchDailyCloses(symbol);
+      return await fetchDailyCloses(symbol, from, to);
     } catch (err) {
       lastError = err;
       if (attempt < RETRY_ATTEMPTS) {
@@ -38,15 +48,17 @@ export async function handleScheduled(env: Env): Promise<void> {
   for (const { ticker, rsi_eligible } of instruments) {
     try {
       const closes = await fetchWithRetry(ticker);
+      if (closes.length === 0) {
+        // Unreachable in practice — the cron's 30-day window always spans
+        // trading days — but fetchDailyCloses's contract now allows an empty
+        // result (see market-data.ts), so guard rather than write undefined
+        // fields from a missing `latest`.
+        continue;
+      }
       const rsi = rsi_eligible ? calculateRSI(closes.map((c) => c.close)) : null;
       const latest = closes[closes.length - 1];
 
-      const statements = closes.map(({ date, close, high, low }) =>
-        env.DB.prepare(
-          `INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, ?, ?)
-           ON CONFLICT (ticker, date) DO UPDATE SET close = excluded.close, high = excluded.high, low = excluded.low`,
-        ).bind(ticker, date, close, high, low),
-      );
+      const statements = upsertPriceHistory(env.DB, ticker, closes);
 
       statements.push(
         env.DB.prepare(
