@@ -41,6 +41,7 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | S-05 | alert-notifications   | receive an email when an alert threshold is crossed       | S-04           | FR-008, FR-008a                 | done     |
 | S-06 | trigger-history       | view a history of all previously triggered alerts         | S-05           | FR-010                          | done     |
 | S-08 | daily-high-low-evaluation | get an alert notification even when the threshold was only crossed intraday, not at close | S-05      | FR-012                          | done     |
+| S-09 | admin-panel            | (admin-only) manually fetch/backfill market data for a chosen instrument over a chosen date range | S-01, F-02, F-03 | —                       | planned  |
 
 ## Streams
 
@@ -49,7 +50,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | Stream | Theme                       | Chain                               | Note                                                                            |
 |--------|-----------------------------|-------------------------------------|---------------------------------------------------------------------------------|
 | A      | Auth & alert CRUD           | `F-01` → `F-01a` → `S-01` → `S-02` → `S-03`  | Delivers the north star (S-02); S-03 is a refinement slice after it lands.      |
-| B      | Data pipeline & notif.      | `F-02` → `F-03` → `S-04` → `S-05` → `S-06` → `S-08` | F-02 branches from F-01 parallel with S-01; S-04 joins Stream A at S-02; `F-03` also unlocks `S-07` (30-day history view), which runs parallel to S-04. `S-08` depends only on `S-05` and runs parallel to `S-06`. |
+| B      | Data pipeline & notif.      | `F-02` → `F-03` → `S-04` → `S-05` → `S-06` → `S-08` | F-02 branches from F-01 parallel with S-01; S-04 joins Stream A at S-02; `F-03` also unlocks `S-07` (30-day history view), which runs parallel to S-04. `S-08` depends only on `S-05` and runs parallel to `S-06`. `S-09` crosses both streams — needs `S-01` (auth, Stream A) plus `F-02`/`F-03` (Stream B) — and can run any time after all three are done. |
 
 ## Baseline
 
@@ -217,6 +218,18 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Not real intraday polling — the daily Yahoo Finance chart-API response already returns `high`/`low` in the same once-a-day fetch that supplies `close` (`src/worker/lib/market-data.ts`); `YahooChartResult` just doesn't type or read them yet. Needs: `high`/`low` columns added to `price_history` (currently `close`-only, `migrations/0006_create_price_history.sql`), the fetch/parse layer extended to store them, and `alert-evaluation.ts`'s `conditionMet` updated to compare against `high` for "up" alerts / `low` for "down" alerts instead of `close`. Keep this clearly distinct from the parked "Intraday or real-time alerts" item below — evaluation frequency and data source are unchanged.
 - **Status:** done
 
+### S-09: Admin can manually fetch/backfill market data for an instrument over a date range
+
+- **Outcome:** An administrator — identified by an `ADMIN_EMAILS` allowlist stored as an environment variable / secret (remote secret; `.dev.vars` locally), not a DB-backed role — sees an additional sidebar tile below "Historia", opening a panel visible only to them. The panel has one action to start: pick a category and an instrument via the same two-combobox pattern as the instrument history page (F-03/S-07), pick a date range (from–to), and fetch. `fetchDailyCloses` moves from its current fixed lookback window to an explicit `from`/`to` date-range parameter; the daily cron calls it with its existing default range (today − 30 days, today) so cron behavior is unchanged, and the admin panel passes whatever range the admin selects — which can be wider than the cron's window (e.g. 90 days back). Fetched rows overwrite existing `price_history`/`market_data` rows for those dates via the same `ON CONFLICT DO UPDATE` pattern the cron already uses — same ticker, same source, same parsing, so this is a superset/refresh of cron data, never conflicting or incorrect data. Framed as extensible: more admin actions land in this panel later.
+- **Change ID:** `admin-panel`
+- **PRD refs:** — (new admin-only capability; not yet reflected in an FR)
+- **Prerequisites:** S-01, F-02, F-03
+- **Parallel with:** —
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** First authorization tier beyond the flat "each user manages only their own alerts" model documented in `CLAUDE.md` — that doc needs updating alongside this slice. `ADMIN_EMAILS` living in env/secret (not a DB table) means adding/removing an admin requires a redeploy or secret update, not a UI action — deliberate minimal choice for a single-action admin panel. Reshaping `fetchDailyCloses`'s signature touches the existing cron call site — must verify the default `from`/`to` values reproduce today's cron behavior exactly. Directly resolves the "self-backfill window" gap flagged during `S-08` plan review (44-day RSI lookback vs. the cron's ~21-trading-day fetch) by giving a way to manually backfill deeper history.
+- **Status:** planned
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID             | Suggested issue title                               | Ready for `/10x-plan` | Notes                                                              |
@@ -233,6 +246,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-05       | alert-notifications   | Notification pipeline: alert eval + Resend email    | no                    | Awaits S-04; Stooq/RSI already validated by then                   |
 | S-06       | trigger-history       | Trigger history: list of fired alerts               | no                    | Awaits S-05                                                        |
 | S-08       | daily-high-low-evaluation | Price alerts: evaluate against daily high/low, not just close | no       | Awaits S-05 (done); Yahoo response already carries high/low, needs parsing + schema + evaluation change |
+| S-09       | admin-panel            | Admin panel: manual market-data fetch/backfill for an instrument + date range | yes | Awaits S-01, F-02, F-03 (all done); run `/10x-plan admin-panel` |
 
 ## Open Roadmap Questions
 
