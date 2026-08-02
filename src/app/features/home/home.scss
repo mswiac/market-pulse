@@ -21,8 +21,14 @@
   margin: 0 0 1rem;
 }
 
+// matFab's `color="primary"` input has no effect under M3 theming; the FAB's
+// own M3 default is primary-container, not primary. Overriding the
+// component's own tokens directly matches the toolbar/buttons' vivid primary
+// — the icon (fill: currentColor) and label inherit from the same color.
 .new-alert-fab {
   position: fixed;
   bottom: 2rem;
   right: 2rem;
+  --mat-fab-container-color: var(--mat-sys-primary);
+  --mat-fab-foreground-color: var(--mat-sys-on-primary);
 }

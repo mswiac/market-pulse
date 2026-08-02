@@ -215,8 +215,8 @@
         <target>Administrator</target>
       </trans-unit>
       <trans-unit id="shell.nav.adminMarketData" datatype="html">
-        <source>Market data</source>
-        <target>Dane giełdowe</target>
+        <source>Fetch market data</source>
+        <target>Pobierz dane giełdowe</target>
       </trans-unit>
       <trans-unit id="adminPanel.title" datatype="html">
         <source>Admin panel</source>

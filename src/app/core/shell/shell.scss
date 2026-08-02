@@ -4,6 +4,16 @@
   min-height: 100vh;
 }
 
+// mat-toolbar's `color="primary"` input has no effect under M3 theming (Angular
+// Material only wires it up for M2). Overriding the component's own tokens
+// directly matches the buttons' vivid primary — and, since Material wires
+// unthemed nested buttons to follow --mat-toolbar-container-text-color, the
+// "Log out" button picks up the same on-primary text automatically.
+mat-toolbar {
+  --mat-toolbar-container-background-color: var(--mat-sys-primary);
+  --mat-toolbar-container-text-color: var(--mat-sys-on-primary);
+}
+
 .spacer {
   flex: 1 1 auto;
 }
@@ -19,7 +29,7 @@
 }
 
 mat-sidenav {
-  width: 15rem;
+  width: 17rem;
 }
 
 mat-nav-list {
@@ -33,11 +43,35 @@ mat-nav-list {
 // applies to both nav links and the "History" toggle button so the whole list reads as one menu.
 mat-nav-list [mat-list-item] {
   border-radius: 1.75rem;
+  // Matches the "+ New alert" FAB's label weight (--mat-sys-label-large-weight,
+  // 500) — nav items default to body-large (400), noticeably lighter.
+  --mat-list-list-item-label-text-weight: var(--mat-sys-label-large-weight);
 }
 
+// The title/icon inside mat-list-item paint from their own MDC tokens
+// (--mat-list-list-item-*-label-text-color / -leading-icon-color), not from
+// this element's own `color` — same MDC-internal-token pattern as the
+// toolbar and FAB above. Material also has separate :hover/:focus variants
+// of the same tokens, so all state variants need overriding too.
+//
+// On top of that, Material draws a semi-transparent hover/focus "state
+// layer" (a ::before overlay) using --mat-list-list-item-*-state-layer-color
+// at --mat-list-list-item-*-state-layer-opacity. Since .active-link is a
+// persistent "you are here" indicator rather than a plain interactive
+// button, tinting the overlay just swaps which shade flickers (dark
+// on-surface vs. a brightening on-primary) depending on transient
+// focus/hover — instead, zero out the opacity so the background stays one
+// flat, unchanging --mat-sys-primary regardless of interaction state.
 .active-link {
-  background-color: var(--mat-sys-secondary-container);
-  color: var(--mat-sys-on-secondary-container);
+  background-color: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  --mat-list-list-item-label-text-color: var(--mat-sys-on-primary);
+  --mat-list-list-item-hover-label-text-color: var(--mat-sys-on-primary);
+  --mat-list-list-item-focus-label-text-color: var(--mat-sys-on-primary);
+  --mat-list-list-item-leading-icon-color: var(--mat-sys-on-primary);
+  --mat-list-list-item-hover-leading-icon-color: var(--mat-sys-on-primary);
+  --mat-list-list-item-hover-state-layer-opacity: 0;
+  --mat-list-list-item-focus-state-layer-opacity: 0;
 }
 
 // A raw <button> keeps the browser's default border/appearance/padding unless

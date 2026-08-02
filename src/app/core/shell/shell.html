@@ -1,4 +1,4 @@
-<mat-toolbar color="primary">
+<mat-toolbar>
   <span>MarketPulse</span>
   <span class="spacer"></span>
   @if (user(); as currentUser) {
@@ -64,7 +64,7 @@
 
         @if (adminExpanded()) {
           <a mat-list-item id="admin-nav-panel" class="nested-item" routerLink="/admin" routerLinkActive="active-link">
-            <span matListItemTitle i18n="@@shell.nav.adminMarketData">Market data</span>
+            <span matListItemTitle i18n="@@shell.nav.adminMarketData">Fetch market data</span>
           </a>
         }
       }
