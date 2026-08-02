@@ -3,7 +3,7 @@ project: MarketPulse
 version: 1
 status: draft
 created: 2026-06-21
-updated: 2026-07-31
+updated: 2026-08-02
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -40,6 +40,7 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | S-07 | instrument-history-view | view 30-day price/RSI history for any instrument via two comboboxes | F-03 | —                    | done |
 | S-05 | alert-notifications   | receive an email when an alert threshold is crossed       | S-04           | FR-008, FR-008a                 | done     |
 | S-06 | trigger-history       | view a history of all previously triggered alerts         | S-05           | FR-010                          | done     |
+| S-08 | daily-high-low-evaluation | get an alert notification even when the threshold was only crossed intraday, not at close | S-05      | FR-012                          | planned  |
 
 ## Streams
 
@@ -48,7 +49,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | Stream | Theme                       | Chain                               | Note                                                                            |
 |--------|-----------------------------|-------------------------------------|---------------------------------------------------------------------------------|
 | A      | Auth & alert CRUD           | `F-01` → `F-01a` → `S-01` → `S-02` → `S-03`  | Delivers the north star (S-02); S-03 is a refinement slice after it lands.      |
-| B      | Data pipeline & notif.      | `F-02` → `F-03` → `S-04` → `S-05` → `S-06`  | F-02 branches from F-01 parallel with S-01; S-04 joins Stream A at S-02; `F-03` also unlocks `S-07` (30-day history view), which runs parallel to S-04. |
+| B      | Data pipeline & notif.      | `F-02` → `F-03` → `S-04` → `S-05` → `S-06` → `S-08` | F-02 branches from F-01 parallel with S-01; S-04 joins Stream A at S-02; `F-03` also unlocks `S-07` (30-day history view), which runs parallel to S-04. `S-08` depends only on `S-05` and runs parallel to `S-06`. |
 
 ## Baseline
 
@@ -204,6 +205,18 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Straightforward read from the `trigger_events` table introduced in S-05. Low risk; if the `trigger_events` schema changes during S-05 implementation, this slice needs to adjust accordingly.
 - **Status:** done
 
+### S-08: Price alerts fire on the daily high/low, not only the close
+
+- **Outcome:** Price-type alerts on VIX and NASDAQ-100 fire when the daily high or low crosses the threshold, not only when the closing price does. Example: threshold 100 ("up" alert), price rises to 102 intraday, closes at 99 — today this never fires; after this slice it fires. RSI alerts are unaffected (RSI is inherently derived from closes).
+- **Change ID:** `daily-high-low-evaluation`
+- **PRD refs:** FR-012, Business Logic (Inputs)
+- **Prerequisites:** S-05
+- **Parallel with:** S-06
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** Not real intraday polling — the daily Yahoo Finance chart-API response already returns `high`/`low` in the same once-a-day fetch that supplies `close` (`src/worker/lib/market-data.ts`); `YahooChartResult` just doesn't type or read them yet. Needs: `high`/`low` columns added to `price_history` (currently `close`-only, `migrations/0006_create_price_history.sql`), the fetch/parse layer extended to store them, and `alert-evaluation.ts`'s `conditionMet` updated to compare against `high` for "up" alerts / `low` for "down" alerts instead of `close`. Keep this clearly distinct from the parked "Intraday or real-time alerts" item below — evaluation frequency and data source are unchanged.
+- **Status:** planned
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID             | Suggested issue title                               | Ready for `/10x-plan` | Notes                                                              |
@@ -219,6 +232,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-07       | instrument-history-view | Instrument history view: 30-day price/RSI page    | no                    | Awaits F-03; can be planned in parallel with S-04                  |
 | S-05       | alert-notifications   | Notification pipeline: alert eval + Resend email    | no                    | Awaits S-04; Stooq/RSI already validated by then                   |
 | S-06       | trigger-history       | Trigger history: list of fired alerts               | no                    | Awaits S-05                                                        |
+| S-08       | daily-high-low-evaluation | Price alerts: evaluate against daily high/low, not just close | no       | Awaits S-05 (done); Yahoo response already carries high/low, needs parsing + schema + evaluation change |
 
 ## Open Roadmap Questions
 
