@@ -16,6 +16,7 @@ export default defineConfig(async () => {
             // Resend call is made (see test/worker/alert-evaluation.test.ts).
             RESEND_API_KEY: "test-resend-api-key",
             RESEND_VERIFIED_EMAIL: "verified@example.com",
+            ADMIN_EMAILS: "admin@example.com",
           },
         },
       }),

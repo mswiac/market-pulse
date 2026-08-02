@@ -305,26 +305,26 @@ After this ships, `CLAUDE.md`'s Architecture section ("flat role model — each 
 
 #### Automated
 
-- [x] 1.1 Typecheck passes: `npm run typecheck`
-- [x] 1.2 Worker tests pass: `npm run test:worker`
-- [x] 1.3 Existing scheduled-handler tests still pass unchanged: `npm run test:worker -- scheduled`
+- [x] 1.1 Typecheck passes: `npm run typecheck` — 7bbda44
+- [x] 1.2 Worker tests pass: `npm run test:worker` — 7bbda44
+- [x] 1.3 Existing scheduled-handler tests still pass unchanged: `npm run test:worker -- scheduled` — 7bbda44
 
 #### Manual
 
-- [x] 1.4 Real Yahoo period1/period2 request confirmed working via curl before starting Phase 2
+- [x] 1.4 Real Yahoo period1/period2 request confirmed working via curl before starting Phase 2 — 7bbda44
 
 ### Phase 2: Backend — admin-gated fetch endpoint
 
 #### Automated
 
-- [ ] 2.1 Typecheck passes: `npm run typecheck`
-- [ ] 2.2 New route tests pass: `npm run test:worker -- admin`
-- [ ] 2.3 Full worker suite still green: `npm run test:worker`
+- [x] 2.1 Typecheck passes: `npm run typecheck`
+- [x] 2.2 New route tests pass: `npm run test:worker -- admin`
+- [x] 2.3 Full worker suite still green: `npm run test:worker`
 
 #### Manual
 
-- [ ] 2.4 Admin curl request against local dev writes/overwrites price_history correctly with matching daysWritten
-- [ ] 2.5 Same request from a non-admin session returns 403
+- [x] 2.4 Admin curl request against local dev writes/overwrites price_history correctly with matching daysWritten
+- [x] 2.5 Same request from a non-admin session returns 403
 
 ### Phase 3: Frontend — routing, guard, sidebar visibility
 
