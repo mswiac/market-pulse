@@ -40,7 +40,7 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | S-07 | instrument-history-view | view 30-day price/RSI history for any instrument via two comboboxes | F-03 | —                    | done |
 | S-05 | alert-notifications   | receive an email when an alert threshold is crossed       | S-04           | FR-008, FR-008a                 | done     |
 | S-06 | trigger-history       | view a history of all previously triggered alerts         | S-05           | FR-010                          | done     |
-| S-08 | daily-high-low-evaluation | get an alert notification even when the threshold was only crossed intraday, not at close | S-05      | FR-012                          | planned  |
+| S-08 | daily-high-low-evaluation | get an alert notification even when the threshold was only crossed intraday, not at close | S-05      | FR-012                          | done     |
 
 ## Streams
 
@@ -215,7 +215,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Not real intraday polling — the daily Yahoo Finance chart-API response already returns `high`/`low` in the same once-a-day fetch that supplies `close` (`src/worker/lib/market-data.ts`); `YahooChartResult` just doesn't type or read them yet. Needs: `high`/`low` columns added to `price_history` (currently `close`-only, `migrations/0006_create_price_history.sql`), the fetch/parse layer extended to store them, and `alert-evaluation.ts`'s `conditionMet` updated to compare against `high` for "up" alerts / `low` for "down" alerts instead of `close`. Keep this clearly distinct from the parked "Intraday or real-time alerts" item below — evaluation frequency and data source are unchanged.
-- **Status:** planned
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -258,3 +258,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-07: A dedicated page lets the user pick an instrument type and a specific instrument via two comboboxes (populated from `GET /api/instruments`, the second filtered by the first) and view that instrument's closing price and RSI for each of the last 30 days.** — Archived 2026-07-26 → `context/archive/2026-07-26-instrument-history-view/`. Lesson: —.
 - **S-05: The cron job reads pre-computed RSI and latest closes from the `market_data` table, evaluates all active alerts against the current values, and sends an email via Resend to each alert's designated address when the threshold condition is met. Each trigger event is recorded in the `trigger_events` table.** — Archived 2026-07-31 → `context/archive/2026-07-31-alert-notifications/`. Lesson: —.
 - **S-06: User can see a chronological log of previously triggered alerts showing timestamp, instrument, alert type, and the index value at the time the threshold was crossed.** — Archived 2026-07-31 → `context/archive/2026-07-31-trigger-history/`. Lesson: —.
+- **S-08: Price-type alerts on VIX and NASDAQ-100 fire when the daily high or low crosses the threshold, not only when the closing price does. Example: threshold 100 ("up" alert), price rises to 102 intraday, closes at 99 — today this never fires; after this slice it fires. RSI alerts are unaffected (RSI is inherently derived from closes).** — Archived 2026-08-02 → `context/archive/2026-08-02-daily-high-low-evaluation/`. Lesson: —.

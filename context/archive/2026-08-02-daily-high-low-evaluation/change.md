@@ -1,10 +1,10 @@
 ---
 change_id: daily-high-low-evaluation
 title: Daily high low evaluation
-status: impl_reviewed
+status: archived
 created: 2026-08-02
 updated: 2026-08-02
-archived_at: null
+archived_at: 2026-08-02T13:04:35Z
 ---
 
 ## Notes
