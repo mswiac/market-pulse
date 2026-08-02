@@ -1,6 +1,8 @@
 export interface DailyClose {
   date: string;
   close: number;
+  high: number | null;
+  low: number | null;
 }
 
 export class MarketDataFetchError extends Error {
@@ -13,7 +15,7 @@ export class MarketDataFetchError extends Error {
 interface YahooChartResult {
   timestamp?: number[];
   indicators?: {
-    quote?: Array<{ close?: Array<number | null> }>;
+    quote?: Array<{ close?: Array<number | null>; high?: Array<number | null>; low?: Array<number | null> }>;
   };
 }
 
@@ -55,7 +57,10 @@ export async function fetchDailyCloses(symbol: string): Promise<DailyClose[]> {
 
   const result = body.chart?.result?.[0];
   const timestamps = result?.timestamp;
-  const closes = result?.indicators?.quote?.[0]?.close;
+  const quote = result?.indicators?.quote?.[0];
+  const closes = quote?.close;
+  const highs = quote?.high;
+  const lows = quote?.low;
 
   if (!timestamps || !closes || timestamps.length !== closes.length) {
     throw new MarketDataFetchError(`Yahoo response for ${symbol} has an unexpected shape`);
@@ -73,7 +78,12 @@ export async function fetchDailyCloses(symbol: string): Promise<DailyClose[]> {
   for (let i = 0; i < timestamps.length; i++) {
     const close = closes[i];
     if (close === null || close === undefined) continue;
-    dailyCloses.push({ date: toIsoDate(timestamps[i]), close });
+    // A day with a valid close but missing high/low is kept (nulls for
+    // high/low), unlike a missing close which drops the whole day — Yahoo
+    // omitting high/low doesn't mean the close itself is untrustworthy.
+    const high = highs?.[i] ?? null;
+    const low = lows?.[i] ?? null;
+    dailyCloses.push({ date: toIsoDate(timestamps[i]), close, high, low });
   }
 
   if (dailyCloses.length === 0) {

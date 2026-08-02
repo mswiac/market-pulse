@@ -39,20 +39,20 @@ export async function handleScheduled(env: Env): Promise<void> {
     try {
       const closes = await fetchWithRetry(ticker);
       const rsi = rsi_eligible ? calculateRSI(closes.map((c) => c.close)) : null;
-      const latestPrice = closes[closes.length - 1].close;
+      const latest = closes[closes.length - 1];
 
-      const statements = closes.map(({ date, close }) =>
+      const statements = closes.map(({ date, close, high, low }) =>
         env.DB.prepare(
-          `INSERT INTO price_history (ticker, date, close) VALUES (?, ?, ?)
-           ON CONFLICT (ticker, date) DO UPDATE SET close = excluded.close`,
-        ).bind(ticker, date, close),
+          `INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT (ticker, date) DO UPDATE SET close = excluded.close, high = excluded.high, low = excluded.low`,
+        ).bind(ticker, date, close, high, low),
       );
 
       statements.push(
         env.DB.prepare(
-          `INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())
-           ON CONFLICT (ticker) DO UPDATE SET price = excluded.price, rsi = excluded.rsi, updated_at = excluded.updated_at`,
-        ).bind(ticker, latestPrice, rsi),
+          `INSERT INTO market_data (ticker, price, rsi, high, low, updated_at) VALUES (?, ?, ?, ?, ?, unixepoch())
+           ON CONFLICT (ticker) DO UPDATE SET price = excluded.price, rsi = excluded.rsi, high = excluded.high, low = excluded.low, updated_at = excluded.updated_at`,
+        ).bind(ticker, latest.close, rsi, latest.high, latest.low),
       );
 
       await env.DB.batch(statements);

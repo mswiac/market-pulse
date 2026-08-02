@@ -371,15 +371,15 @@ Per project convention, D1 migrations are not auto-applied on deploy — `wrangl
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly to local D1
-- [x] 1.2 Existing full test suite still passes post-migration
+- [x] 1.1 Migration applies cleanly to local D1 — f090496
+- [x] 1.2 Existing full test suite still passes post-migration — f090496
 
 ### Phase 2: Market Data Ingestion
 
 #### Automated
 
-- [ ] 2.1 `npm run test:worker` passes, including new/extended cases
-- [ ] 2.2 Type checking passes
+- [x] 2.1 `npm run test:worker` passes, including new/extended cases
+- [x] 2.2 Type checking passes
 
 #### Manual
 

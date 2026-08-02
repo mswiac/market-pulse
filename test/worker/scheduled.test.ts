@@ -9,10 +9,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // back to the exports.default pattern.
 import worker from '../../src/worker/index';
 
-function yahooBody(timestamps: number[], closes: Array<number | null>) {
+function yahooBody(
+  timestamps: number[],
+  closes: Array<number | null>,
+  highs?: Array<number | null>,
+  lows?: Array<number | null>,
+) {
   return {
     chart: {
-      result: [{ timestamp: timestamps, indicators: { quote: [{ close: closes }] } }],
+      result: [{ timestamp: timestamps, indicators: { quote: [{ close: closes, high: highs, low: lows }] } }],
       error: null,
     },
   };
@@ -26,12 +31,16 @@ interface MarketDataRow {
   ticker: string;
   price: number;
   rsi: number | null;
+  high: number | null;
+  low: number | null;
   updated_at: number;
 }
 
 // 15 ascending trading-day timestamps (13:30 UTC), enough to seed RSI(14).
 const TIMESTAMPS = Array.from({ length: 15 }, (_, i) => 1767620200 + i * 86400);
 const RISING_CLOSES = Array.from({ length: 15 }, (_, i) => 100 + i);
+const RISING_HIGHS = RISING_CLOSES.map((c) => c + 1);
+const RISING_LOWS = RISING_CLOSES.map((c) => c - 1);
 
 async function runScheduled(): Promise<void> {
   const controller = createScheduledController();
@@ -58,7 +67,11 @@ describe('scheduled handler', () => {
     // the same one across the two instrument fetches.
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES)))),
+      vi
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS))),
+        ),
     );
 
     await runScheduled();
@@ -72,12 +85,25 @@ describe('scheduled handler', () => {
     expect(typeof nasdaq?.rsi).toBe('number');
     expect(nasdaq?.rsi).toBe(100); // strictly rising closes -> avgLoss 0 -> RSI 100
 
+    const latestHigh = RISING_HIGHS[RISING_HIGHS.length - 1];
+    const latestLow = RISING_LOWS[RISING_LOWS.length - 1];
+    expect(nasdaq?.high).toBe(latestHigh);
+    expect(nasdaq?.low).toBe(latestLow);
+
     const priceHistory = await env.DB.prepare(
       'SELECT COUNT(*) as count FROM price_history WHERE ticker = ?',
     )
       .bind('^NDX')
       .first<{ count: number }>();
     expect(priceHistory?.count).toBe(15);
+
+    const latestPriceHistoryRow = await env.DB.prepare(
+      'SELECT high, low FROM price_history WHERE ticker = ? ORDER BY date DESC LIMIT 1',
+    )
+      .bind('^NDX')
+      .first<{ high: number; low: number }>();
+    expect(latestPriceHistoryRow?.high).toBe(latestHigh);
+    expect(latestPriceHistoryRow?.low).toBe(latestLow);
   });
 
   it('still writes the other instrument when one fetch fails after retries', async () => {
@@ -98,13 +124,22 @@ describe('scheduled handler', () => {
     expect(marketData.results[0]?.ticker).toBe('^NDX');
   });
 
-  it('does not create duplicate price_history rows on overlapping re-runs', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES)))),
-    );
-
+  it('does not create duplicate price_history rows on overlapping re-runs, and overwrites high/low', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS))),
+      );
+    vi.stubGlobal('fetch', fetchMock);
     await runScheduled();
+
+    // Second run returns revised high/low for the same days — the upsert
+    // must overwrite, not just dedupe on (ticker, date).
+    const revisedHighs = RISING_HIGHS.map((h) => h + 5);
+    const revisedLows = RISING_LOWS.map((l) => l - 5);
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, revisedHighs, revisedLows))),
+    );
     await runScheduled();
 
     const priceHistory = await env.DB.prepare(
@@ -113,6 +148,18 @@ describe('scheduled handler', () => {
       .bind('^NDX')
       .first<{ count: number }>();
     expect(priceHistory?.count).toBe(15);
+
+    const latestRow = await env.DB.prepare('SELECT high, low FROM price_history WHERE ticker = ? ORDER BY date DESC LIMIT 1')
+      .bind('^NDX')
+      .first<{ high: number; low: number }>();
+    expect(latestRow?.high).toBe(revisedHighs[revisedHighs.length - 1]);
+    expect(latestRow?.low).toBe(revisedLows[revisedLows.length - 1]);
+
+    const marketData = await env.DB.prepare('SELECT high, low FROM market_data WHERE ticker = ?')
+      .bind('^NDX')
+      .first<{ high: number; low: number }>();
+    expect(marketData?.high).toBe(revisedHighs[revisedHighs.length - 1]);
+    expect(marketData?.low).toBe(revisedLows[revisedLows.length - 1]);
   });
 
   it('logs and returns without writing anything when the instruments registry query fails', async () => {
