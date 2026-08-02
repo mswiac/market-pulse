@@ -383,7 +383,7 @@ Per project convention, D1 migrations are not auto-applied on deploy — `wrangl
 
 #### Manual
 
-- [ ] 2.3 Local cron run confirmed to populate high/low in price_history/market_data
+- [x] 2.3 Local cron run confirmed to populate high/low in price_history/market_data
 
 ### Phase 3: Alert Evaluation & Armed-State Logic
 
@@ -394,7 +394,7 @@ Per project convention, D1 migrations are not auto-applied on deploy — `wrangl
 
 #### Manual
 
-- [ ] 3.3 Manually seeded "down" alert scenario starts inactive at creation
+- [x] 3.3 Manually seeded "down" alert scenario starts inactive at creation
 
 ### Phase 4: History & Trigger APIs
 
@@ -407,12 +407,12 @@ Per project convention, D1 migrations are not auto-applied on deploy — `wrangl
 
 #### Automated
 
-- [x] 5.1 Frontend build succeeds
-- [x] 5.2 `npm run test:worker` still green
+- [x] 5.1 Frontend build succeeds — ded175f
+- [x] 5.2 `npm run test:worker` still green — ded175f
 
 #### Manual
 
-- [ ] 5.3 Alert list shows Close/High/Low for a PRICE alert
-- [ ] 5.4 Trigger history shows High/Low columns
-- [ ] 5.5 Instrument history shows High/Low columns for both tickers
-- [ ] 5.6 End-to-end fired-alert scenario verified across email, S-06, and S-07
+- [x] 5.3 Alert list shows Close/High/Low for a PRICE alert
+- [x] 5.4 Trigger history shows High/Low columns
+- [x] 5.5 Instrument history shows High/Low columns for both tickers
+- [x] 5.6 End-to-end fired-alert scenario verified across email, S-06, and S-07
