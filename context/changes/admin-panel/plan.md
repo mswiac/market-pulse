@@ -342,14 +342,14 @@ After this ships, `CLAUDE.md`'s Architecture section ("flat role model — each 
 
 #### Automated
 
-- [x] 4.1 Typecheck passes: `npm run typecheck`
-- [x] 4.2 Production build succeeds: `npm run build`
-- [x] 4.3 Full CI passes: `npm run ci`
+- [x] 4.1 Typecheck passes: `npm run typecheck` — 3ead4ee
+- [x] 4.2 Production build succeeds: `npm run build` — 3ead4ee
+- [x] 4.3 Full CI passes: `npm run ci` — 3ead4ee
 
 #### Manual
 
-- [x] 4.4 Category → instrument combobox filtering works like the Historia page
-- [x] 4.5 Valid submit shows success banner with correct day count
-- [x] 4.6 D1 confirms price_history rows written/overwritten for the submitted range
-- [x] 4.7 Invalid range shows inline error, no request succeeds
-- [x] 4.8 Polish translations render correctly
+- [x] 4.4 Category → instrument combobox filtering works like the Historia page — 3ead4ee
+- [x] 4.5 Valid submit shows success banner with correct day count — 3ead4ee
+- [x] 4.6 D1 confirms price_history rows written/overwritten for the submitted range — 3ead4ee
+- [x] 4.7 Invalid range shows inline error, no request succeeds — 3ead4ee
+- [x] 4.8 Polish translations render correctly — 3ead4ee
