@@ -27,6 +27,8 @@ interface TriggerEventOverrides {
   direction?: string;
   threshold?: number;
   valueAtTrigger?: number;
+  highAtTrigger?: number | null;
+  lowAtTrigger?: number | null;
   emailStatus?: 'sent' | 'failed';
   emailError?: string | null;
 }
@@ -41,16 +43,31 @@ async function seedTriggerEvent(userId: number, triggeredAt: number, overrides: 
     direction = 'up',
     threshold = 20,
     valueAtTrigger = 21,
+    highAtTrigger = null,
+    lowAtTrigger = null,
     emailStatus = 'sent',
     emailError = null,
   } = overrides;
 
   await env.DB.prepare(
     `INSERT INTO trigger_events
-       (user_id, ticker, alert_type, direction, threshold, value_at_trigger, notification_email, email_status, email_error, triggered_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (user_id, ticker, alert_type, direction, threshold, value_at_trigger, high_at_trigger, low_at_trigger, notification_email, email_status, email_error, triggered_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
-    .bind(userId, ticker, alertType, direction, threshold, valueAtTrigger, 'notify@example.com', emailStatus, emailError, triggeredAt)
+    .bind(
+      userId,
+      ticker,
+      alertType,
+      direction,
+      threshold,
+      valueAtTrigger,
+      highAtTrigger,
+      lowAtTrigger,
+      'notify@example.com',
+      emailStatus,
+      emailError,
+      triggeredAt,
+    )
     .run();
 }
 
@@ -120,6 +137,16 @@ describe('trigger events endpoint', () => {
     const response = await getTriggerEvents(cookie);
     const body = (await response.json()) as { events: { triggeredAt: number }[] };
     expect(body.events.map((e) => e.triggeredAt)).toEqual([3000, 2000, 1000]);
+  });
+
+  it('includes high/low at trigger for a PRICE alert', async () => {
+    const { cookie, userId } = await registerAndLogIn('trigger-high-low@example.com');
+    await seedTriggerEvent(userId, 1000, { highAtTrigger: 22.5, lowAtTrigger: 19.75 });
+
+    const response = await getTriggerEvents(cookie);
+    const body = (await response.json()) as { events: { highAtTrigger: number | null; lowAtTrigger: number | null }[] };
+    expect(body.events[0].highAtTrigger).toBe(22.5);
+    expect(body.events[0].lowAtTrigger).toBe(19.75);
   });
 
   it('includes the failed email status and error message', async () => {

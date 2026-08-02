@@ -47,6 +47,28 @@
             <td mat-cell *matCellDef="let day" class="numeric-cell">{{ day.close | number: '1.2-2' }} {{ currency() }}</td>
           </ng-container>
 
+          <ng-container matColumnDef="high">
+            <th mat-header-cell *matHeaderCellDef class="numeric-cell" i18n="@@instrumentHistory.column.high">High</th>
+            <td mat-cell *matCellDef="let day" class="numeric-cell">
+              @if (day.high !== null) {
+                {{ day.high | number: '1.2-2' }} {{ currency() }}
+              } @else {
+                —
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="low">
+            <th mat-header-cell *matHeaderCellDef class="numeric-cell" i18n="@@instrumentHistory.column.low">Low</th>
+            <td mat-cell *matCellDef="let day" class="numeric-cell">
+              @if (day.low !== null) {
+                {{ day.low | number: '1.2-2' }} {{ currency() }}
+              } @else {
+                —
+              }
+            </td>
+          </ng-container>
+
           <ng-container matColumnDef="rsi">
             <th mat-header-cell *matHeaderCellDef class="numeric-cell" i18n="@@instrumentHistory.column.rsi">RSI</th>
             <td mat-cell *matCellDef="let day" class="numeric-cell">

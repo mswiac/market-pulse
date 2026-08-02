@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
+import { resolveFiringValue } from '../lib/alert-evaluation';
 import { EMAIL_PATTERN, normalizeEmail } from '../lib/email';
 import type { InstrumentRow } from '../lib/instruments';
 import { sessionMiddleware } from '../lib/session';
@@ -113,13 +114,17 @@ async function validateAlertInput(
 interface CurrentMarketValue {
   price: number;
   rsi: number | null;
+  high: number | null;
+  low: number | null;
 }
 
 // Computed server-side from the ticker's current market_data row, never
 // trusted from the request — an alert starts disarmed if the direction's
 // condition is already true against today's value (so it doesn't fire
 // immediately on stale/pre-existing data), armed otherwise. No market_data
-// row yet (before the first cron run for a fresh ticker) defaults to armed.
+// row yet (before the first cron run for a fresh ticker) defaults to armed —
+// this early return must stay before resolveFiringValue, which requires a
+// full snapshot and has no "row doesn't exist at all" case of its own.
 async function computeArmed(
   db: D1Database,
   ticker: string,
@@ -127,8 +132,13 @@ async function computeArmed(
   threshold: number,
   direction: Direction,
 ): Promise<number> {
-  const row = await db.prepare('SELECT price, rsi FROM market_data WHERE ticker = ?').bind(ticker).first<CurrentMarketValue>();
-  const value = row ? (alertType === 'RSI' ? row.rsi : row.price) : null;
+  const row = await db
+    .prepare('SELECT price, rsi, high, low FROM market_data WHERE ticker = ?')
+    .bind(ticker)
+    .first<CurrentMarketValue>();
+  if (!row) return 1;
+
+  const value = resolveFiringValue(alertType, direction, row);
   if (value === null) return 1;
 
   const conditionAlreadyMet = direction === 'up' ? value >= threshold : value <= threshold;
@@ -153,7 +163,9 @@ const ALERT_SELECT = `
     a.created_at AS createdAt,
     a.updated_at AS updatedAt,
     m.price AS currentPrice,
-    m.rsi AS currentRsi
+    m.rsi AS currentRsi,
+    m.high AS currentHigh,
+    m.low AS currentLow
   FROM alerts a
   JOIN instruments i ON i.ticker = a.ticker
   LEFT JOIN market_data m ON m.ticker = a.ticker

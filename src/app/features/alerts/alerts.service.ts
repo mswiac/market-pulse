@@ -17,6 +17,8 @@ export interface Alert {
   updatedAt: number;
   currentPrice: number | null;
   currentRsi: number | null;
+  currentHigh: number | null;
+  currentLow: number | null;
 }
 
 export interface CreateAlertPayload {

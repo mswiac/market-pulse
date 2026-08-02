@@ -49,9 +49,11 @@ instrumentsRoutes.get('/:ticker/history', async (c) => {
     return c.json({ error: 'unknown instrument' }, 404);
   }
 
-  const { results } = await c.env.DB.prepare('SELECT date, close FROM price_history WHERE ticker = ? ORDER BY date DESC LIMIT ?')
+  const { results } = await c.env.DB.prepare(
+    'SELECT date, close, high, low FROM price_history WHERE ticker = ? ORDER BY date DESC LIMIT ?',
+  )
     .bind(ticker, LOOKBACK_DAYS)
-    .all<{ date: string; close: number }>();
+    .all<{ date: string; close: number; high: number | null; low: number | null }>();
 
   // Rows come back newest-first (for the LIMIT to keep the most recent days);
   // RSI smoothing must run oldest-to-newest, so reverse before computing.
@@ -62,7 +64,7 @@ instrumentsRoutes.get('/:ticker/history', async (c) => {
     : chronological.map(() => null);
 
   const history = chronological
-    .map((row, i) => ({ date: row.date, close: row.close, rsi: rsiSeries[i] }))
+    .map((row, i) => ({ date: row.date, close: row.close, high: row.high, low: row.low, rsi: rsiSeries[i] }))
     .slice(-HISTORY_DAYS);
 
   return c.json({ ticker, rsiEligible, currency: instrument.currency, history }, 200);

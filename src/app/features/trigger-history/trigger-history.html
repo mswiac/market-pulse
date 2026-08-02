@@ -48,6 +48,28 @@
           </td>
         </ng-container>
 
+        <ng-container matColumnDef="highAtTrigger">
+          <th mat-header-cell *matHeaderCellDef class="numeric-cell" i18n="@@triggerHistory.column.highAtTrigger">High</th>
+          <td mat-cell *matCellDef="let event" class="numeric-cell">
+            @if (event.highAtTrigger !== null) {
+              {{ event.highAtTrigger | number: '1.2-2' }} {{ event.currency }}
+            } @else {
+              —
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="lowAtTrigger">
+          <th mat-header-cell *matHeaderCellDef class="numeric-cell" i18n="@@triggerHistory.column.lowAtTrigger">Low</th>
+          <td mat-cell *matCellDef="let event" class="numeric-cell">
+            @if (event.lowAtTrigger !== null) {
+              {{ event.lowAtTrigger | number: '1.2-2' }} {{ event.currency }}
+            } @else {
+              —
+            }
+          </td>
+        </ng-container>
+
         <ng-container matColumnDef="emailStatus">
           <th mat-header-cell *matHeaderCellDef class="centered-cell" i18n="@@triggerHistory.column.emailStatus">Notification</th>
           <td mat-cell *matCellDef="let event" class="centered-cell">

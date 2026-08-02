@@ -46,6 +46,22 @@
               <span i18n="@@alertList.detail.noData">No data</span>
             }
           </p>
+          @if (showCurrentHighLow(alert.alertType)) {
+            <p>
+              <strong i18n="@@alertList.detail.currentHigh">Today's high:</strong>&nbsp;@if (alert.currentHigh !== null) {
+                {{ alert.currentHigh | number: '1.2-2' }} {{ alert.currency }}
+              } @else {
+                <span i18n="@@alertList.detail.noData">No data</span>
+              }
+            </p>
+            <p>
+              <strong i18n="@@alertList.detail.currentLow">Today's low:</strong>&nbsp;@if (alert.currentLow !== null) {
+                {{ alert.currentLow | number: '1.2-2' }} {{ alert.currency }}
+              } @else {
+                <span i18n="@@alertList.detail.noData">No data</span>
+              }
+            </p>
+          }
           @if (showCurrentRsi(alert.alertType)) {
             <p>
               <strong i18n="@@alertList.detail.currentRsi">Current RSI:</strong>&nbsp;@if (alert.currentRsi !== null) {

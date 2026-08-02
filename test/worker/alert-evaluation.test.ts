@@ -38,12 +38,18 @@ async function seedAlert(userId: number, overrides: AlertSeed = {}): Promise<num
   return result.meta.last_row_id as number;
 }
 
-async function seedMarketData(ticker: string, price: number, rsi: number | null = null): Promise<void> {
+async function seedMarketData(
+  ticker: string,
+  price: number,
+  rsi: number | null = null,
+  high: number | null = null,
+  low: number | null = null,
+): Promise<void> {
   await env.DB.prepare(
-    `INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())
-     ON CONFLICT (ticker) DO UPDATE SET price = excluded.price, rsi = excluded.rsi, updated_at = excluded.updated_at`,
+    `INSERT INTO market_data (ticker, price, rsi, high, low, updated_at) VALUES (?, ?, ?, ?, ?, unixepoch())
+     ON CONFLICT (ticker) DO UPDATE SET price = excluded.price, rsi = excluded.rsi, high = excluded.high, low = excluded.low, updated_at = excluded.updated_at`,
   )
-    .bind(ticker, price, rsi)
+    .bind(ticker, price, rsi, high, low)
     .run();
 }
 
@@ -58,6 +64,8 @@ interface TriggerEventRow {
   email_status: string;
   email_error: string | null;
   value_at_trigger: number;
+  high_at_trigger: number | null;
+  low_at_trigger: number | null;
 }
 
 async function triggerEventsFor(alertId: number): Promise<TriggerEventRow[]> {
@@ -285,5 +293,78 @@ describe('evaluateAlerts', () => {
 
     expect((await getAlert(alertId)).armed).toBe(1);
     expect(await triggerEventsFor(alertId)).toHaveLength(0);
+  });
+
+  it('fires an armed "up" PRICE alert when the day\'s high crosses the threshold while price (close) stays below it', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('fires-on-high@example.com');
+    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    // Close (18) never crosses 20 — only the intraday high (22) does.
+    await seedMarketData('^VIX', 18, null, 22, 16);
+
+    await evaluateAlerts(env);
+
+    expect((await getAlert(alertId)).armed).toBe(0);
+    const events = await triggerEventsFor(alertId);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ value_at_trigger: 18, high_at_trigger: 22, low_at_trigger: 16 });
+  });
+
+  it('fires an armed "down" PRICE alert when the day\'s low crosses the threshold while price (close) stays above it', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('fires-on-low@example.com');
+    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'down', armed: 1 });
+    // Close (22) never crosses 20 — only the intraday low (18) does.
+    await seedMarketData('^VIX', 22, null, 24, 18);
+
+    await evaluateAlerts(env);
+
+    expect((await getAlert(alertId)).armed).toBe(0);
+    const events = await triggerEventsFor(alertId);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ value_at_trigger: 22, high_at_trigger: 24, low_at_trigger: 18 });
+  });
+
+  it('does not re-arm purely because high/low retreated — re-arm still requires price (close) to retreat past the margin', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('rearm-needs-close@example.com');
+    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    await seedMarketData('^VIX', 25, null, 26, 24);
+    await evaluateAlerts(env);
+    expect((await getAlert(alertId)).armed).toBe(0);
+
+    // High/low retreat well below the margin (<= 18), but close (25) hasn't
+    // moved at all — re-arm must still look at close, so it stays disarmed.
+    await seedMarketData('^VIX', 25, null, 10, 8);
+    await evaluateAlerts(env);
+    expect((await getAlert(alertId)).armed).toBe(0);
+  });
+
+  it('falls back to comparing against price (close) when high/low are null', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('fallback-to-close@example.com');
+    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    // No high/low seeded (defaults to null) — firing must fall back to price.
+    await seedMarketData('^VIX', 25);
+
+    await evaluateAlerts(env);
+
+    expect((await getAlert(alertId)).armed).toBe(0);
+    const events = await triggerEventsFor(alertId);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ value_at_trigger: 25, high_at_trigger: null, low_at_trigger: null });
+  });
+
+  it('does not record high_at_trigger/low_at_trigger for a fired RSI alert', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('rsi-no-high-low@example.com');
+    const alertId = await seedAlert(userId, { ticker: '^NDX', alertType: 'RSI', threshold: 70, direction: 'up', armed: 1 });
+    await seedMarketData('^NDX', 4500, 75, 4550, 4450);
+
+    await evaluateAlerts(env);
+
+    const events = await triggerEventsFor(alertId);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ value_at_trigger: 75, high_at_trigger: null, low_at_trigger: null });
   });
 });

@@ -11,6 +11,8 @@ export interface TriggerEvent {
   direction: string;
   threshold: number;
   valueAtTrigger: number;
+  highAtTrigger: number | null;
+  lowAtTrigger: number | null;
   emailStatus: 'sent' | 'failed';
   emailError: string | null;
   triggeredAt: number;

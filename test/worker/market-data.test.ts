@@ -5,13 +5,18 @@ function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status });
 }
 
-function validChartBody(timestamps: number[], closes: Array<number | null>) {
+function validChartBody(
+  timestamps: number[],
+  closes: Array<number | null>,
+  highs?: Array<number | null>,
+  lows?: Array<number | null>,
+) {
   return {
     chart: {
       result: [
         {
           timestamp: timestamps,
-          indicators: { quote: [{ close: closes }] },
+          indicators: { quote: [{ close: closes, high: highs, low: lows }] },
         },
       ],
       error: null,
@@ -31,8 +36,32 @@ describe('fetchDailyCloses', () => {
     const result = await fetchDailyCloses('^VIX');
 
     expect(result).toEqual([
-      { date: '2026-01-05', close: 100.5 },
-      { date: '2026-01-06', close: 101.25 },
+      { date: '2026-01-05', close: 100.5, high: null, low: null },
+      { date: '2026-01-06', close: 101.25, high: null, low: null },
+    ]);
+  });
+
+  it('parses high/low alongside close from a valid Yahoo response', async () => {
+    const body = validChartBody([1767620200, 1767706600], [100.5, 101.25], [101, 102], [99, 100.5]);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, body)));
+
+    const result = await fetchDailyCloses('^VIX');
+
+    expect(result).toEqual([
+      { date: '2026-01-05', close: 100.5, high: 101, low: 99 },
+      { date: '2026-01-06', close: 101.25, high: 102, low: 100.5 },
+    ]);
+  });
+
+  it('keeps a day with a valid close but null high/low, instead of dropping it', async () => {
+    const body = validChartBody([1767620200, 1767706600], [100.5, 101.25], [101, null], [99, null]);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, body)));
+
+    const result = await fetchDailyCloses('^VIX');
+
+    expect(result).toEqual([
+      { date: '2026-01-05', close: 100.5, high: 101, low: 99 },
+      { date: '2026-01-06', close: 101.25, high: null, low: null },
     ]);
   });
 
@@ -55,7 +84,7 @@ describe('fetchDailyCloses', () => {
 
     const result = await fetchDailyCloses('^NDX');
 
-    expect(result).toEqual([{ date: '2026-01-05', close: 100.5 }]);
+    expect(result).toEqual([{ date: '2026-01-05', close: 100.5, high: null, low: null }]);
   });
 
   it('throws MarketDataFetchError when the body is malformed', async () => {
