@@ -16,7 +16,7 @@ export const adminMiddleware: MiddlewareHandler<{ Bindings: Env; Variables: Vari
   const user = await c.env.DB.prepare('SELECT email FROM users WHERE id = ?').bind(userId).first<{ email: string }>();
 
   if (!user || !isAdminEmail(c.env.ADMIN_EMAILS, user.email)) {
-    return c.json({ error: 'forbidden' }, 403);
+    return c.json({ error: 'forbidden', code: 'forbidden' }, 403);
   }
 
   return await next();

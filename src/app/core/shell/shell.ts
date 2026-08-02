@@ -23,6 +23,8 @@ export class Shell {
   // refresh on /history) so the active section isn't hidden behind a
   // collapsed toggle with no visual trace of where the user actually is.
   protected readonly historyExpanded = signal(this.router.url.startsWith('/history'));
+  // Same rationale as historyExpanded above — starts expanded on a direct /admin landing.
+  protected readonly adminExpanded = signal(this.router.url.startsWith('/admin'));
 
   protected onLogout(): void {
     this.authService.logout().subscribe(() => void this.router.navigateByUrl('/login'));

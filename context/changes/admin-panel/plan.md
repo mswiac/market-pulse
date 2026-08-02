@@ -330,26 +330,26 @@ After this ships, `CLAUDE.md`'s Architecture section ("flat role model — each 
 
 #### Automated
 
-- [x] 3.1 Typecheck passes: `npm run typecheck`
-- [x] 3.2 Production build succeeds: `npm run build`
+- [x] 3.1 Typecheck passes: `npm run typecheck` — 7ba2208
+- [x] 3.2 Production build succeeds: `npm run build` — 7ba2208
 
 #### Manual
 
-- [x] 3.3 Admin account sees sidebar tile and can reach /admin
-- [x] 3.4 Non-admin account: tile absent, direct navigation to /admin redirects to /
+- [x] 3.3 Admin account sees sidebar tile and can reach /admin — 7ba2208
+- [x] 3.4 Non-admin account: tile absent, direct navigation to /admin redirects to / — 7ba2208
 
 ### Phase 4: Frontend — admin panel UI
 
 #### Automated
 
-- [ ] 4.1 Typecheck passes: `npm run typecheck`
-- [ ] 4.2 Production build succeeds: `npm run build`
-- [ ] 4.3 Full CI passes: `npm run ci`
+- [x] 4.1 Typecheck passes: `npm run typecheck`
+- [x] 4.2 Production build succeeds: `npm run build`
+- [x] 4.3 Full CI passes: `npm run ci`
 
 #### Manual
 
-- [ ] 4.4 Category → instrument combobox filtering works like the Historia page
-- [ ] 4.5 Valid submit shows success banner with correct day count
-- [ ] 4.6 D1 confirms price_history rows written/overwritten for the submitted range
-- [ ] 4.7 Invalid range shows inline error, no request succeeds
-- [ ] 4.8 Polish translations render correctly
+- [x] 4.4 Category → instrument combobox filtering works like the Historia page
+- [x] 4.5 Valid submit shows success banner with correct day count
+- [x] 4.6 D1 confirms price_history rows written/overwritten for the submitted range
+- [x] 4.7 Invalid range shows inline error, no request succeeds
+- [x] 4.8 Polish translations render correctly

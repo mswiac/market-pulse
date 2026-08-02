@@ -77,45 +77,55 @@ describe('POST /api/admin/market-data', () => {
     expect(response.status).toBe(401);
   });
 
-  it('returns 403 for a logged-in non-admin', async () => {
+  it('returns 403 with code forbidden for a logged-in non-admin', async () => {
     const cookie = await registerAndLogIn('not-admin@example.com');
 
     const response = await fetchMarketData(cookie, { ticker: '^VIX', from: '2026-01-01', to: '2026-01-05' });
 
     expect(response.status).toBe(403);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('forbidden');
   });
 
-  it('returns 400 for an unknown ticker', async () => {
+  it('returns 400 with code unknown_instrument for an unknown ticker', async () => {
     const cookie = await logInAsAdmin();
 
     const response = await fetchMarketData(cookie, { ticker: '^NOPE', from: '2026-01-01', to: '2026-01-05' });
 
     expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('unknown_instrument');
   });
 
-  it('returns 400 when from is after to', async () => {
+  it('returns 400 with code invalid_range_order when from is after to', async () => {
     const cookie = await logInAsAdmin();
 
     const response = await fetchMarketData(cookie, { ticker: '^VIX', from: '2026-01-10', to: '2026-01-01' });
 
     expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('invalid_range_order');
   });
 
-  it('returns 400 when to is in the future', async () => {
+  it('returns 400 with code future_to_date when to is in the future', async () => {
     const cookie = await logInAsAdmin();
     const future = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
     const response = await fetchMarketData(cookie, { ticker: '^VIX', from: '2026-01-01', to: future });
 
     expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('future_to_date');
   });
 
-  it('returns 400 when the range exceeds 730 days', async () => {
+  it('returns 400 with code range_too_large when the range exceeds 730 days', async () => {
     const cookie = await logInAsAdmin();
 
     const response = await fetchMarketData(cookie, { ticker: '^VIX', from: '2020-01-01', to: '2026-01-01' });
 
     expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('range_too_large');
   });
 
   it('fetches and writes price_history for an admin, overwriting pre-existing rows', async () => {
@@ -157,12 +167,14 @@ describe('POST /api/admin/market-data', () => {
     expect(json.daysWritten).toBe(0);
   });
 
-  it('returns 502 when the Yahoo fetch fails', async () => {
+  it('returns 502 with code fetch_failed when the Yahoo fetch fails', async () => {
     const cookie = await logInAsAdmin();
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(500, {})));
 
     const response = await fetchMarketData(cookie, { ticker: '^VIX', from: '2026-01-01', to: '2026-01-05' });
 
     expect(response.status).toBe(502);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('fetch_failed');
   });
 });

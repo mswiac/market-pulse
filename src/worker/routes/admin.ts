@@ -39,24 +39,24 @@ adminRoutes.post('/market-data', async (c) => {
   const to = body ? parseDate(body.to) : null;
 
   if (!ticker) {
-    return c.json({ error: 'ticker is required' }, 400);
+    return c.json({ error: 'ticker is required', code: 'ticker_required' }, 400);
   }
   if (!from || !to) {
-    return c.json({ error: 'from and to must be valid YYYY-MM-DD dates' }, 400);
+    return c.json({ error: 'from and to must be valid YYYY-MM-DD dates', code: 'invalid_dates' }, 400);
   }
   if (from.getTime() > to.getTime()) {
-    return c.json({ error: 'from must not be after to' }, 400);
+    return c.json({ error: 'from must not be after to', code: 'invalid_range_order' }, 400);
   }
   if (to.getTime() > Date.now()) {
-    return c.json({ error: 'to must not be in the future' }, 400);
+    return c.json({ error: 'to must not be in the future', code: 'future_to_date' }, 400);
   }
   if ((to.getTime() - from.getTime()) / MS_PER_DAY > MAX_RANGE_DAYS) {
-    return c.json({ error: `range must not exceed ${MAX_RANGE_DAYS} days` }, 400);
+    return c.json({ error: `range must not exceed ${MAX_RANGE_DAYS} days`, code: 'range_too_large' }, 400);
   }
 
   const instrument = await c.env.DB.prepare('SELECT ticker FROM instruments WHERE ticker = ?').bind(ticker).first();
   if (!instrument) {
-    return c.json({ error: 'unknown instrument' }, 400);
+    return c.json({ error: 'unknown instrument', code: 'unknown_instrument' }, 400);
   }
 
   const fromIso = body!.from as string;
@@ -67,7 +67,7 @@ adminRoutes.post('/market-data', async (c) => {
     closes = await fetchDailyCloses(ticker, fromIso, toIso);
   } catch (err) {
     if (err instanceof MarketDataFetchError) {
-      return c.json({ error: 'market data fetch failed' }, 502);
+      return c.json({ error: 'market data fetch failed', code: 'fetch_failed' }, 502);
     }
     throw err;
   }

@@ -1,1 +1,51 @@
-<p>Admin panel coming soon.</p>
+<div class="admin-panel-page">
+  <h2 i18n="@@adminPanel.title">Admin panel</h2>
+
+  @if (loadError()) {
+    <p class="form-error" i18n="@@instrumentHistory.error.instrumentsLoadFailed">
+      Failed to load instruments. Please refresh the page and try again.
+    </p>
+  } @else {
+    <mat-card class="fetch-card" appearance="outlined">
+      <div class="filters">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label i18n="@@adminPanel.type.label">Type</mat-label>
+          <mat-select [value]="selectedInstrumentType()" (selectionChange)="onTypeChange($event.value)">
+            @for (type of instrumentTypes(); track type) {
+              <mat-option [value]="type">{{ instrumentTypeLabel(type) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label i18n="@@adminPanel.instrument.label">Instrument</mat-label>
+          <mat-select [value]="selectedTicker()" (selectionChange)="onTickerChange($event.value)">
+            @for (instrument of instrumentOptions(); track instrument.ticker) {
+              <mat-option [value]="instrument.ticker">{{ instrument.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <div class="filters">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label i18n="@@adminPanel.from.label">From</mat-label>
+          <input matInput [matDatepicker]="fromPicker" [value]="fromDate()" (dateChange)="onFromDateChange($event.value)" />
+          <mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
+          <mat-datepicker #fromPicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label i18n="@@adminPanel.to.label">To</mat-label>
+          <input matInput [matDatepicker]="toPicker" [value]="toDate()" (dateChange)="onToDateChange($event.value)" />
+          <mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
+          <mat-datepicker #toPicker></mat-datepicker>
+        </mat-form-field>
+      </div>
+
+      <button mat-flat-button color="primary" type="button" [disabled]="!canSubmit()" (click)="onSubmit()" i18n="@@adminPanel.submit">
+        Fetch market data
+      </button>
+    </mat-card>
+  }
+</div>

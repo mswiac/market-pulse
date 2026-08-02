@@ -214,6 +214,74 @@
         <source>Admin</source>
         <target>Administrator</target>
       </trans-unit>
+      <trans-unit id="shell.nav.adminMarketData" datatype="html">
+        <source>Market data</source>
+        <target>Dane giełdowe</target>
+      </trans-unit>
+      <trans-unit id="adminPanel.title" datatype="html">
+        <source>Admin panel</source>
+        <target>Panel administratora</target>
+      </trans-unit>
+      <trans-unit id="adminPanel.type.label" datatype="html">
+        <source>Type</source>
+        <target>Typ</target>
+      </trans-unit>
+      <trans-unit id="adminPanel.instrument.label" datatype="html">
+        <source>Instrument</source>
+        <target>Instrument</target>
+      </trans-unit>
+      <trans-unit id="adminPanel.from.label" datatype="html">
+        <source>From</source>
+        <target>Od</target>
+      </trans-unit>
+      <trans-unit id="adminPanel.to.label" datatype="html">
+        <source>To</source>
+        <target>Do</target>
+      </trans-unit>
+      <trans-unit id="adminPanel.submit" datatype="html">
+        <source> Fetch market data </source>
+        <target> Pobierz dane giełdowe </target>
+      </trans-unit>
+      <trans-unit id="adminPanel.result.success" datatype="html">
+        <source>Saved <x id="INTERPOLATION" equiv-text="result.daysWritten"/> day(s) for <x id="INTERPOLATION_1" equiv-text="result.ticker"/> (<x id="INTERPOLATION_2" equiv-text="result.from"/> – <x id="INTERPOLATION_3" equiv-text="result.to"/>).</source>
+        <target>Zapisano <x id="INTERPOLATION" equiv-text="result.daysWritten"/> dni dla <x id="INTERPOLATION_1" equiv-text="result.ticker"/> (<x id="INTERPOLATION_2" equiv-text="result.from"/> – <x id="INTERPOLATION_3" equiv-text="result.to"/>).</target>
+      </trans-unit>
+      <trans-unit id="adminPanel.result.errorGeneric" datatype="html">
+        <source>Something went wrong. Please try again.</source>
+        <target>Coś poszło nie tak. Spróbuj ponownie.</target>
+      </trans-unit>
+      <trans-unit id="adminPanel.error.tickerRequired" datatype="html">
+        <source>Please select an instrument.</source>
+        <target>Wybierz walor.</target>
+      </trans-unit>
+      <trans-unit id="adminPanel.error.invalidDates" datatype="html">
+        <source>Please select valid from/to dates.</source>
+        <target>Wybierz poprawne daty od/do.</target>
+      </trans-unit>
+      <trans-unit id="adminPanel.error.invalidRangeOrder" datatype="html">
+        <source>The start date must not be after the end date.</source>
+        <target>Data początkowa nie może być późniejsza niż końcowa.</target>
+      </trans-unit>
+      <trans-unit id="adminPanel.error.futureToDate" datatype="html">
+        <source>The end date must not be in the future.</source>
+        <target>Data końcowa nie może być w przyszłości.</target>
+      </trans-unit>
+      <trans-unit id="adminPanel.error.rangeTooLarge" datatype="html">
+        <source>The selected range is too large (max 730 days).</source>
+        <target>Wybrany zakres jest zbyt duży (maksymalnie 730 dni).</target>
+      </trans-unit>
+      <trans-unit id="adminPanel.error.unknownInstrument" datatype="html">
+        <source>Unknown instrument.</source>
+        <target>Nieznany walor.</target>
+      </trans-unit>
+      <trans-unit id="adminPanel.error.fetchFailed" datatype="html">
+        <source>Fetching market data failed. Please try again.</source>
+        <target>Pobranie danych giełdowych nie powiodło się. Spróbuj ponownie.</target>
+      </trans-unit>
+      <trans-unit id="adminPanel.error.forbidden" datatype="html">
+        <source>You don&apos;t have permission to do this.</source>
+        <target>Nie masz uprawnień do wykonania tej akcji.</target>
+      </trans-unit>
       <trans-unit id="home.welcomeTitle" datatype="html">
         <source>Welcome back</source>
         <target>Witaj ponownie</target>
