@@ -73,7 +73,11 @@ adminRoutes.post('/market-data', async (c) => {
   }
 
   if (closes.length > 0) {
-    await c.env.DB.batch(upsertPriceHistory(c.env.DB, ticker, closes));
+    try {
+      await c.env.DB.batch(upsertPriceHistory(c.env.DB, ticker, closes));
+    } catch {
+      return c.json({ error: 'failed to write price history', code: 'write_failed' }, 500);
+    }
   }
 
   return c.json({ ticker, from: fromIso, to: toIso, daysWritten: closes.length }, 200);

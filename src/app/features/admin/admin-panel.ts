@@ -8,7 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Instrument, InstrumentsService } from '../instruments/instruments.service';
-import { AdminService, MarketDataFetchResult } from './admin.service';
+import { AdminService, MarketDataFetchResult } from './admin-panel.service';
 
 function toIsoDate(date: Date): string {
   const year = date.getFullYear();
@@ -32,6 +32,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   range_too_large: $localize`:@@adminPanel.error.rangeTooLarge:The selected range is too large (max 730 days).`,
   unknown_instrument: $localize`:@@adminPanel.error.unknownInstrument:Unknown instrument.`,
   fetch_failed: $localize`:@@adminPanel.error.fetchFailed:Fetching market data failed. Please try again.`,
+  write_failed: $localize`:@@adminPanel.error.writeFailed:Saving market data failed. Please try again.`,
   forbidden: $localize`:@@adminPanel.error.forbidden:You don't have permission to do this.`,
 };
 

@@ -164,25 +164,32 @@
           <context context-type="linenumber">34</context>
         </context-group>
       </trans-unit>
+      <trans-unit id="adminPanel.error.writeFailed" datatype="html">
+        <source>Saving market data failed. Please try again.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-panel.ts</context>
+          <context context-type="linenumber">35</context>
+        </context-group>
+      </trans-unit>
       <trans-unit id="adminPanel.error.forbidden" datatype="html">
         <source>You don&apos;t have permission to do this.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/admin/admin-panel.ts</context>
-          <context context-type="linenumber">35</context>
+          <context context-type="linenumber">36</context>
         </context-group>
       </trans-unit>
       <trans-unit id="adminPanel.result.errorGeneric" datatype="html">
         <source>Something went wrong. Please try again.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/admin/admin-panel.ts</context>
-          <context context-type="linenumber">38</context>
+          <context context-type="linenumber">39</context>
         </context-group>
       </trans-unit>
       <trans-unit id="adminPanel.result.success" datatype="html">
         <source>Saved <x id="INTERPOLATION" equiv-text="result.daysWritten"/> day(s) for <x id="INTERPOLATION_1" equiv-text="result.ticker"/> (<x id="INTERPOLATION_2" equiv-text="result.from"/> – <x id="INTERPOLATION_3" equiv-text="result.to"/>).</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/admin/admin-panel.ts</context>
-          <context context-type="linenumber">127</context>
+          <context context-type="linenumber">128</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertForm.editTitle" datatype="html">

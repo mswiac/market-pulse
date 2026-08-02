@@ -278,6 +278,10 @@
         <source>Fetching market data failed. Please try again.</source>
         <target>Pobranie danych giełdowych nie powiodło się. Spróbuj ponownie.</target>
       </trans-unit>
+      <trans-unit id="adminPanel.error.writeFailed" datatype="html">
+        <source>Saving market data failed. Please try again.</source>
+        <target>Zapis danych giełdowych nie powiódł się. Spróbuj ponownie.</target>
+      </trans-unit>
       <trans-unit id="adminPanel.error.forbidden" datatype="html">
         <source>You don&apos;t have permission to do this.</source>
         <target>Nie masz uprawnień do wykonania tej akcji.</target>

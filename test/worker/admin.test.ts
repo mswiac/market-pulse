@@ -177,4 +177,21 @@ describe('POST /api/admin/market-data', () => {
     const json = (await response.json()) as { code: string };
     expect(json.code).toBe('fetch_failed');
   });
+
+  it('returns 500 with code write_failed when the D1 batch write fails', async () => {
+    const cookie = await logInAsAdmin();
+    const body = yahooBody([1767620200], [100.5]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, body))),
+    );
+    const batchSpy = vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('boom'));
+
+    const response = await fetchMarketData(cookie, { ticker: '^VIX', from: '2026-01-01', to: '2026-01-05' });
+
+    expect(response.status).toBe(500);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('write_failed');
+    batchSpy.mockRestore();
+  });
 });

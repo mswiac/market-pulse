@@ -11,13 +11,13 @@ const RETRY_DELAY_MS = 300;
 // fetchDailyCloses takes a date range instead of an implicit default.
 const CRON_LOOKBACK_DAYS = 30;
 
-function toIsoDate(date: Date): string {
+function dateToIsoDateString(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
 async function fetchWithRetry(symbol: string): Promise<DailyClose[]> {
-  const to = toIsoDate(new Date());
-  const from = toIsoDate(new Date(Date.now() - CRON_LOOKBACK_DAYS * 24 * 60 * 60 * 1000));
+  const to = dateToIsoDateString(new Date());
+  const from = dateToIsoDateString(new Date(Date.now() - CRON_LOOKBACK_DAYS * 24 * 60 * 60 * 1000));
 
   let lastError: unknown;
   for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
