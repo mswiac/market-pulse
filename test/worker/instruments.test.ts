@@ -34,15 +34,24 @@ async function getHistory(ticker: string, cookie?: string): Promise<Response> {
 
 // Seeds `closes.length` consecutive daily rows for `ticker`, oldest starting
 // at 2020-01-01, so tests control exactly how much lookback history exists.
-async function seedPriceHistory(ticker: string, closes: number[]): Promise<void> {
+// `highs`/`lows` are optional and default to null (matching an un-backfilled
+// row) — pass them when a test needs to assert on returned high/low values.
+async function seedPriceHistory(
+  ticker: string,
+  closes: number[],
+  highs?: Array<number | null>,
+  lows?: Array<number | null>,
+): Promise<void> {
   const start = new Date('2020-01-01T00:00:00Z');
   const statements = closes.map((close, i) => {
     const date = new Date(start);
     date.setUTCDate(date.getUTCDate() + i);
-    return env.DB.prepare('INSERT INTO price_history (ticker, date, close) VALUES (?, ?, ?)').bind(
+    return env.DB.prepare('INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, ?, ?)').bind(
       ticker,
       date.toISOString().slice(0, 10),
       close,
+      highs?.[i] ?? null,
+      lows?.[i] ?? null,
     );
   });
   await env.DB.batch(statements);
@@ -118,19 +127,24 @@ describe('instrument history endpoint', () => {
       ticker: string;
       rsiEligible: boolean;
       currency: string;
-      history: { rsi: number | null }[];
+      history: { rsi: number | null; high: number | null; low: number | null }[];
     };
 
     expect(body.rsiEligible).toBe(false);
     expect(body.currency).toBe('USD');
     expect(body.history).toHaveLength(20);
     expect(body.history.every((day) => day.rsi === null)).toBe(true);
+    // Not seeded with high/low — un-backfilled days return null, not a crash.
+    expect(body.history.every((day) => day.high === null && day.low === null)).toBe(true);
   });
 
   it('returns rsiEligible: true, currency: USD, and populates rsi once enough lookback exists for ^NDX', async () => {
     const cookie = await registerAndLogIn('history-ndx-full@example.com');
     // Exactly 30 (display) + 14 (lookback) closes — every displayed day has enough history for RSI.
-    await seedPriceHistory('^NDX', Array.from({ length: 44 }, (_, i) => 4000 + i));
+    const closes = Array.from({ length: 44 }, (_, i) => 4000 + i);
+    const highs = closes.map((c) => c + 10);
+    const lows = closes.map((c) => c - 10);
+    await seedPriceHistory('^NDX', closes, highs, lows);
 
     const response = await getHistory('^NDX', cookie);
     expect(response.status).toBe(200);
@@ -138,7 +152,7 @@ describe('instrument history endpoint', () => {
       ticker: string;
       rsiEligible: boolean;
       currency: string;
-      history: { date: string; close: number; rsi: number | null }[];
+      history: { date: string; close: number; high: number | null; low: number | null; rsi: number | null }[];
     };
 
     expect(body.rsiEligible).toBe(true);
@@ -147,6 +161,11 @@ describe('instrument history endpoint', () => {
     expect(body.history.every((day) => typeof day.rsi === 'number')).toBe(true);
     // Oldest → newest, matching the seeded date sequence.
     expect(body.history[0].date < body.history[body.history.length - 1].date).toBe(true);
+    // High/low pass through from price_history for every displayed day.
+    expect(body.history.every((day) => typeof day.high === 'number' && typeof day.low === 'number')).toBe(true);
+    const lastDay = body.history[body.history.length - 1];
+    expect(lastDay.high).toBe(lastDay.close + 10);
+    expect(lastDay.low).toBe(lastDay.close - 10);
   });
 
   it('caps history at 30 entries even when more than 44 rows of price_history exist', async () => {

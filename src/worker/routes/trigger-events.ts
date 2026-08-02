@@ -30,6 +30,8 @@ interface TriggerEventRow {
   direction: string;
   threshold: number;
   value_at_trigger: number;
+  high_at_trigger: number | null;
+  low_at_trigger: number | null;
   email_status: 'sent' | 'failed';
   email_error: string | null;
   triggered_at: number;
@@ -45,6 +47,7 @@ triggerEventsRoutes.get('/', async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT te.id, te.ticker, COALESCE(i.name, te.ticker) AS instrument_name, i.currency,
             te.alert_type, te.direction, te.threshold, te.value_at_trigger,
+            te.high_at_trigger, te.low_at_trigger,
             te.email_status, te.email_error, te.triggered_at
      FROM trigger_events te
      LEFT JOIN instruments i ON i.ticker = te.ticker
@@ -65,6 +68,8 @@ triggerEventsRoutes.get('/', async (c) => {
     direction: row.direction,
     threshold: row.threshold,
     valueAtTrigger: row.value_at_trigger,
+    highAtTrigger: row.high_at_trigger,
+    lowAtTrigger: row.low_at_trigger,
     emailStatus: row.email_status,
     emailError: row.email_error,
     triggeredAt: row.triggered_at,
