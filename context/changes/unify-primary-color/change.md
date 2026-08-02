@@ -1,7 +1,7 @@
 ---
 change_id: unify-primary-color
 title: Unify primary color across buttons, table/list headers, and sidebar menu
-status: implementing
+status: implemented
 created: 2026-08-02
 updated: 2026-08-02
 archived_at: null

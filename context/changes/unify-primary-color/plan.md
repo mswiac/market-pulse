@@ -162,12 +162,12 @@ None — CSS/HTML/i18n-only change, no data or API impact.
 
 #### Automated
 
-- [x] 1.1 `npm run ci` passes (typecheck, worker tests, production build)
+- [x] 1.1 `npm run ci` passes (typecheck, worker tests, production build) — 8f556e4
 
 #### Manual
 
-- [x] 1.2 Toolbar, FAB, active sidebar link, and an existing button render the same shade of blue
-- [x] 1.3 Table/list headers and alert-list accordion header are visually unchanged
-- [x] 1.4 Text stays readable (on-primary contrast) on toolbar, FAB, and active link
-- [x] 1.5 Home page greeting shows a visible space between label and email
-- [x] 1.6 Admin sidebar link reads "Fetch market data" / "Pobierz dane giełdowe" and still navigates correctly
+- [x] 1.2 Toolbar, FAB, active sidebar link, and an existing button render the same shade of blue — 8f556e4
+- [x] 1.3 Table/list headers and alert-list accordion header are visually unchanged — 8f556e4
+- [x] 1.4 Text stays readable (on-primary contrast) on toolbar, FAB, and active link — 8f556e4
+- [x] 1.5 Home page greeting shows a visible space between label and email — 8f556e4
+- [x] 1.6 Admin sidebar link reads "Fetch market data" / "Pobierz dane giełdowe" and still navigates correctly — 8f556e4
