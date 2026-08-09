@@ -312,15 +312,15 @@ Phase 1's migration is additive/widening only (no existing row is altered in mea
 
 #### Automated
 
-- [x] 3.1 `npm run test:worker` passes with updated `alerts.test.ts`
-- [x] 3.2 `npm run typecheck` passes
+- [x] 3.1 `npm run test:worker` passes with updated `alerts.test.ts` — 7ae5839
+- [x] 3.2 `npm run typecheck` passes — 7ae5839
 
 ### Phase 4: Shared instrument-type constants + `alert-form.ts` code-based matching (frontend)
 
 #### Automated
 
-- [ ] 4.1 `npm run typecheck` passes
-- [ ] 4.2 `npm run build` passes (i18n catalog complete)
+- [x] 4.1 `npm run typecheck` passes
+- [x] 4.2 `npm run build` passes (i18n catalog complete)
 
 #### Manual
 

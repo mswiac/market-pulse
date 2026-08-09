@@ -14,10 +14,6 @@
         <source>Type</source>
         <target>Typ</target>
       </trans-unit>
-      <trans-unit id="alertForm.instrumentType.index" datatype="html">
-        <source>Index</source>
-        <target>Indeks</target>
-      </trans-unit>
       <trans-unit id="alertForm.instrument.label" datatype="html">
         <source>Instrument</source>
         <target>Instrument</target>
@@ -422,9 +418,17 @@
         <source>Instrument</source>
         <target>Instrument</target>
       </trans-unit>
-      <trans-unit id="instrumentHistory.instrumentType.index" datatype="html">
+      <trans-unit id="instrumentType.index" datatype="html">
         <source>Index</source>
         <target>Indeks</target>
+      </trans-unit>
+      <trans-unit id="instrumentType.plStock" datatype="html">
+        <source>PL companies</source>
+        <target>Spółki PL</target>
+      </trans-unit>
+      <trans-unit id="instrumentType.usStock" datatype="html">
+        <source>US companies</source>
+        <target>Spółki USA</target>
       </trans-unit>
       <trans-unit id="instrumentHistory.error.historyLoadFailed" datatype="html">
         <source> Failed to load history for this instrument. Please try again. </source>
