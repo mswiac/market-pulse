@@ -307,5 +307,5 @@ None beyond what already exists — no additional network round-trips (currency 
 
 #### Manual
 
-- [x] 3.1 `roadmap.md` F-04 section describes the Yahoo `.WA` approach, not a Stooq fetch path
+- [x] 3.1 `roadmap.md` F-04 section describes the Yahoo `.WA` approach, not a Stooq fetch path — e07a709
 - [ ] 3.2 Dynamic-categories idea captured in the roadmap (Parked or backlog) — skipped per user (2026-08-09): manual/hardcoded category additions likely to remain the approach, dynamic categories deprioritized
