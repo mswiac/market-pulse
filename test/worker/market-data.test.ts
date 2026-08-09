@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MarketDataFetchError, fetchDailyCloses, upsertPriceHistory } from '../../src/worker/lib/market-data';
+import { MarketDataFetchError, buildCurrencyCorrection, fetchDailyCloses, upsertPriceHistory } from '../../src/worker/lib/market-data';
 
 const FROM = '2026-01-01';
 const TO = '2026-01-31';
@@ -13,6 +13,7 @@ function validChartBody(
   closes: Array<number | null>,
   highs?: Array<number | null>,
   lows?: Array<number | null>,
+  currency?: string,
 ) {
   return {
     chart: {
@@ -20,6 +21,7 @@ function validChartBody(
         {
           timestamp: timestamps,
           indicators: { quote: [{ close: closes, high: highs, low: lows }] },
+          meta: currency ? { currency } : undefined,
         },
       ],
       error: null,
@@ -38,7 +40,7 @@ describe('fetchDailyCloses', () => {
 
     const result = await fetchDailyCloses('^VIX', FROM, TO);
 
-    expect(result).toEqual([
+    expect(result.closes).toEqual([
       { date: '2026-01-05', close: 100.5, high: null, low: null },
       { date: '2026-01-06', close: 101.25, high: null, low: null },
     ]);
@@ -50,7 +52,7 @@ describe('fetchDailyCloses', () => {
 
     const result = await fetchDailyCloses('^VIX', FROM, TO);
 
-    expect(result).toEqual([
+    expect(result.closes).toEqual([
       { date: '2026-01-05', close: 100.5, high: 101, low: 99 },
       { date: '2026-01-06', close: 101.25, high: 102, low: 100.5 },
     ]);
@@ -62,7 +64,7 @@ describe('fetchDailyCloses', () => {
 
     const result = await fetchDailyCloses('^VIX', FROM, TO);
 
-    expect(result).toEqual([
+    expect(result.closes).toEqual([
       { date: '2026-01-05', close: 100.5, high: 101, low: 99 },
       { date: '2026-01-06', close: 101.25, high: null, low: null },
     ]);
@@ -87,7 +89,7 @@ describe('fetchDailyCloses', () => {
 
     const result = await fetchDailyCloses('^NDX', FROM, TO);
 
-    expect(result).toEqual([{ date: '2026-01-05', close: 100.5, high: null, low: null }]);
+    expect(result.closes).toEqual([{ date: '2026-01-05', close: 100.5, high: null, low: null }]);
   });
 
   it('throws MarketDataFetchError when the body is malformed', async () => {
@@ -110,13 +112,13 @@ describe('fetchDailyCloses', () => {
     await expect(fetchDailyCloses('^VIX', FROM, TO)).rejects.toThrow(MarketDataFetchError);
   });
 
-  it('returns an empty array when the range has no trading days, instead of throwing', async () => {
+  it('returns an empty closes array when the range has no trading days, instead of throwing', async () => {
     const body = validChartBody([], []);
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, body)));
 
     const result = await fetchDailyCloses('^VIX', '2026-01-03', '2026-01-04');
 
-    expect(result).toEqual([]);
+    expect(result.closes).toEqual([]);
   });
 
   it('builds the Yahoo request URL with period1/period2 derived from from/to', async () => {
@@ -132,6 +134,24 @@ describe('fetchDailyCloses', () => {
     expect(calledUrl).toContain(`period1=${period1}`);
     expect(calledUrl).toContain(`period2=${period2}`);
     expect(calledUrl).not.toContain('range=');
+  });
+
+  it('parses currency from meta.currency alongside closes', async () => {
+    const body = validChartBody([1767620200], [100.5], undefined, undefined, 'PLN');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, body)));
+
+    const result = await fetchDailyCloses('CDR.WA', FROM, TO);
+
+    expect(result.currency).toBe('PLN');
+  });
+
+  it('resolves currency to null when meta is absent, without throwing', async () => {
+    const body = validChartBody([1767620200], [100.5]);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, body)));
+
+    const result = await fetchDailyCloses('^VIX', FROM, TO);
+
+    expect(result.currency).toBeNull();
   });
 });
 
@@ -165,5 +185,39 @@ describe('upsertPriceHistory', () => {
     const fakeDb = { prepare: () => ({ bind: () => ({}) }) } as unknown as D1Database;
 
     expect(upsertPriceHistory(fakeDb, '^VIX', [])).toEqual([]);
+  });
+});
+
+describe('buildCurrencyCorrection', () => {
+  function fakeDb(): { db: D1Database; bound: Array<{ sql: string; args: unknown[] }> } {
+    const bound: Array<{ sql: string; args: unknown[] }> = [];
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...args: unknown[]) => {
+          bound.push({ sql, args });
+          return { sql, args };
+        },
+      }),
+    } as unknown as D1Database;
+    return { db, bound };
+  }
+
+  it('returns null when the fetched currency matches the stored one', () => {
+    const { db } = fakeDb();
+    expect(buildCurrencyCorrection(db, 'CDR', 'PLN', 'PLN')).toBeNull();
+  });
+
+  it('returns null when the fetched currency is null', () => {
+    const { db } = fakeDb();
+    expect(buildCurrencyCorrection(db, 'CDR', 'PLN', null)).toBeNull();
+  });
+
+  it('returns a bound UPDATE statement when currencies differ', () => {
+    const { db, bound } = fakeDb();
+    const statement = buildCurrencyCorrection(db, 'CDR', 'USD', 'PLN');
+
+    expect(statement).not.toBeNull();
+    expect(bound[0].sql).toContain('UPDATE instruments SET currency = ?');
+    expect(bound[0].args).toEqual(['PLN', 'CDR']);
   });
 });

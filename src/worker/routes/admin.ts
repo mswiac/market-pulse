@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
 import { adminMiddleware } from '../lib/admin';
-import { MarketDataFetchError, fetchDailyCloses, upsertPriceHistory } from '../lib/market-data';
+import { MarketDataFetchError, buildCurrencyCorrection, fetchDailyCloses, upsertPriceHistory } from '../lib/market-data';
 import { sessionMiddleware } from '../lib/session';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -56,7 +56,9 @@ adminRoutes.post('/market-data', async (c) => {
     return c.json({ error: `range must not exceed ${MAX_RANGE_DAYS} days`, code: 'range_too_large' }, 400);
   }
 
-  const instrument = await c.env.DB.prepare('SELECT ticker FROM instruments WHERE ticker = ?').bind(ticker).first();
+  const instrument = await c.env.DB.prepare('SELECT ticker, suffix, currency FROM instruments WHERE ticker = ?')
+    .bind(ticker)
+    .first<{ ticker: string; suffix: string; currency: string }>();
   if (!instrument) {
     return c.json({ error: 'unknown instrument', code: 'unknown_instrument' }, 400);
   }
@@ -65,8 +67,11 @@ adminRoutes.post('/market-data', async (c) => {
   const toIso = body!.to as string;
 
   let closes;
+  let fetchedCurrency: string | null;
   try {
-    closes = await fetchDailyCloses(ticker, fromIso, toIso);
+    // `ticker + suffix` is the Yahoo query symbol only — every DB write
+    // below stays keyed on the bare `ticker` (see market-data.ts).
+    ({ closes, currency: fetchedCurrency } = await fetchDailyCloses(instrument.ticker + instrument.suffix, fromIso, toIso));
   } catch (err) {
     if (err instanceof MarketDataFetchError) {
       return c.json({ error: 'market data fetch failed', code: 'fetch_failed' }, 502);
@@ -74,9 +79,18 @@ adminRoutes.post('/market-data', async (c) => {
     throw err;
   }
 
-  if (closes.length > 0) {
+  const statements = closes.length > 0 ? upsertPriceHistory(c.env.DB, ticker, closes) : [];
+  const currencyCorrection = buildCurrencyCorrection(c.env.DB, ticker, instrument.currency, fetchedCurrency);
+  if (currencyCorrection) {
+    statements.push(currencyCorrection);
+  }
+
+  if (statements.length > 0) {
     try {
-      await c.env.DB.batch(upsertPriceHistory(c.env.DB, ticker, closes));
+      await c.env.DB.batch(statements);
+      if (currencyCorrection) {
+        console.log(`admin-market-data: corrected currency for ${ticker}: ${instrument.currency} -> ${fetchedCurrency}`);
+      }
     } catch {
       return c.json({ error: 'failed to write price history', code: 'write_failed' }, 500);
     }

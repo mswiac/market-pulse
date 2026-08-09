@@ -281,9 +281,9 @@ None beyond what already exists — no additional network round-trips (currency 
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly: `npm run migrate:local`
-- [x] 1.2 Type checking passes: `npm run typecheck`
-- [x] 1.3 Worker unit tests pass: `npm run test:worker`
+- [x] 1.1 Migration applies cleanly: `npm run migrate:local` — b70b6db
+- [x] 1.2 Type checking passes: `npm run typecheck` — b70b6db
+- [x] 1.3 Worker unit tests pass: `npm run test:worker` — b70b6db
 
 #### Manual
 
@@ -294,9 +294,9 @@ None beyond what already exists — no additional network round-trips (currency 
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npm run typecheck`
-- [ ] 2.2 Worker unit tests pass: `npm run test:worker`
-- [ ] 2.3 Full CI passes: `npm run ci`
+- [x] 2.1 Type checking passes: `npm run typecheck`
+- [x] 2.2 Worker unit tests pass: `npm run test:worker`
+- [x] 2.3 Full CI passes: `npm run ci`
 
 #### Manual
 
