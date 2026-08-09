@@ -54,6 +54,25 @@ async function fetchMarketData(cookie: string | null, body: Record<string, unkno
   });
 }
 
+async function addInstrument(cookie: string | null, body: Record<string, unknown>): Promise<Response> {
+  return exports.default.fetch(`${BASE_URL}/api/admin/instruments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) },
+    body: JSON.stringify(body),
+  });
+}
+
+function validNewInstrument(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    type: 'us_stock',
+    ticker: 'TEST.US',
+    name: 'Test Co',
+    currency: 'USD',
+    rsiEligible: true,
+    ...overrides,
+  };
+}
+
 interface PriceHistoryRow {
   ticker: string;
   date: string;
@@ -193,5 +212,167 @@ describe('POST /api/admin/market-data', () => {
     const json = (await response.json()) as { code: string };
     expect(json.code).toBe('write_failed');
     batchSpy.mockRestore();
+  });
+});
+
+describe('POST /api/admin/instruments', () => {
+  afterEach(async () => {
+    await env.DB.prepare('DELETE FROM instruments WHERE ticker LIKE ?').bind('TEST%').run();
+  });
+
+  it('returns 401 with no session', async () => {
+    const response = await addInstrument(null, validNewInstrument());
+    expect(response.status).toBe(401);
+  });
+
+  it('returns 403 with code forbidden for a logged-in non-admin', async () => {
+    const cookie = await registerAndLogIn('not-admin-instruments@example.com');
+
+    const response = await addInstrument(cookie, validNewInstrument());
+
+    expect(response.status).toBe(403);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('forbidden');
+  });
+
+  it('returns 400 with code invalid_body for a malformed JSON body', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await exports.default.fetch(`${BASE_URL}/api/admin/instruments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: cookie },
+      body: '{not valid json',
+    });
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('invalid_body');
+  });
+
+  it('returns 400 with code instrument_type_invalid for an unknown type', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(cookie, validNewInstrument({ type: 'crypto' }));
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('instrument_type_invalid');
+  });
+
+  it('returns 400 with code instrument_ticker_required for an empty ticker', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(cookie, validNewInstrument({ ticker: '  ' }));
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('instrument_ticker_required');
+  });
+
+  it('returns 400 with code instrument_name_required for an empty name', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(cookie, validNewInstrument({ name: '' }));
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('instrument_name_required');
+  });
+
+  it('returns 400 with code instrument_currency_invalid for a malformed currency', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(cookie, validNewInstrument({ currency: 'US' }));
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('instrument_currency_invalid');
+  });
+
+  it('returns 400 with code instrument_rsi_eligible_invalid for a non-boolean rsiEligible', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(cookie, validNewInstrument({ rsiEligible: 'true' }));
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('instrument_rsi_eligible_invalid');
+  });
+
+  it('creates a pl_stock instrument with provider derived as stooq, and it is visible via GET /api/instruments', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(
+      cookie,
+      validNewInstrument({ type: 'pl_stock', ticker: 'TEST.PL', name: 'Test SA', currency: 'PLN', rsiEligible: true }),
+    );
+
+    expect(response.status).toBe(201);
+    const created = (await response.json()) as Record<string, unknown>;
+    expect(created).toEqual({
+      ticker: 'TEST.PL',
+      name: 'Test SA',
+      type: 'pl_stock',
+      rsiEligible: true,
+      provider: 'stooq',
+      currency: 'PLN',
+    });
+
+    const listResponse = await exports.default.fetch(`${BASE_URL}/api/instruments`, { headers: { Cookie: cookie } });
+    const instruments = (await listResponse.json()) as Record<string, unknown>[];
+    expect(instruments).toEqual(
+      expect.arrayContaining([{ ticker: 'TEST.PL', name: 'Test SA', type: 'pl_stock', rsiEligible: true, currency: 'PLN' }]),
+    );
+  });
+
+  it('creates an us_stock instrument with provider derived as yahoo', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(cookie, validNewInstrument({ type: 'us_stock', ticker: 'TEST.US2' }));
+
+    expect(response.status).toBe(201);
+    const created = (await response.json()) as Record<string, unknown>;
+    expect(created['provider']).toBe('yahoo');
+  });
+
+  it('normalizes a lowercase ticker to uppercase regardless of what was typed', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(cookie, validNewInstrument({ ticker: 'test.lower' }));
+
+    expect(response.status).toBe(201);
+    const created = (await response.json()) as { ticker: string };
+    expect(created.ticker).toBe('TEST.LOWER');
+
+    const row = await env.DB.prepare('SELECT ticker FROM instruments WHERE ticker = ?').bind('TEST.LOWER').first();
+    expect(row).not.toBeNull();
+  });
+
+  it('persists rsiEligible: false and round-trips it correctly, not just the default true case', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(
+      cookie,
+      validNewInstrument({ type: 'index', ticker: 'TEST.IDX', name: 'Test Index', currency: 'USD', rsiEligible: false }),
+    );
+
+    expect(response.status).toBe(201);
+    const created = (await response.json()) as { rsiEligible: boolean };
+    expect(created.rsiEligible).toBe(false);
+
+    const row = await env.DB.prepare('SELECT rsi_eligible FROM instruments WHERE ticker = ?').bind('TEST.IDX').first<{
+      rsi_eligible: number;
+    }>();
+    expect(row?.rsi_eligible).toBe(0);
+  });
+
+  it('returns 409 with code instrument_duplicate_ticker for a ticker that already exists', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(cookie, validNewInstrument({ type: 'index', ticker: '^VIX', currency: 'USD' }));
+
+    expect(response.status).toBe(409);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('instrument_duplicate_ticker');
   });
 });

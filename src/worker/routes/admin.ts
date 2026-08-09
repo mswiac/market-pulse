@@ -7,6 +7,8 @@ import { sessionMiddleware } from '../lib/session';
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_RANGE_DAYS = 730;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const VALID_INSTRUMENT_TYPES = ['index', 'pl_stock', 'us_stock'] as const;
+const CURRENCY_PATTERN = /^[A-Z]{3}$/;
 
 type Variables = { userId: number };
 
@@ -81,6 +83,94 @@ adminRoutes.post('/market-data', async (c) => {
   }
 
   return c.json({ ticker, from: fromIso, to: toIso, daysWritten: closes.length }, 200);
+});
+
+async function parseInstrumentBody(c: { req: { json: () => Promise<unknown> } }): Promise<{
+  type?: unknown;
+  ticker?: unknown;
+  name?: unknown;
+  currency?: unknown;
+  rsiEligible?: unknown;
+} | null> {
+  try {
+    return (await c.req.json()) as {
+      type?: unknown;
+      ticker?: unknown;
+      name?: unknown;
+      currency?: unknown;
+      rsiEligible?: unknown;
+    };
+  } catch {
+    return null;
+  }
+}
+
+// pl_stock is the only type fetched from Stooq (F-04) — everything else
+// (index, us_stock) uses the existing Yahoo path, same as today's ^VIX/^NDX.
+function deriveProvider(type: string): string {
+  return type === 'pl_stock' ? 'stooq' : 'yahoo';
+}
+
+interface InsertedInstrumentRow {
+  ticker: string;
+  name: string;
+  type: string;
+  rsiEligible: number;
+  provider: string;
+  currency: string;
+}
+
+adminRoutes.post('/instruments', async (c) => {
+  const body = await parseInstrumentBody(c);
+  if (!body) {
+    return c.json({ error: 'invalid request body', code: 'invalid_body' }, 400);
+  }
+
+  const type =
+    typeof body.type === 'string' && (VALID_INSTRUMENT_TYPES as readonly string[]).includes(body.type) ? body.type : null;
+  if (!type) {
+    return c.json({ error: 'type must be one of index, pl_stock, us_stock', code: 'instrument_type_invalid' }, 400);
+  }
+
+  // Tickers are conventionally uppercase for both Yahoo and Stooq — normalize
+  // regardless of what the admin typed, same as currency below.
+  const ticker = typeof body.ticker === 'string' ? body.ticker.trim().toUpperCase() : '';
+  if (!ticker) {
+    return c.json({ error: 'ticker is required', code: 'instrument_ticker_required' }, 400);
+  }
+
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
+  if (!name) {
+    return c.json({ error: 'name is required', code: 'instrument_name_required' }, 400);
+  }
+
+  const currency = typeof body.currency === 'string' ? body.currency.trim().toUpperCase() : '';
+  if (!CURRENCY_PATTERN.test(currency)) {
+    return c.json({ error: 'currency must be a 3-letter code', code: 'instrument_currency_invalid' }, 400);
+  }
+
+  if (typeof body.rsiEligible !== 'boolean') {
+    return c.json({ error: 'rsiEligible must be a boolean', code: 'instrument_rsi_eligible_invalid' }, 400);
+  }
+  const rsiEligible = body.rsiEligible;
+  const provider = deriveProvider(type);
+
+  try {
+    const row = await c.env.DB.prepare(
+      `INSERT INTO instruments (ticker, name, type, rsi_eligible, provider, currency)
+       VALUES (?, ?, ?, ?, ?, ?)
+       RETURNING ticker, name, type, rsi_eligible AS rsiEligible, provider, currency`,
+    )
+      .bind(ticker, name, type, rsiEligible ? 1 : 0, provider, currency)
+      .first<InsertedInstrumentRow>();
+
+    return c.json({ ...row, rsiEligible: !!row!.rsiEligible }, 201);
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('UNIQUE')) {
+      return c.json({ error: 'instrument already exists', code: 'instrument_duplicate_ticker' }, 409);
+    }
+    throw err;
+  }
 });
 
 export default adminRoutes;

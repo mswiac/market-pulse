@@ -42,4 +42,12 @@ export class InstrumentsService {
     }
     return this.inFlight;
   }
+
+  // Forces a fresh GET after a write (e.g. admin adding an instrument) —
+  // ensureLoaded()'s cache has no other invalidation path once loaded.
+  reload(): Observable<Instrument[]> {
+    this.loaded = false;
+    this.inFlight = null;
+    return this.ensureLoaded();
+  }
 }

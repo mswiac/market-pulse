@@ -7,18 +7,13 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { AuthService } from '../../../core/auth/auth.service';
+import { INSTRUMENT_TYPE_LABELS } from '../../instruments/instrument-types';
 import { InstrumentsService } from '../../instruments/instruments.service';
 import { Alert, AlertsService } from '../alerts.service';
 
 export interface AlertFormData {
   alert?: Alert;
 }
-
-const VIX_RSI_ERROR = 'RSI is not available for VIX';
-
-const INSTRUMENT_TYPE_LABELS: Record<string, string> = {
-  index: $localize`:@@alertForm.instrumentType.index:Index`,
-};
 
 function positiveNumberValidator(): ValidatorFn {
   return (control) => (typeof control.value === 'number' && control.value > 0 ? null : { positive: true });
@@ -177,8 +172,8 @@ export class AlertForm {
       if (err.status === 404) {
         return $localize`:@@alertForm.error.notFound:This alert no longer exists.`;
       }
-      const serverError = (err.error as { error?: string } | null)?.error;
-      if (err.status === 400 && serverError === VIX_RSI_ERROR) {
+      const code = (err.error as { code?: string } | null)?.code;
+      if (err.status === 400 && code === 'rsi_not_eligible') {
         return $localize`:@@alertForm.error.rsiUnavailableForVix:RSI is not available for VIX.`;
       }
     }

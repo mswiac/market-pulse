@@ -4,14 +4,11 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
+import { INSTRUMENT_TYPE_LABELS } from '../instruments/instrument-types';
 import { Instrument, InstrumentsService } from '../instruments/instruments.service';
 import { InstrumentHistoryEntry, InstrumentHistoryService } from './instrument-history.service';
 
 const HISTORY_DAYS = 30;
-
-const INSTRUMENT_TYPE_LABELS: Record<string, string> = {
-  index: $localize`:@@instrumentHistory.instrumentType.index:Index`,
-};
 
 @Component({
   selector: 'app-instrument-history',

@@ -22,6 +22,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/admin-panel').then((m) => m.AdminPanel),
         canActivate: [adminGuard],
       },
+      {
+        path: 'admin/add-instrument',
+        loadComponent: () => import('./features/admin/add-instrument/add-instrument').then((m) => m.AddInstrument),
+        canActivate: [adminGuard],
+      },
     ],
   },
   {

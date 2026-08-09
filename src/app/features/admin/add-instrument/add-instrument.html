@@ -1,0 +1,45 @@
+<div class="add-instrument-page">
+  <h2 i18n="@@addInstrument.title">Add instrument</h2>
+
+  <mat-card class="form-card" appearance="outlined">
+    <div class="filters">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label i18n="@@addInstrument.type.label">Type</mat-label>
+        <mat-select [value]="type()" (selectionChange)="onTypeChange($event.value)">
+          @for (t of creatableInstrumentTypes; track t) {
+            <mat-option [value]="t">{{ instrumentTypeLabel(t) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label i18n="@@addInstrument.ticker.label">Ticker</mat-label>
+        <input matInput [value]="ticker()" (input)="onTickerChange($any($event.target).value)" (blur)="onTickerBlur($event)" />
+      </mat-form-field>
+    </div>
+
+    <div class="filters">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label i18n="@@addInstrument.name.label">Company name</mat-label>
+        <input matInput [value]="name()" (input)="onNameChange($any($event.target).value)" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label i18n="@@addInstrument.currency.label">Currency</mat-label>
+        <mat-select [value]="currency()" (selectionChange)="onCurrencyChange($event.value)">
+          @for (c of currencies; track c) {
+            <mat-option [value]="c">{{ c }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <mat-checkbox [checked]="rsiEligible()" (change)="onRsiEligibleChange($event.checked)">
+      <span i18n="@@addInstrument.rsiEligible.label">Calculate RSI</span>
+    </mat-checkbox>
+
+    <button mat-flat-button color="primary" type="button" [disabled]="!canSubmit()" (click)="onSubmit()" i18n="@@addInstrument.submit">
+      Add instrument
+    </button>
+  </mat-card>
+</div>

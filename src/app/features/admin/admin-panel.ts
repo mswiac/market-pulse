@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { INSTRUMENT_TYPE_LABELS } from '../instruments/instrument-types';
 import { Instrument, InstrumentsService } from '../instruments/instruments.service';
 import { AdminService, MarketDataFetchResult } from './admin-panel.service';
 
@@ -16,10 +17,6 @@ function toIsoDate(date: Date): string {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
-
-const INSTRUMENT_TYPE_LABELS: Record<string, string> = {
-  index: $localize`:@@instrumentHistory.instrumentType.index:Index`,
-};
 
 // Backend returns a fixed set of machine-readable codes for validation and
 // fetch failures (src/worker/routes/admin.ts) — mapped here to localized
