@@ -71,7 +71,7 @@ type AlertValidationResult =
       notificationEmail: string;
       direction: Direction;
     }
-  | { ok: false; error: string };
+  | { ok: false; error: string; code: string };
 
 // Shared by POST and PUT — both need the same ticker/alertType/threshold/email/
 // RSI-eligibility checks before writing.
@@ -81,31 +81,31 @@ async function validateAlertInput(
 ): Promise<AlertValidationResult> {
   const instrument = await lookupTicker(db, body.ticker);
   if (!instrument) {
-    return { ok: false, error: 'invalid instrument' };
+    return { ok: false, error: 'invalid instrument', code: 'invalid_instrument' };
   }
 
   const alertType = normalizeAlertType(body.alertType);
   if (!alertType) {
-    return { ok: false, error: 'invalid alert type' };
+    return { ok: false, error: 'invalid alert type', code: 'invalid_alert_type' };
   }
 
   const threshold = validateThreshold(alertType, body.threshold);
   if (threshold === null) {
-    return { ok: false, error: 'invalid threshold' };
+    return { ok: false, error: 'invalid threshold', code: 'invalid_threshold' };
   }
 
   const notificationEmail = normalizeEmail(body.notificationEmail);
   if (!notificationEmail || !EMAIL_PATTERN.test(notificationEmail)) {
-    return { ok: false, error: 'invalid notification email' };
+    return { ok: false, error: 'invalid notification email', code: 'invalid_notification_email' };
   }
 
   const direction = normalizeDirection(body.direction);
   if (!direction) {
-    return { ok: false, error: 'invalid direction' };
+    return { ok: false, error: 'invalid direction', code: 'invalid_direction' };
   }
 
   if (!instrument.rsi_eligible && alertType === 'RSI') {
-    return { ok: false, error: 'RSI is not available for VIX' };
+    return { ok: false, error: 'RSI is not available for VIX', code: 'rsi_not_eligible' };
   }
 
   return { ok: true, instrument, alertType, threshold, notificationEmail, direction };
@@ -180,12 +180,12 @@ function toAlertResponse(row: Record<string, unknown>): Record<string, unknown> 
 alertsRoutes.post('/', async (c) => {
   const body = await parseAlertBody(c);
   if (!body) {
-    return c.json({ error: 'invalid request body' }, 400);
+    return c.json({ error: 'invalid request body', code: 'invalid_body' }, 400);
   }
 
   const validation = await validateAlertInput(c.env.DB, body);
   if (!validation.ok) {
-    return c.json({ error: validation.error }, 400);
+    return c.json({ error: validation.error, code: validation.code }, 400);
   }
   const { instrument, alertType, threshold, notificationEmail, direction } = validation;
 
@@ -210,7 +210,7 @@ alertsRoutes.post('/', async (c) => {
     return c.json(toAlertResponse(selectResult.results[0] as Record<string, unknown>), 201);
   } catch (err) {
     if (err instanceof Error && err.message.includes('UNIQUE')) {
-      return c.json({ error: 'duplicate alert' }, 409);
+      return c.json({ error: 'duplicate alert', code: 'duplicate_alert' }, 409);
     }
     throw err;
   }
@@ -237,17 +237,17 @@ function parseAlertId(idParam: string): number | null {
 alertsRoutes.put('/:id', async (c) => {
   const id = parseAlertId(c.req.param('id'));
   if (id === null) {
-    return c.json({ error: 'invalid alert id' }, 400);
+    return c.json({ error: 'invalid alert id', code: 'invalid_alert_id' }, 400);
   }
 
   const body = await parseAlertBody(c);
   if (!body) {
-    return c.json({ error: 'invalid request body' }, 400);
+    return c.json({ error: 'invalid request body', code: 'invalid_body' }, 400);
   }
 
   const validation = await validateAlertInput(c.env.DB, body);
   if (!validation.ok) {
-    return c.json({ error: validation.error }, 400);
+    return c.json({ error: validation.error, code: validation.code }, 400);
   }
   const { instrument, alertType, threshold, notificationEmail, direction } = validation;
 
@@ -270,13 +270,13 @@ alertsRoutes.put('/:id', async (c) => {
 
     const updated = selectResult.results[0];
     if (!updated) {
-      return c.json({ error: 'alert not found' }, 404);
+      return c.json({ error: 'alert not found', code: 'alert_not_found' }, 404);
     }
 
     return c.json(toAlertResponse(updated as Record<string, unknown>), 200);
   } catch (err) {
     if (err instanceof Error && err.message.includes('UNIQUE')) {
-      return c.json({ error: 'duplicate alert' }, 409);
+      return c.json({ error: 'duplicate alert', code: 'duplicate_alert' }, 409);
     }
     throw err;
   }
@@ -285,7 +285,7 @@ alertsRoutes.put('/:id', async (c) => {
 alertsRoutes.delete('/:id', async (c) => {
   const id = parseAlertId(c.req.param('id'));
   if (id === null) {
-    return c.json({ error: 'invalid alert id' }, 400);
+    return c.json({ error: 'invalid alert id', code: 'invalid_alert_id' }, 400);
   }
 
   const userId = c.get('userId');
@@ -295,7 +295,7 @@ alertsRoutes.delete('/:id', async (c) => {
     .first();
 
   if (!deleted) {
-    return c.json({ error: 'alert not found' }, 404);
+    return c.json({ error: 'alert not found', code: 'alert_not_found' }, 404);
   }
 
   return c.body(null, 204);
