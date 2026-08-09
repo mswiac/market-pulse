@@ -149,7 +149,10 @@ adminRoutes.post('/instruments', async (c) => {
     return c.json({ error: 'currency must be a 3-letter code', code: 'instrument_currency_invalid' }, 400);
   }
 
-  const rsiEligible = body.rsiEligible === true;
+  if (typeof body.rsiEligible !== 'boolean') {
+    return c.json({ error: 'rsiEligible must be a boolean', code: 'instrument_rsi_eligible_invalid' }, 400);
+  }
+  const rsiEligible = body.rsiEligible;
   const provider = deriveProvider(type);
 
   try {

@@ -23,6 +23,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   instrument_ticker_required: $localize`:@@addInstrument.error.tickerRequired:Please enter a ticker.`,
   instrument_name_required: $localize`:@@addInstrument.error.nameRequired:Please enter a company name.`,
   instrument_currency_invalid: $localize`:@@addInstrument.error.currencyInvalid:Currency must be a 3-letter code (e.g. USD, PLN).`,
+  instrument_rsi_eligible_invalid: $localize`:@@addInstrument.error.rsiEligibleInvalid:Invalid RSI setting. Please try again.`,
   instrument_duplicate_ticker: $localize`:@@addInstrument.error.duplicateTicker:This ticker already exists.`,
 };
 

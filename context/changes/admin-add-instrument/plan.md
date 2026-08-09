@@ -16,7 +16,7 @@ Extends the admin panel (`S-09`) with a second action: an admin can add a new ro
 
 ## Desired End State
 
-An admin on `/admin` sees a second card, "Add instrument," with five fields (type, ticker, name, currency, RSI-eligible checkbox — checked by default) and a submit button. Submitting calls `POST /api/admin/instruments`, which validates the input, derives `provider` from `type`, inserts the row, and returns it. On success the admin panel reloads the shared instrument cache and shows a confirmation snackbar; the new instrument is immediately available on the instrument-history page, the alert form, and future admin backfills. Duplicate tickers are rejected with a clear message. The `instruments.type` CHECK constraint now allows `'index' | 'pl_stock' | 'us_stock'`. `alerts.ts` and its frontend consumer now use the same `{error, code}` convention as `admin.ts`, with no remaining string-matching on error text.
+An admin sees a new, separate sidebar item "Add instrument" (`/admin/add-instrument`, next to the existing "Fetch market data" page rather than stacked onto it) with five fields — type, ticker, company name, currency (a fixed EUR/PLN/USD select), and an RSI-eligible checkbox (checked by default) — and a submit button. Ticker is normalized to uppercase both server-side and on client blur, regardless of what the admin typed. Submitting calls `POST /api/admin/instruments`, which validates the input, derives `provider` from `type`, inserts the row, and returns it. On success the page reloads the shared instrument cache and shows a confirmation snackbar; the new instrument is immediately available on the instrument-history page, the alert form, and future admin backfills. Duplicate tickers are rejected with a clear message. The `instruments.type` CHECK constraint now allows `'index' | 'pl_stock' | 'us_stock'`. `alerts.ts` and its frontend consumer now use the same `{error, code}` convention as `admin.ts`, with no remaining string-matching on error text.
 
 Verify by: `npm run ci` passes; `POST /api/admin/instruments` as a non-admin returns 403; as an admin, adding a `pl_stock` ticker returns 201 and the ticker subsequently appears in `GET /api/instruments` and in the alert-creation and instrument-history comboboxes.
 
@@ -85,7 +85,7 @@ New admin-only route that validates input, derives `provider` from `type`, and i
 
 **Intent**: Add `adminRoutes.post('/instruments', ...)` alongside the existing `/market-data` handler, reusing the router-level `sessionMiddleware`/`adminMiddleware` already applied at line 15. Validates `type` (must be `'index' | 'pl_stock' | 'us_stock'`), `ticker` and `name` (non-empty strings, trimmed), `currency` (non-empty, normalized to uppercase, must match `^[A-Z]{3}$`), and `rsiEligible` (boolean). Derives `provider`: `'pl_stock'` → `'stooq'`, everything else → `'yahoo'`. Inserts via `INSERT ... RETURNING ticker, name, type, rsi_eligible AS rsiEligible, provider, currency`, coercing `rsiEligible` to a real boolean in the response the same way `instruments.ts:36` does. Catches a `UNIQUE` constraint error the same way `alerts.ts:211-215` does, returning 409.
 
-**Contract**: `POST /api/admin/instruments` body `{ type: string, ticker: string, name: string, currency: string, rsiEligible: boolean }` → `201 { ticker, name, type, rsiEligible, provider, currency }`. Error codes (all `{error, code}`, following the file's existing convention): `invalid_body` (400, unparseable JSON), `instrument_type_invalid` (400), `instrument_ticker_required` (400), `instrument_name_required` (400), `instrument_currency_invalid` (400), `instrument_duplicate_ticker` (409). Distinct code names from the existing `/market-data` codes (e.g. `ticker_required`) — both handlers share the same frontend error-message lookup table (Phase 5), so codes must not collide across the two actions.
+**Contract**: `POST /api/admin/instruments` body `{ type: string, ticker: string, name: string, currency: string, rsiEligible: boolean }` → `201 { ticker, name, type, rsiEligible, provider, currency }`. Error codes (all `{error, code}`, following the file's existing convention): `invalid_body` (400, unparseable JSON), `instrument_type_invalid` (400), `instrument_ticker_required` (400), `instrument_name_required` (400), `instrument_currency_invalid` (400), `instrument_rsi_eligible_invalid` (400, non-boolean `rsiEligible` — added during impl-review, F2: every other field explicitly rejects malformed input, `rsiEligible` originally didn't), `instrument_duplicate_ticker` (409). Distinct code names from the existing `/market-data` codes (e.g. `ticker_required`) — the add-instrument page's own error-message lookup table (Phase 5) must cover all of these.
 
 #### 2. Tests
 
@@ -195,7 +195,7 @@ Removes the three-way `INSTRUMENT_TYPE_LABELS` duplication and switches `alert-f
 
 ### Overview
 
-The user-facing feature: a second card in `/admin` that calls the Phase 2 endpoint.
+The user-facing feature: a new, separate admin page (own route + sidebar entry) that calls the Phase 2 endpoint. Built as a second card stacked onto the existing "Fetch market data" page initially; moved to its own route after manual testing showed the stacked-card layout was confusing and inconsistent with the rest of the app's one-page-per-action navigation pattern (History's "Instruments"/"Triggered alerts" are likewise separate routes, not tabs on one page).
 
 ### Changes Required:
 
@@ -203,7 +203,7 @@ The user-facing feature: a second card in `/admin` that calls the Phase 2 endpoi
 
 **File**: `src/app/features/admin/admin-panel.service.ts`
 
-**Intent**: Add `addInstrument(...)` mirroring `fetchMarketData`'s shape.
+**Intent**: Add `addInstrument(...)` mirroring `fetchMarketData`'s shape. Kept on the shared `AdminService` (the HTTP client for all `/api/admin/*` endpoints) even though the UI that calls it now lives on a different page than `fetchMarketData`'s caller.
 
 **Contract**: `addInstrument(type: string, ticker: string, name: string, currency: string, rsiEligible: boolean): Observable<{ticker: string; name: string; type: string; rsiEligible: boolean; provider: string; currency: string}>`, POSTing to `/api/admin/instruments`.
 
@@ -215,29 +215,29 @@ The user-facing feature: a second card in `/admin` that calls the Phase 2 endpoi
 
 **Contract**: `reload(): Observable<Instrument[]>` — resets `loaded = false` and `inFlight = null`, then delegates to `ensureLoaded()`.
 
-#### 3. Form state, submission, and error handling
+#### 3. New page component
 
-**File**: `src/app/features/admin/admin-panel.ts`
+**Files**: `src/app/features/admin/add-instrument/add-instrument.ts` (new), `.html` (new), `.scss` (new)
 
-**Intent**: Add signals for the five new-instrument fields (`newType`, `newTicker`, `newName`, `newCurrency`, `newRsiEligible`, defaulting `newRsiEligible` to `true` and `newType` to the first entry of `CREATABLE_INSTRUMENT_TYPES`), a `canSubmitInstrument` computed (non-empty ticker/name; `newCurrency` matching `^[A-Z]{3}$`, checked against the value after the blur-time uppercase transform), and an `onSubmitInstrument()` handler calling `adminService.addInstrument(...)`. On success: call `instrumentsService.reload()`, reset the form fields, show a success snackbar. On error: reuse the existing `showError`/`ERROR_MESSAGES` mechanism (`admin-panel.ts:132-136`), extended with the five new codes from Phase 2. Currency input gets an `onCurrencyBlur()` handler that uppercases the typed value in place, mirroring the existing reformat-on-blur pattern for threshold (`alert-form.ts:142-149`) — gives the admin instant feedback on format instead of a round-trip 400.
+**Intent**: A standalone page component, not a card inside `admin-panel.ts`. Signals for the five fields (`type`, `ticker`, `name`, `currency`, `rsiEligible`, defaulting `rsiEligible` to `true`, `type` to the first entry of `CREATABLE_INSTRUMENT_TYPES`, `currency` to the first entry of a fixed `['EUR', 'PLN', 'USD']` list), a `canSubmit` computed (non-empty ticker/name; currency is always valid since it comes from a fixed select, no format check needed), and an `onSubmit()` handler calling `adminService.addInstrument(...)`. On success: call `instrumentsService.reload()`, reset the form, show a success snackbar. On error: same code→message-lookup pattern as `admin-panel.ts`, with its own local `ERROR_MESSAGES` covering the seven Phase-2 codes plus `forbidden`/generic (the two pages no longer share one lookup table — a natural consequence of the split, not a regression, since the two error-code sets don't overlap). Ticker gets an `onTickerBlur()` handler that uppercases the typed value in place (mirroring the existing reformat-on-blur pattern for threshold in `alert-form.ts:142-149`), matching the server-side normalization in `admin.ts` — tickers are conventionally uppercase for both Yahoo and Stooq, and the admin should never have to remember to type it that way.
 
-**Contract**: `ERROR_MESSAGES` gains entries for `invalid_body`, `instrument_type_invalid`, `instrument_ticker_required`, `instrument_name_required`, `instrument_currency_invalid`, `instrument_duplicate_ticker`. Type combobox options come from `CREATABLE_INSTRUMENT_TYPES` (Phase 4), not `instrumentsService.types()` (which wouldn't yet include `pl_stock`/`us_stock` before any exist).
+**Contract**: `.scss` mirrors `admin-panel.scss`'s page-wrapper/card layout exactly (only class names differ) so the two admin pages look visually consistent. Template uses `mat-select` for type and currency, `matInput` for ticker/name, `mat-checkbox` for RSI-eligible, a submit button disabled until `canSubmit()`. New i18n ids under an `addInstrument.*` prefix (own page, own prefix — not `adminPanel.*`), each needing a `messages.pl.xlf` entry per Critical Implementation Details. `MatCheckboxModule` added to this component's `imports` (not needed by `admin-panel.ts`, which has no checkbox).
 
-#### 4. Template
+#### 4. Routing and navigation
 
-**File**: `src/app/features/admin/admin-panel.html`
+**Files**: `src/app/app.routes.ts`, `src/app/core/shell/shell.html`
 
-**Intent**: A second `mat-card`, structurally parallel to the existing "Fetch market data" card — `mat-select` for type, `matInput` text fields for ticker/name/currency (currency wired to `(blur)="onCurrencyBlur($event)"`, same wiring style as `admin-panel.html`'s existing date fields), a `mat-checkbox` for RSI-eligible (checked by default), and a submit button disabled until `canSubmitInstrument()`.
+**Intent**: Register `/admin/add-instrument` as a sibling route to `/admin`, both gated by `adminGuard`. Add a second nested sidebar link under the "Admin" toggle, alongside "Fetch market data" — same pattern as the "History" toggle's two nested links (Instruments / Triggered alerts). Both nested groups' links are ordered alphabetically by their Polish (rendered) label. The existing "Fetch market data" link needs `[routerLinkActiveOptions]="{ exact: true }"` added (not needed before, since `/admin` had no child routes to accidentally prefix-match against).
 
-**Contract**: New i18n ids for every label/placeholder/button text (`adminPanel.addInstrument.*`), each needing a `messages.pl.xlf` entry per Critical Implementation Details. Requires adding `MatCheckboxModule` to the component's `imports` array (not currently imported anywhere in `admin-panel.ts`).
+**Contract**: `admin-panel.html`'s own `<h2>` page title changes from the generic "Admin panel" to "Fetch market data" — now that it's one of two sibling admin pages instead of "the" admin panel, the heading should name its specific action, matching the new page's own title.
 
 #### 5. Translation catalog
 
 **File**: `src/locale/messages.pl.xlf`
 
-**Intent**: Add `<trans-unit>` entries for every new `@@id` introduced across Phases 4 and 5 (the three `instrumentType.*` ids, the `adminPanel.addInstrument.*` ids, and none needed for `ERROR_MESSAGES`/`INSTRUMENT_TYPE_LABELS` beyond what's already covered — those are TS-level `$localize` calls, same requirement).
+**Intent**: Add `<trans-unit>` entries for every new `@@id` introduced across Phases 4 and 5 (the three `instrumentType.*` ids, the `addInstrument.*` ids, the updated `adminPanel.title`, the new `shell.nav.adminAddInstrument` sidebar-link id).
 
-**Contract**: Polish translations following the existing tone in the file (e.g. `adminPanel.title` → "Panel administratora"). Suggested: type combobox "PL companies"/"US companies" → "Spółki PL"/"Spółki USA" (per the roadmap's resolved naming), "Add instrument" → "Dodaj instrument", "RSI eligible" → "RSI dostępne".
+**Contract**: Polish translations following the existing tone in the file. Type select "PL companies"/"US companies" → "Spółki PL"/"Spółki USA" (per the roadmap's resolved naming), "Add instrument" → "Dodaj instrument", the RSI checkbox → "Licz RSI" (not "RSI dostępne" — chosen during manual review as clearer phrasing for what the checkbox actually controls).
 
 ### Success Criteria:
 
@@ -247,11 +247,11 @@ The user-facing feature: a second card in `/admin` that calls the Phase 2 endpoi
 
 #### Manual Verification:
 
-- As a logged-in admin, open `/admin`, fill in the "Add instrument" card with a `pl_stock` ticker (e.g. type=Spółki PL, ticker=`CDR`, name=`CD Projekt`, currency=`PLN`, RSI checked), submit, and confirm a success snackbar appears
+- As a logged-in admin, open `/admin/add-instrument`, fill in a `pl_stock` ticker (e.g. type=Spółki PL, ticker=`cdr` lowercase to also verify the uppercase normalization, name=`CD Projekt`, currency=`PLN`, RSI checked), submit, and confirm a success snackbar appears and the ticker was stored as `CDR`
 - Confirm the new instrument immediately appears as a selectable option on `/history` (instrument-history page) and in the alert-creation form's type/instrument comboboxes, without a page refresh
 - Attempt to add a ticker that already exists (e.g. `^VIX`) and confirm a clear "already exists" message is shown, not a generic error
-- Attempt to submit with an empty ticker/name/currency and confirm the submit button is disabled (client-side) rather than relying on the server error
-- As a non-admin, confirm `/admin` remains inaccessible (unchanged from S-09, but worth re-confirming nothing in this phase weakened it)
+- Attempt to submit with an empty ticker/name and confirm the submit button is disabled (client-side) rather than relying on the server error
+- As a non-admin, confirm `/admin` and `/admin/add-instrument` remain inaccessible (unchanged from S-09, but worth re-confirming nothing in this phase weakened it)
 
 ---
 

@@ -235,6 +235,20 @@ describe('POST /api/admin/instruments', () => {
     expect(json.code).toBe('forbidden');
   });
 
+  it('returns 400 with code invalid_body for a malformed JSON body', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await exports.default.fetch(`${BASE_URL}/api/admin/instruments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: cookie },
+      body: '{not valid json',
+    });
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('invalid_body');
+  });
+
   it('returns 400 with code instrument_type_invalid for an unknown type', async () => {
     const cookie = await logInAsAdmin();
 
@@ -273,6 +287,16 @@ describe('POST /api/admin/instruments', () => {
     expect(response.status).toBe(400);
     const json = (await response.json()) as { code: string };
     expect(json.code).toBe('instrument_currency_invalid');
+  });
+
+  it('returns 400 with code instrument_rsi_eligible_invalid for a non-boolean rsiEligible', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(cookie, validNewInstrument({ rsiEligible: 'true' }));
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('instrument_rsi_eligible_invalid');
   });
 
   it('creates a pl_stock instrument with provider derived as stooq, and it is visible via GET /api/instruments', async () => {

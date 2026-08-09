@@ -342,6 +342,10 @@
         <source>Currency must be a 3-letter code (e.g. USD, PLN).</source>
         <target>Waluta musi być 3-literowym kodem (np. USD, PLN).</target>
       </trans-unit>
+      <trans-unit id="addInstrument.error.rsiEligibleInvalid" datatype="html">
+        <source>Invalid RSI setting. Please try again.</source>
+        <target>Nieprawidłowe ustawienie RSI. Spróbuj ponownie.</target>
+      </trans-unit>
       <trans-unit id="addInstrument.error.duplicateTicker" datatype="html">
         <source>This ticker already exists.</source>
         <target>Ten ticker już istnieje.</target>
