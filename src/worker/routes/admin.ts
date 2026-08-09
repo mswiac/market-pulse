@@ -91,6 +91,7 @@ async function parseInstrumentBody(c: { req: { json: () => Promise<unknown> } })
   name?: unknown;
   currency?: unknown;
   rsiEligible?: unknown;
+  suffix?: unknown;
 } | null> {
   try {
     return (await c.req.json()) as {
@@ -99,17 +100,17 @@ async function parseInstrumentBody(c: { req: { json: () => Promise<unknown> } })
       name?: unknown;
       currency?: unknown;
       rsiEligible?: unknown;
+      suffix?: unknown;
     };
   } catch {
     return null;
   }
 }
 
-// pl_stock is the only type fetched from Stooq (F-04) — everything else
-// (index, us_stock) uses the existing Yahoo path, same as today's ^VIX/^NDX.
-function deriveProvider(type: string): string {
-  return type === 'pl_stock' ? 'stooq' : 'yahoo';
-}
+// Yahoo is the only provider now (F-04 dropped a planned Stooq fetch path —
+// Stooq's CSV endpoint is gated by a JS proof-of-work anti-bot challenge;
+// Yahoo already covers GPW equities via a `.WA` ticker suffix instead).
+const PROVIDER = 'yahoo';
 
 interface InsertedInstrumentRow {
   ticker: string;
@@ -118,6 +119,7 @@ interface InsertedInstrumentRow {
   rsiEligible: number;
   provider: string;
   currency: string;
+  suffix: string;
 }
 
 adminRoutes.post('/instruments', async (c) => {
@@ -153,15 +155,19 @@ adminRoutes.post('/instruments', async (c) => {
     return c.json({ error: 'rsiEligible must be a boolean', code: 'instrument_rsi_eligible_invalid' }, 400);
   }
   const rsiEligible = body.rsiEligible;
-  const provider = deriveProvider(type);
+
+  // No format restriction, same "admin is trusted" contract as ticker —
+  // empty is valid (index/us_stock tickers are already the exact Yahoo
+  // symbol and need no suffix appended at fetch time).
+  const suffix = typeof body.suffix === 'string' ? body.suffix.trim() : '';
 
   try {
     const row = await c.env.DB.prepare(
-      `INSERT INTO instruments (ticker, name, type, rsi_eligible, provider, currency)
-       VALUES (?, ?, ?, ?, ?, ?)
-       RETURNING ticker, name, type, rsi_eligible AS rsiEligible, provider, currency`,
+      `INSERT INTO instruments (ticker, name, type, rsi_eligible, provider, currency, suffix)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       RETURNING ticker, name, type, rsi_eligible AS rsiEligible, provider, currency, suffix`,
     )
-      .bind(ticker, name, type, rsiEligible ? 1 : 0, provider, currency)
+      .bind(ticker, name, type, rsiEligible ? 1 : 0, PROVIDER, currency, suffix)
       .first<InsertedInstrumentRow>();
 
     return c.json({ ...row, rsiEligible: !!row!.rsiEligible }, 201);

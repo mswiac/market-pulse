@@ -16,6 +16,11 @@
         <mat-label i18n="@@addInstrument.ticker.label">Ticker</mat-label>
         <input matInput [value]="ticker()" (input)="onTickerChange($any($event.target).value)" (blur)="onTickerBlur($event)" />
       </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label i18n="@@addInstrument.suffix.label">Sufiks (np. .WA)</mat-label>
+        <input matInput [value]="suffix()" (input)="onSuffixChange($any($event.target).value)" />
+      </mat-form-field>
     </div>
 
     <div class="filters">

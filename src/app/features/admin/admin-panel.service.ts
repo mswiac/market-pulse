@@ -16,6 +16,7 @@ export interface CreatedInstrument {
   rsiEligible: boolean;
   provider: string;
   currency: string;
+  suffix: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -26,7 +27,14 @@ export class AdminService {
     return this.http.post<MarketDataFetchResult>('/api/admin/market-data', { ticker, from, to });
   }
 
-  addInstrument(type: string, ticker: string, name: string, currency: string, rsiEligible: boolean): Observable<CreatedInstrument> {
-    return this.http.post<CreatedInstrument>('/api/admin/instruments', { type, ticker, name, currency, rsiEligible });
+  addInstrument(
+    type: string,
+    ticker: string,
+    name: string,
+    currency: string,
+    rsiEligible: boolean,
+    suffix: string,
+  ): Observable<CreatedInstrument> {
+    return this.http.post<CreatedInstrument>('/api/admin/instruments', { type, ticker, name, currency, rsiEligible, suffix });
   }
 }

@@ -299,12 +299,19 @@ describe('POST /api/admin/instruments', () => {
     expect(json.code).toBe('instrument_rsi_eligible_invalid');
   });
 
-  it('creates a pl_stock instrument with provider derived as stooq, and it is visible via GET /api/instruments', async () => {
+  it('creates a pl_stock instrument with an explicit suffix, provider always yahoo, visible via GET /api/instruments without suffix/provider', async () => {
     const cookie = await logInAsAdmin();
 
     const response = await addInstrument(
       cookie,
-      validNewInstrument({ type: 'pl_stock', ticker: 'TEST.PL', name: 'Test SA', currency: 'PLN', rsiEligible: true }),
+      validNewInstrument({
+        type: 'pl_stock',
+        ticker: 'TEST.PL',
+        name: 'Test SA',
+        currency: 'PLN',
+        rsiEligible: true,
+        suffix: '.WA',
+      }),
     );
 
     expect(response.status).toBe(201);
@@ -314,8 +321,9 @@ describe('POST /api/admin/instruments', () => {
       name: 'Test SA',
       type: 'pl_stock',
       rsiEligible: true,
-      provider: 'stooq',
+      provider: 'yahoo',
       currency: 'PLN',
+      suffix: '.WA',
     });
 
     const listResponse = await exports.default.fetch(`${BASE_URL}/api/instruments`, { headers: { Cookie: cookie } });
@@ -325,7 +333,7 @@ describe('POST /api/admin/instruments', () => {
     );
   });
 
-  it('creates an us_stock instrument with provider derived as yahoo', async () => {
+  it('creates an us_stock instrument with provider always yahoo and suffix defaulting to empty when omitted', async () => {
     const cookie = await logInAsAdmin();
 
     const response = await addInstrument(cookie, validNewInstrument({ type: 'us_stock', ticker: 'TEST.US2' }));
@@ -333,6 +341,7 @@ describe('POST /api/admin/instruments', () => {
     expect(response.status).toBe(201);
     const created = (await response.json()) as Record<string, unknown>;
     expect(created['provider']).toBe('yahoo');
+    expect(created['suffix']).toBe('');
   });
 
   it('normalizes a lowercase ticker to uppercase regardless of what was typed', async () => {
