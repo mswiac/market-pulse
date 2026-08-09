@@ -9,11 +9,24 @@ export interface MarketDataFetchResult {
   daysWritten: number;
 }
 
+export interface CreatedInstrument {
+  ticker: string;
+  name: string;
+  type: string;
+  rsiEligible: boolean;
+  provider: string;
+  currency: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private readonly http = inject(HttpClient);
 
   fetchMarketData(ticker: string, from: string, to: string): Observable<MarketDataFetchResult> {
     return this.http.post<MarketDataFetchResult>('/api/admin/market-data', { ticker, from, to });
+  }
+
+  addInstrument(type: string, ticker: string, name: string, currency: string, rsiEligible: boolean): Observable<CreatedInstrument> {
+    return this.http.post<CreatedInstrument>('/api/admin/instruments', { type, ticker, name, currency, rsiEligible });
   }
 }

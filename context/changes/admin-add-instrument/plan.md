@@ -295,7 +295,7 @@ Phase 1's migration is additive/widening only (no existing row is altered in mea
 
 #### Manual
 
-- [ ] 1.3 `^VIX`/`^NDX` rows unchanged after migration
+- [x] 1.3 `^VIX`/`^NDX` rows unchanged after migration
 
 ### Phase 2: `POST /api/admin/instruments` endpoint
 
@@ -306,7 +306,7 @@ Phase 1's migration is additive/widening only (no existing row is altered in mea
 
 #### Manual
 
-- [ ] 2.3 Manual POST via admin session confirms row appears in `GET /api/instruments`
+- [x] 2.3 Manual POST via admin session confirms row appears in `GET /api/instruments`
 
 ### Phase 3: `alerts.ts` error-code convention fix (backend)
 
@@ -319,24 +319,24 @@ Phase 1's migration is additive/widening only (no existing row is altered in mea
 
 #### Automated
 
-- [x] 4.1 `npm run typecheck` passes
-- [x] 4.2 `npm run build` passes (i18n catalog complete)
+- [x] 4.1 `npm run typecheck` passes — 4a07c23
+- [x] 4.2 `npm run build` passes (i18n catalog complete) — 4a07c23
 
 #### Manual
 
-- [ ] 4.3 Instrument-history and alert-form type comboboxes unchanged (still show only "Indeks")
-- [ ] 4.4 VIX+RSI validation error still shows the correct localized message
+- [x] 4.3 Instrument-history and alert-form type comboboxes unchanged (still show only "Indeks")
+- [x] 4.4 VIX+RSI validation error still shows the correct localized message
 
 ### Phase 5: "Add instrument" form in the admin panel
 
 #### Automated
 
-- [ ] 5.1 `npm run ci` passes
+- [x] 5.1 `npm run ci` passes
 
 #### Manual
 
-- [ ] 5.2 Add a `pl_stock` instrument end-to-end, success snackbar shown
-- [ ] 5.3 New instrument appears in instrument-history and alert-form comboboxes without refresh
-- [ ] 5.4 Duplicate ticker shows a clear "already exists" message
-- [ ] 5.5 Empty required fields keep submit disabled client-side
-- [ ] 5.6 Non-admin still can't access `/admin`
+- [x] 5.2 Add a `pl_stock` instrument end-to-end, success snackbar shown
+- [x] 5.3 New instrument appears in instrument-history and alert-form comboboxes without refresh
+- [x] 5.4 Duplicate ticker shows a clear "already exists" message
+- [x] 5.5 Empty required fields keep submit disabled client-side
+- [x] 5.6 Non-admin still can't access `/admin`

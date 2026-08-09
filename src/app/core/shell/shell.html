@@ -31,18 +31,17 @@
       </button>
 
       @if (historyExpanded()) {
+        <a mat-list-item id="history-nav-panel" class="nested-item" routerLink="/history/triggers" routerLinkActive="active-link">
+          <span matListItemTitle i18n="@@shell.nav.triggerHistory">Triggered alerts</span>
+        </a>
         <a
           mat-list-item
-          id="history-nav-panel"
           class="nested-item"
           routerLink="/history"
           routerLinkActive="active-link"
           [routerLinkActiveOptions]="{ exact: true }"
         >
           <span matListItemTitle i18n="@@shell.nav.instruments">Instruments</span>
-        </a>
-        <a mat-list-item class="nested-item" routerLink="/history/triggers" routerLinkActive="active-link">
-          <span matListItemTitle i18n="@@shell.nav.triggerHistory">Triggered alerts</span>
         </a>
       }
 
@@ -63,7 +62,16 @@
         </button>
 
         @if (adminExpanded()) {
-          <a mat-list-item id="admin-nav-panel" class="nested-item" routerLink="/admin" routerLinkActive="active-link">
+          <a mat-list-item id="admin-nav-panel" class="nested-item" routerLink="/admin/add-instrument" routerLinkActive="active-link">
+            <span matListItemTitle i18n="@@shell.nav.adminAddInstrument">Add instrument</span>
+          </a>
+          <a
+            mat-list-item
+            class="nested-item"
+            routerLink="/admin"
+            routerLinkActive="active-link"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >
             <span matListItemTitle i18n="@@shell.nav.adminMarketData">Fetch market data</span>
           </a>
         }

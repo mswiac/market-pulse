@@ -214,9 +214,13 @@
         <source>Fetch market data</source>
         <target>Pobierz dane giełdowe</target>
       </trans-unit>
+      <trans-unit id="shell.nav.adminAddInstrument" datatype="html">
+        <source>Add instrument</source>
+        <target>Dodaj instrument</target>
+      </trans-unit>
       <trans-unit id="adminPanel.title" datatype="html">
-        <source>Admin panel</source>
-        <target>Panel administratora</target>
+        <source>Fetch market data</source>
+        <target>Pobierz dane giełdowe</target>
       </trans-unit>
       <trans-unit id="adminPanel.type.label" datatype="html">
         <source>Type</source>
@@ -281,6 +285,70 @@
       <trans-unit id="adminPanel.error.forbidden" datatype="html">
         <source>You don&apos;t have permission to do this.</source>
         <target>Nie masz uprawnień do wykonania tej akcji.</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.title" datatype="html">
+        <source>Add instrument</source>
+        <target>Dodaj instrument</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.type.label" datatype="html">
+        <source>Type</source>
+        <target>Typ</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.ticker.label" datatype="html">
+        <source>Ticker</source>
+        <target>Ticker</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.name.label" datatype="html">
+        <source>Company name</source>
+        <target>Nazwa spółki</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.currency.label" datatype="html">
+        <source>Currency</source>
+        <target>Waluta</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.rsiEligible.label" datatype="html">
+        <source>Calculate RSI</source>
+        <target>Licz RSI</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.submit" datatype="html">
+        <source>Add instrument</source>
+        <target>Dodaj instrument</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.result.success" datatype="html">
+        <source>Added instrument <x id="INTERPOLATION" equiv-text="result.ticker"/>.</source>
+        <target>Dodano instrument <x id="INTERPOLATION" equiv-text="result.ticker"/>.</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.error.forbidden" datatype="html">
+        <source>You don&apos;t have permission to do this.</source>
+        <target>Nie masz uprawnień do wykonania tej akcji.</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.error.invalidBody" datatype="html">
+        <source>Invalid request. Please try again.</source>
+        <target>Nieprawidłowe żądanie. Spróbuj ponownie.</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.error.typeInvalid" datatype="html">
+        <source>Please select a valid type.</source>
+        <target>Wybierz poprawny typ.</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.error.tickerRequired" datatype="html">
+        <source>Please enter a ticker.</source>
+        <target>Wprowadź ticker.</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.error.nameRequired" datatype="html">
+        <source>Please enter a company name.</source>
+        <target>Wprowadź nazwę spółki.</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.error.currencyInvalid" datatype="html">
+        <source>Currency must be a 3-letter code (e.g. USD, PLN).</source>
+        <target>Waluta musi być 3-literowym kodem (np. USD, PLN).</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.error.duplicateTicker" datatype="html">
+        <source>This ticker already exists.</source>
+        <target>Ten ticker już istnieje.</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.error.generic" datatype="html">
+        <source>Something went wrong. Please try again.</source>
+        <target>Coś poszło nie tak. Spróbuj ponownie.</target>
       </trans-unit>
       <trans-unit id="home.welcomeTitle" datatype="html">
         <source>Welcome back</source>

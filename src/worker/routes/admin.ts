@@ -132,7 +132,9 @@ adminRoutes.post('/instruments', async (c) => {
     return c.json({ error: 'type must be one of index, pl_stock, us_stock', code: 'instrument_type_invalid' }, 400);
   }
 
-  const ticker = typeof body.ticker === 'string' ? body.ticker.trim() : '';
+  // Tickers are conventionally uppercase for both Yahoo and Stooq — normalize
+  // regardless of what the admin typed, same as currency below.
+  const ticker = typeof body.ticker === 'string' ? body.ticker.trim().toUpperCase() : '';
   if (!ticker) {
     return c.json({ error: 'ticker is required', code: 'instrument_ticker_required' }, 400);
   }

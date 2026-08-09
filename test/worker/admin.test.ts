@@ -311,6 +311,19 @@ describe('POST /api/admin/instruments', () => {
     expect(created['provider']).toBe('yahoo');
   });
 
+  it('normalizes a lowercase ticker to uppercase regardless of what was typed', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(cookie, validNewInstrument({ ticker: 'test.lower' }));
+
+    expect(response.status).toBe(201);
+    const created = (await response.json()) as { ticker: string };
+    expect(created.ticker).toBe('TEST.LOWER');
+
+    const row = await env.DB.prepare('SELECT ticker FROM instruments WHERE ticker = ?').bind('TEST.LOWER').first();
+    expect(row).not.toBeNull();
+  });
+
   it('persists rsiEligible: false and round-trips it correctly, not just the default true case', async () => {
     const cookie = await logInAsAdmin();
 
