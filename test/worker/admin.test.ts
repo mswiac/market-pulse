@@ -33,13 +33,27 @@ async function logInAsAdmin(): Promise<string> {
   return registerAndLogIn(ADMIN_EMAIL);
 }
 
-function yahooBody(timestamps: number[], closes: Array<number | null>) {
+function yahooBody(timestamps: number[], closes: Array<number | null>, currency?: string) {
   return {
     chart: {
-      result: [{ timestamp: timestamps, indicators: { quote: [{ close: closes, high: closes, low: closes }] } }],
+      result: [
+        {
+          timestamp: timestamps,
+          indicators: { quote: [{ close: closes, high: closes, low: closes }] },
+          meta: currency ? { currency } : undefined,
+        },
+      ],
       error: null,
     },
   };
+}
+
+async function insertSuffixInstrument(currency = 'PLN'): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO instruments (ticker, name, type, rsi_eligible, provider, currency, suffix) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind('TESTBACKFILL', 'Test SA', 'pl_stock', 0, 'yahoo', currency, '.WA')
+    .run();
 }
 
 function jsonResponse(status: number, body: unknown): Response {
@@ -87,8 +101,9 @@ describe('POST /api/admin/market-data', () => {
     await env.DB.prepare('DELETE FROM price_history').run();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     vi.unstubAllGlobals();
+    await env.DB.prepare("DELETE FROM instruments WHERE ticker = 'TESTBACKFILL'").run();
   });
 
   it('returns 401 with no session', async () => {
@@ -213,6 +228,43 @@ describe('POST /api/admin/market-data', () => {
     expect(json.code).toBe('write_failed');
     batchSpy.mockRestore();
   });
+
+  it('fetches a suffix-bearing instrument via ticker+suffix, writing price_history under the bare ticker', async () => {
+    await insertSuffixInstrument();
+    const cookie = await logInAsAdmin();
+
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody([1767620200], [100.5]))));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await fetchMarketData(cookie, { ticker: 'TESTBACKFILL', from: '2026-01-01', to: '2026-01-05' });
+
+    expect(response.status).toBe(200);
+    const calledUrl = fetchMock.mock.calls[0][0] as string;
+    expect(calledUrl).toContain(encodeURIComponent('TESTBACKFILL.WA'));
+
+    const row = await env.DB.prepare('SELECT * FROM price_history WHERE ticker = ?').bind('TESTBACKFILL').first();
+    expect(row).not.toBeNull();
+    const wrongTicker = await env.DB.prepare('SELECT 1 FROM price_history WHERE ticker = ?').bind('TESTBACKFILL.WA').first();
+    expect(wrongTicker).toBeNull();
+  });
+
+  it('auto-corrects instruments.currency when the fetched currency disagrees with the stored value', async () => {
+    await insertSuffixInstrument('USD');
+    const cookie = await logInAsAdmin();
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody([1767620200], [100.5], 'PLN')))),
+    );
+
+    const response = await fetchMarketData(cookie, { ticker: 'TESTBACKFILL', from: '2026-01-01', to: '2026-01-05' });
+
+    expect(response.status).toBe(200);
+    const row = await env.DB.prepare('SELECT currency FROM instruments WHERE ticker = ?')
+      .bind('TESTBACKFILL')
+      .first<{ currency: string }>();
+    expect(row?.currency).toBe('PLN');
+  });
 });
 
 describe('POST /api/admin/instruments', () => {
@@ -299,12 +351,19 @@ describe('POST /api/admin/instruments', () => {
     expect(json.code).toBe('instrument_rsi_eligible_invalid');
   });
 
-  it('creates a pl_stock instrument with provider derived as stooq, and it is visible via GET /api/instruments', async () => {
+  it('creates a pl_stock instrument with an explicit suffix, provider always yahoo, visible via GET /api/instruments without suffix/provider', async () => {
     const cookie = await logInAsAdmin();
 
     const response = await addInstrument(
       cookie,
-      validNewInstrument({ type: 'pl_stock', ticker: 'TEST.PL', name: 'Test SA', currency: 'PLN', rsiEligible: true }),
+      validNewInstrument({
+        type: 'pl_stock',
+        ticker: 'TEST.PL',
+        name: 'Test SA',
+        currency: 'PLN',
+        rsiEligible: true,
+        suffix: '.WA',
+      }),
     );
 
     expect(response.status).toBe(201);
@@ -314,8 +373,9 @@ describe('POST /api/admin/instruments', () => {
       name: 'Test SA',
       type: 'pl_stock',
       rsiEligible: true,
-      provider: 'stooq',
+      provider: 'yahoo',
       currency: 'PLN',
+      suffix: '.WA',
     });
 
     const listResponse = await exports.default.fetch(`${BASE_URL}/api/instruments`, { headers: { Cookie: cookie } });
@@ -325,7 +385,7 @@ describe('POST /api/admin/instruments', () => {
     );
   });
 
-  it('creates an us_stock instrument with provider derived as yahoo', async () => {
+  it('creates an us_stock instrument with provider always yahoo and suffix defaulting to empty when omitted', async () => {
     const cookie = await logInAsAdmin();
 
     const response = await addInstrument(cookie, validNewInstrument({ type: 'us_stock', ticker: 'TEST.US2' }));
@@ -333,6 +393,7 @@ describe('POST /api/admin/instruments', () => {
     expect(response.status).toBe(201);
     const created = (await response.json()) as Record<string, unknown>;
     expect(created['provider']).toBe('yahoo');
+    expect(created['suffix']).toBe('');
   });
 
   it('normalizes a lowercase ticker to uppercase regardless of what was typed', async () => {

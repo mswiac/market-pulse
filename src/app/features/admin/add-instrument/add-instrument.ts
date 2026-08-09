@@ -13,6 +13,13 @@ import { InstrumentsService } from '../../instruments/instruments.service';
 
 const CURRENCIES: readonly string[] = ['EUR', 'PLN', 'USD'];
 
+// Suggested suffix per type, prefilled on type change — admin can freely
+// override or clear it. Only 'pl_stock' (GPW) needs one today; a future
+// non-GPW market just needs a different typed value here, no code change.
+const SUFFIX_DEFAULTS: Record<string, string> = {
+  pl_stock: '.WA',
+};
+
 // Backend returns a fixed set of machine-readable codes for validation and
 // duplicate-ticker failures (src/worker/routes/admin.ts) — mapped here to
 // localized text rather than displaying the (English, code-facing) server message.
@@ -48,6 +55,7 @@ export class AddInstrument {
   protected readonly name = signal('');
   protected readonly currency = signal(CURRENCIES[0]);
   protected readonly rsiEligible = signal(true);
+  protected readonly suffix = signal('');
   protected readonly submitting = signal(false);
 
   protected readonly canSubmit = computed(() => !!this.ticker().trim() && !!this.name().trim() && !this.submitting());
@@ -58,6 +66,9 @@ export class AddInstrument {
 
   protected onTypeChange(type: string): void {
     this.type.set(type);
+    // Only overwrite on an actual type change (not on every keystroke
+    // elsewhere), so it doesn't fight an admin who already edited the field.
+    this.suffix.set(SUFFIX_DEFAULTS[type] ?? '');
   }
 
   protected onTickerChange(ticker: string): void {
@@ -82,6 +93,10 @@ export class AddInstrument {
     this.currency.set(currency);
   }
 
+  protected onSuffixChange(suffix: string): void {
+    this.suffix.set(suffix);
+  }
+
   protected onRsiEligibleChange(checked: boolean): void {
     this.rsiEligible.set(checked);
   }
@@ -91,18 +106,20 @@ export class AddInstrument {
 
     this.submitting.set(true);
 
-    this.adminService.addInstrument(this.type(), this.ticker().trim(), this.name().trim(), this.currency().trim(), this.rsiEligible()).subscribe({
-      next: (result) => {
-        this.submitting.set(false);
-        this.resetForm();
-        this.instrumentsService.reload().subscribe();
-        this.showResult(result);
-      },
-      error: (err: unknown) => {
-        this.submitting.set(false);
-        this.showError(err);
-      },
-    });
+    this.adminService
+      .addInstrument(this.type(), this.ticker().trim(), this.name().trim(), this.currency().trim(), this.rsiEligible(), this.suffix().trim())
+      .subscribe({
+        next: (result) => {
+          this.submitting.set(false);
+          this.resetForm();
+          this.instrumentsService.reload().subscribe();
+          this.showResult(result);
+        },
+        error: (err: unknown) => {
+          this.submitting.set(false);
+          this.showError(err);
+        },
+      });
   }
 
   private resetForm(): void {
@@ -111,6 +128,7 @@ export class AddInstrument {
     this.name.set('');
     this.currency.set(CURRENCIES[0]);
     this.rsiEligible.set(true);
+    this.suffix.set('');
   }
 
   private showResult(result: CreatedInstrument): void {

@@ -17,6 +17,12 @@ interface YahooChartResult {
   indicators?: {
     quote?: Array<{ close?: Array<number | null>; high?: Array<number | null>; low?: Array<number | null> }>;
   };
+  meta?: { currency?: string };
+}
+
+export interface DailyClosesResult {
+  closes: DailyClose[];
+  currency: string | null;
 }
 
 interface YahooChartResponse {
@@ -37,7 +43,7 @@ function toUnixSeconds(isoDate: string): number {
   return Date.parse(`${isoDate}T00:00:00Z`) / 1000;
 }
 
-export async function fetchDailyCloses(symbol: string, from: string, to: string): Promise<DailyClose[]> {
+export async function fetchDailyCloses(symbol: string, from: string, to: string): Promise<DailyClosesResult> {
   const period1 = toUnixSeconds(from);
   const period2 = toUnixSeconds(to);
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=1d`;
@@ -70,6 +76,10 @@ export async function fetchDailyCloses(symbol: string, from: string, to: string)
   const closes = quote?.close;
   const highs = quote?.high;
   const lows = quote?.low;
+  // Absent/malformed currency never fails the fetch — unlike the close
+  // series, it's not load-bearing for RSI/alert evaluation, only for the
+  // best-effort currency reconciliation callers may run afterward.
+  const currency = result?.meta?.currency ?? null;
 
   if (!timestamps || !closes || timestamps.length !== closes.length) {
     throw new MarketDataFetchError(`Yahoo response for ${symbol} has an unexpected shape`);
@@ -81,7 +91,7 @@ export async function fetchDailyCloses(symbol: string, from: string, to: string)
   // This is distinct from the "every close is null" case below, where
   // timestamps exist but the data itself looks broken — that still throws.
   if (timestamps.length === 0) {
-    return [];
+    return { closes: [], currency };
   }
 
   // calculateRSI() and "latest price" both assume ascending order — Yahoo's
@@ -108,7 +118,28 @@ export async function fetchDailyCloses(symbol: string, from: string, to: string)
     throw new MarketDataFetchError(`Yahoo response for ${symbol} contained no valid closes`);
   }
 
-  return dailyCloses;
+  return { closes: dailyCloses, currency };
+}
+
+// Mirrors admin.ts's CURRENCY_PATTERN — duplicated rather than imported to
+// keep this lib module independent of the routes layer. Yahoo always wins
+// over an admin-entered value when they disagree (see below), but only if
+// what Yahoo sent actually looks like a currency code — an unexpected/
+// malformed meta.currency should never overwrite a previously-valid one.
+const CURRENCY_PATTERN = /^[A-Z]{3}$/;
+
+// Pure statement-building, matching upsertPriceHistory's style — returns
+// null when there's nothing to correct (no fetched currency, it's not a
+// well-formed 3-letter code, or it already matches), so callers can push
+// the result straight into their batch.
+export function buildCurrencyCorrection(
+  db: D1Database,
+  ticker: string,
+  storedCurrency: string,
+  fetchedCurrency: string | null,
+): D1PreparedStatement | null {
+  if (!fetchedCurrency || !CURRENCY_PATTERN.test(fetchedCurrency) || fetchedCurrency === storedCurrency) return null;
+  return db.prepare('UPDATE instruments SET currency = ? WHERE ticker = ?').bind(fetchedCurrency, ticker);
 }
 
 // Pure statement-building — no db.batch() call here, so this stays testable

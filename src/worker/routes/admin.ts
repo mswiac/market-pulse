@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
 import { adminMiddleware } from '../lib/admin';
-import { MarketDataFetchError, fetchDailyCloses, upsertPriceHistory } from '../lib/market-data';
+import { MarketDataFetchError, buildCurrencyCorrection, fetchDailyCloses, upsertPriceHistory } from '../lib/market-data';
 import { sessionMiddleware } from '../lib/session';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -56,7 +56,9 @@ adminRoutes.post('/market-data', async (c) => {
     return c.json({ error: `range must not exceed ${MAX_RANGE_DAYS} days`, code: 'range_too_large' }, 400);
   }
 
-  const instrument = await c.env.DB.prepare('SELECT ticker FROM instruments WHERE ticker = ?').bind(ticker).first();
+  const instrument = await c.env.DB.prepare('SELECT ticker, suffix, currency FROM instruments WHERE ticker = ?')
+    .bind(ticker)
+    .first<{ ticker: string; suffix: string; currency: string }>();
   if (!instrument) {
     return c.json({ error: 'unknown instrument', code: 'unknown_instrument' }, 400);
   }
@@ -65,8 +67,11 @@ adminRoutes.post('/market-data', async (c) => {
   const toIso = body!.to as string;
 
   let closes;
+  let fetchedCurrency: string | null;
   try {
-    closes = await fetchDailyCloses(ticker, fromIso, toIso);
+    // `ticker + suffix` is the Yahoo query symbol only — every DB write
+    // below stays keyed on the bare `ticker` (see market-data.ts).
+    ({ closes, currency: fetchedCurrency } = await fetchDailyCloses(instrument.ticker + instrument.suffix, fromIso, toIso));
   } catch (err) {
     if (err instanceof MarketDataFetchError) {
       return c.json({ error: 'market data fetch failed', code: 'fetch_failed' }, 502);
@@ -74,9 +79,18 @@ adminRoutes.post('/market-data', async (c) => {
     throw err;
   }
 
-  if (closes.length > 0) {
+  const statements = closes.length > 0 ? upsertPriceHistory(c.env.DB, ticker, closes) : [];
+  const currencyCorrection = buildCurrencyCorrection(c.env.DB, ticker, instrument.currency, fetchedCurrency);
+  if (currencyCorrection) {
+    statements.push(currencyCorrection);
+  }
+
+  if (statements.length > 0) {
     try {
-      await c.env.DB.batch(upsertPriceHistory(c.env.DB, ticker, closes));
+      await c.env.DB.batch(statements);
+      if (currencyCorrection) {
+        console.log(`admin-market-data: corrected currency for ${ticker}: ${instrument.currency} -> ${fetchedCurrency}`);
+      }
     } catch {
       return c.json({ error: 'failed to write price history', code: 'write_failed' }, 500);
     }
@@ -91,6 +105,7 @@ async function parseInstrumentBody(c: { req: { json: () => Promise<unknown> } })
   name?: unknown;
   currency?: unknown;
   rsiEligible?: unknown;
+  suffix?: unknown;
 } | null> {
   try {
     return (await c.req.json()) as {
@@ -99,17 +114,17 @@ async function parseInstrumentBody(c: { req: { json: () => Promise<unknown> } })
       name?: unknown;
       currency?: unknown;
       rsiEligible?: unknown;
+      suffix?: unknown;
     };
   } catch {
     return null;
   }
 }
 
-// pl_stock is the only type fetched from Stooq (F-04) — everything else
-// (index, us_stock) uses the existing Yahoo path, same as today's ^VIX/^NDX.
-function deriveProvider(type: string): string {
-  return type === 'pl_stock' ? 'stooq' : 'yahoo';
-}
+// Yahoo is the only provider now (F-04 dropped a planned Stooq fetch path —
+// Stooq's CSV endpoint is gated by a JS proof-of-work anti-bot challenge;
+// Yahoo already covers GPW equities via a `.WA` ticker suffix instead).
+const PROVIDER = 'yahoo';
 
 interface InsertedInstrumentRow {
   ticker: string;
@@ -118,6 +133,7 @@ interface InsertedInstrumentRow {
   rsiEligible: number;
   provider: string;
   currency: string;
+  suffix: string;
 }
 
 adminRoutes.post('/instruments', async (c) => {
@@ -153,15 +169,19 @@ adminRoutes.post('/instruments', async (c) => {
     return c.json({ error: 'rsiEligible must be a boolean', code: 'instrument_rsi_eligible_invalid' }, 400);
   }
   const rsiEligible = body.rsiEligible;
-  const provider = deriveProvider(type);
+
+  // No format restriction, same "admin is trusted" contract as ticker —
+  // empty is valid (index/us_stock tickers are already the exact Yahoo
+  // symbol and need no suffix appended at fetch time).
+  const suffix = typeof body.suffix === 'string' ? body.suffix.trim() : '';
 
   try {
     const row = await c.env.DB.prepare(
-      `INSERT INTO instruments (ticker, name, type, rsi_eligible, provider, currency)
-       VALUES (?, ?, ?, ?, ?, ?)
-       RETURNING ticker, name, type, rsi_eligible AS rsiEligible, provider, currency`,
+      `INSERT INTO instruments (ticker, name, type, rsi_eligible, provider, currency, suffix)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       RETURNING ticker, name, type, rsi_eligible AS rsiEligible, provider, currency, suffix`,
     )
-      .bind(ticker, name, type, rsiEligible ? 1 : 0, provider, currency)
+      .bind(ticker, name, type, rsiEligible ? 1 : 0, PROVIDER, currency, suffix)
       .first<InsertedInstrumentRow>();
 
     return c.json({ ...row, rsiEligible: !!row!.rsiEligible }, 201);

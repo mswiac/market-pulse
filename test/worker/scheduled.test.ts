@@ -14,10 +14,17 @@ function yahooBody(
   closes: Array<number | null>,
   highs?: Array<number | null>,
   lows?: Array<number | null>,
+  currency?: string,
 ) {
   return {
     chart: {
-      result: [{ timestamp: timestamps, indicators: { quote: [{ close: closes, high: highs, low: lows }] } }],
+      result: [
+        {
+          timestamp: timestamps,
+          indicators: { quote: [{ close: closes, high: highs, low: lows }] },
+          meta: currency ? { currency } : undefined,
+        },
+      ],
       error: null,
     },
   };
@@ -49,6 +56,14 @@ async function runScheduled(): Promise<void> {
   await waitOnExecutionContext(ctx);
 }
 
+async function insertSuffixInstrument(currency = 'PLN'): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO instruments (ticker, name, type, rsi_eligible, provider, currency, suffix) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind('TEST', 'Test SA', 'pl_stock', 0, 'yahoo', currency, '.WA')
+    .run();
+}
+
 beforeEach(async () => {
   // This project's D1 test binding isn't isolated per test (see other suites'
   // use of unique emails for the same reason) — clear both tables explicitly
@@ -56,8 +71,12 @@ beforeEach(async () => {
   await env.DB.batch([env.DB.prepare('DELETE FROM market_data'), env.DB.prepare('DELETE FROM price_history')]);
 });
 
-afterEach(() => {
+afterEach(async () => {
   vi.unstubAllGlobals();
+  // The cron now fetches every instrument (no more `provider='yahoo'`
+  // filter) — a leftover test-added row would otherwise leak into the next
+  // test's fetch-call/result-count assertions.
+  await env.DB.prepare("DELETE FROM instruments WHERE ticker = 'TEST'").run();
 });
 
 describe('scheduled handler', () => {
@@ -178,11 +197,65 @@ describe('scheduled handler', () => {
     } finally {
       consoleErrorSpy.mockRestore();
       // D1's exec() splits statements on newlines, not on semicolons — each
-      // statement below must stay on a single line.
+      // statement below must stay on a single line. `currency`/`suffix`
+      // mirror migrations/0010_instrument_currency.sql and
+      // migrations/0015_instruments_suffix.sql respectively (both DEFAULT,
+      // so the seeded ^VIX/^NDX rows below need no explicit value) — this
+      // table isn't reset per test (D1 test binding is shared across the
+      // whole file), so every column any later test in this file might
+      // touch must be present here too, not just the ones this test itself
+      // needs.
       await env.DB.exec(
-        "CREATE TABLE instruments (ticker TEXT PRIMARY KEY, name TEXT NOT NULL, type TEXT NOT NULL CHECK (type IN ('index')), rsi_eligible INTEGER NOT NULL, provider TEXT NOT NULL);\n" +
+        "CREATE TABLE instruments (ticker TEXT PRIMARY KEY, name TEXT NOT NULL, type TEXT NOT NULL CHECK (type IN ('index', 'pl_stock', 'us_stock')), rsi_eligible INTEGER NOT NULL, provider TEXT NOT NULL, currency TEXT NOT NULL DEFAULT 'USD', suffix TEXT NOT NULL DEFAULT '');\n" +
           "INSERT INTO instruments (ticker, name, type, rsi_eligible, provider) VALUES ('^VIX', 'VIX', 'index', 0, 'yahoo'), ('^NDX', 'NASDAQ-100', 'index', 1, 'yahoo');",
       );
     }
+  });
+
+  it('fetches a suffix-bearing instrument via ticker+suffix, writing DB rows under the bare ticker', async () => {
+    await insertSuffixInstrument();
+
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS))),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await runScheduled();
+
+    const calledUrls = fetchMock.mock.calls.map((call) => call[0] as string);
+    expect(calledUrls.some((url) => url.includes(encodeURIComponent('TEST.WA')))).toBe(true);
+
+    const marketDataRow = await env.DB.prepare('SELECT * FROM market_data WHERE ticker = ?').bind('TEST').first<MarketDataRow>();
+    expect(marketDataRow).not.toBeNull();
+
+    const priceHistoryCount = await env.DB.prepare('SELECT COUNT(*) as count FROM price_history WHERE ticker = ?')
+      .bind('TEST')
+      .first<{ count: number }>();
+    expect(priceHistoryCount?.count).toBe(15);
+
+    // Never wrote a row keyed on the provider symbol itself.
+    const wrongTicker = await env.DB.prepare('SELECT 1 FROM price_history WHERE ticker = ?').bind('TEST.WA').first();
+    expect(wrongTicker).toBeNull();
+  });
+
+  it('auto-corrects instruments.currency when the fetched currency disagrees with the stored value', async () => {
+    await insertSuffixInstrument('USD');
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) => {
+        if (url.includes(encodeURIComponent('TEST.WA'))) {
+          return Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS, 'PLN')));
+        }
+        return Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS)));
+      }),
+    );
+
+    await runScheduled();
+
+    const row = await env.DB.prepare('SELECT currency FROM instruments WHERE ticker = ?').bind('TEST').first<{ currency: string }>();
+    expect(row?.currency).toBe('PLN');
   });
 });

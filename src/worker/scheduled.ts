@@ -1,7 +1,7 @@
 import type { Env } from './index';
 import { evaluateAlerts } from './lib/alert-evaluation';
 import type { InstrumentRow } from './lib/instruments';
-import { fetchDailyCloses, upsertPriceHistory, type DailyClose } from './lib/market-data';
+import { buildCurrencyCorrection, fetchDailyCloses, upsertPriceHistory, type DailyClosesResult } from './lib/market-data';
 import { calculateRSI } from './lib/rsi';
 
 const RETRY_ATTEMPTS = 3;
@@ -15,7 +15,7 @@ function dateToIsoDateString(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-async function fetchWithRetry(symbol: string): Promise<DailyClose[]> {
+async function fetchWithRetry(symbol: string): Promise<DailyClosesResult> {
   const to = dateToIsoDateString(new Date());
   const from = dateToIsoDateString(new Date(Date.now() - CRON_LOOKBACK_DAYS * 24 * 60 * 60 * 1000));
 
@@ -36,18 +36,18 @@ async function fetchWithRetry(symbol: string): Promise<DailyClose[]> {
 export async function handleScheduled(env: Env): Promise<void> {
   let instruments: InstrumentRow[];
   try {
-    const { results } = await env.DB.prepare(
-      `SELECT ticker, rsi_eligible FROM instruments WHERE provider = 'yahoo'`,
-    ).all<InstrumentRow>();
+    const { results } = await env.DB.prepare(`SELECT ticker, rsi_eligible, suffix, currency FROM instruments`).all<InstrumentRow>();
     instruments = results;
   } catch (err) {
     console.error('market-data-pipeline: failed to load instruments registry', err);
     return;
   }
 
-  for (const { ticker, rsi_eligible } of instruments) {
+  for (const { ticker, rsi_eligible, suffix, currency } of instruments) {
     try {
-      const closes = await fetchWithRetry(ticker);
+      // `ticker + suffix` is the Yahoo query symbol only — every DB write
+      // below stays keyed on the bare `ticker` (see market-data.ts).
+      const { closes, currency: fetchedCurrency } = await fetchWithRetry(ticker + suffix);
       if (closes.length === 0) {
         // Unreachable in practice — the cron's 30-day window always spans
         // trading days — but fetchDailyCloses's contract now allows an empty
@@ -67,7 +67,15 @@ export async function handleScheduled(env: Env): Promise<void> {
         ).bind(ticker, latest.close, rsi, latest.high, latest.low),
       );
 
+      const currencyCorrection = buildCurrencyCorrection(env.DB, ticker, currency, fetchedCurrency);
+      if (currencyCorrection) {
+        statements.push(currencyCorrection);
+      }
+
       await env.DB.batch(statements);
+      if (currencyCorrection) {
+        console.log(`market-data-pipeline: corrected currency for ${ticker}: ${currency} -> ${fetchedCurrency}`);
+      }
     } catch (err) {
       console.error(`market-data-pipeline: failed to process ${ticker}`, err);
     }

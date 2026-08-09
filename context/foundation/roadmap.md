@@ -42,7 +42,7 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | S-06 | trigger-history       | view a history of all previously triggered alerts         | S-05           | FR-010                          | done     |
 | S-08 | daily-high-low-evaluation | get an alert notification even when the threshold was only crossed intraday, not at close | S-05      | FR-012                          | done     |
 | S-09 | admin-panel            | (admin-only) manually fetch/backfill market data for a chosen instrument over a chosen date range | S-01, F-02, F-03 | —                       | done  |
-| F-04 | stooq-provider-support | (foundation) fetch daily closes for a ticker from Stooq, as a second provider alongside Yahoo | F-02, F-03 | —                          | proposed |
+| F-04 | stooq-provider-support | (foundation) fetch daily closes for GPW-listed equities via Yahoo's `.WA` ticker suffix (supersedes the original Stooq-fetch scope — see F-04 section) | F-02, F-03 | —                          | proposed |
 | S-10 | admin-add-instrument   | (admin-only) add a new instrument to the registry — pick type (Index / Spółki PL / Spółki USA), enter ticker + company name | S-09, F-03 | —                          | done |
 
 ## Streams
@@ -53,7 +53,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 |--------|-----------------------------|-------------------------------------|---------------------------------------------------------------------------------|
 | A      | Auth & alert CRUD           | `F-01` → `F-01a` → `S-01` → `S-02` → `S-03`  | Delivers the north star (S-02); S-03 is a refinement slice after it lands.      |
 | B      | Data pipeline & notif.      | `F-02` → `F-03` → `S-04` → `S-05` → `S-06` → `S-08` | F-02 branches from F-01 parallel with S-01; S-04 joins Stream A at S-02; `F-03` also unlocks `S-07` (30-day history view), which runs parallel to S-04. `S-08` depends only on `S-05` and runs parallel to `S-06`. `S-09` crosses both streams — needs `S-01` (auth, Stream A) plus `F-02`/`F-03` (Stream B) — and can run any time after all three are done. |
-| C      | Multi-provider instruments  | `F-03` → (`F-04` ∥ `S-10`, both also need `S-09`)   | `F-04` (Stooq fetch support) and `S-10` (admin add-instrument UI) are independent of each other — either can land first. `S-10` alone is usable for `type='us_stock'` instruments (Yahoo already fetches any US ticker); `type='pl_stock'` instruments added via `S-10` have no working fetch until `F-04` lands. |
+| C      | Multi-provider instruments  | `F-03` → (`F-04` ∥ `S-10`, both also need `S-09`)   | `F-04` (GPW equity fetch support via Yahoo `.WA`, originally scoped as Stooq fetch support) and `S-10` (admin add-instrument UI) are independent of each other — either can land first. `S-10` alone is usable for `type='us_stock'` instruments (Yahoo already fetches any US ticker); `type='pl_stock'` instruments added via `S-10` have no working fetch until `F-04` lands. |
 
 ## Baseline
 
@@ -122,9 +122,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Renames the identifier used as the join key across three existing tables (`price_history.instrument`, `market_data.instrument`, `alerts.instrument`) from `VIX`/`NASDAQ100` to `^VIX`/`^NDX` — this is a data migration on existing rows, not just a new table. The existing `alerts` `CHECK` constraint (literal `'VIX'` match) must be replaced by an `rsi_eligible` lookup (or updated to the new literal `'^VIX'`) in the same migration, or existing alerts break.
 - **Status:** done
 
-### F-04: Stooq provider support
+### F-04: GPW equity support via Yahoo (.WA suffix) — originally scoped as Stooq provider support
 
-- **Outcome:** (foundation) A second market-data fetch path — alongside the existing Yahoo fetch in `src/worker/lib/market-data.ts` — retrieves daily closes (and high/low, per S-08) for a given ticker from Stooq. Dispatch is driven by `instruments.provider` (already `'yahoo'` for all current rows): instruments with `provider = 'stooq'` are fetched through the new path instead. The daily cron (`scheduled.ts`) and the admin backfill action (S-09) both call whichever provider the instrument row specifies, transparently. Ticker format contract (resolved): `instruments.ticker` must be the exact symbol Stooq's own history/quote endpoint accepts for that instrument — i.e. entering the ticker and querying Stooq for its history must work directly, with no separate symbol-mapping layer (same "ticker = the value sent to the provider" principle F-03 already established for Yahoo).
+- **Outcome:** (foundation) GPW-listed equities (`instruments.type = 'pl_stock'`) get a working data fetch by extending the existing Yahoo fetch in `src/worker/lib/market-data.ts` — not via a second Stooq provider as originally scoped (see Risk for why). `instruments.suffix` (a new column, admin-set on creation with a per-type default suggestion — `.WA` for `pl_stock`, empty otherwise — freely overridable) is appended to `ticker` only when building the Yahoo query symbol; every persisted row (`price_history`, `market_data`) and every displayed value (alerts, instrument details, history) stays keyed on the bare `ticker`. The daily cron (`scheduled.ts`) and the admin backfill action (S-09) both use `ticker + suffix` for the fetch call and the bare `ticker` for all writes. `instruments.currency` self-corrects (and logs the correction) against whatever currency Yahoo reports on every successful fetch.
 - **Change ID:** `stooq-provider-support`
 - **PRD refs:** — (new provider integration; not yet reflected in an FR)
 - **Unlocks:** S-10's `type='pl_stock'` instruments actually fetching data (S-10 itself does not require this to be built first — see Stream C)
@@ -134,8 +134,10 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Exact Stooq bulk-download URL/column format for individual PL-listed (GPW) equities (not indices — F-02 established Stooq lacks VIX coverage, but per-stock GPW data was never verified). — Owner: user. Block: no (researchable during `/10x-plan`).
   - Does a PL-stock ticker need currency handling beyond the existing manual `instruments.currency` column, or does Stooq return values in a currency that needs conversion? — Owner: user. Block: no.
-- **Risk:** Stooq has no official API contract (already noted as a risk on F-02) — this reintroduces that dependency, previously dropped when F-02 moved fully to Yahoo (VIX has no Stooq coverage). Scoping this to non-index equities only avoids re-litigating that decision. Needs the same "raw close + high/low → `price_history`" write shape as the Yahoo path so downstream code (RSI calc, alert evaluation) doesn't need to branch on provider.
+  - **Resolved during `/10x-plan`:** both unknowns above became moot — live testing showed Stooq's CSV endpoint (`stooq.pl`/`stooq.com` `/q/d/l/`) is now gated by a client-side JS proof-of-work anti-bot challenge (SHA-256 nonce search + `POST /__verify`), which a plain `fetch()` (curl, or a Cloudflare Worker) cannot pass without independently re-implementing that challenge-response flow — and it's unverified whether the block is JS-only or also IP-reputation-based against Workers' egress IPs. Yahoo's existing chart API was found to already cover GPW equities via a `.WA` ticker suffix (live-verified: `CDR.WA` → valid data, `meta.currency: "PLN"`, `meta.exchangeName: "WSE"`), so this slice extends that proven path instead of building a new, riskier Stooq integration.
+- **Risk:** This is a deliberate, scoped deviation from the "ticker = exact provider value" principle F-03 established for `index`/`us_stock` — `pl_stock` tickers stay display-clean (e.g. `CDR`, not `CDR.WA`), with the new `instruments.suffix` column carrying the provider-symbol delta instead, applied only at fetch time. Getting the ticker-vs-provider-symbol split backwards anywhere would silently write `price_history`/`market_data` rows keyed on the suffixed symbol, breaking the join with `alerts` (keyed on the bare ticker) without an obvious error. Whether Stooq's anti-bot block is JS-only or also IP-reputation-based against Cloudflare Workers was never fully resolved — moot for this slice since Stooq isn't used, but relevant if Stooq is ever revisited.
 - **Status:** proposed
+- **Parked during this slice's planning:** Dynamic/admin-editable instrument categories (browsing existing `type` values and adding new ones in the admin panel, e.g. a hypothetical "Spółka DE" for a future non-GPW, non-US market) — raised while discussing how `suffix` should generalize beyond GPW, explicitly deferred as a separate, larger feature (new categories table + CRUD + `instruments.type` CHECK-constraint changes), not a small addition to this slice. See `## Parked`.
 
 ## Slices
 
@@ -277,7 +279,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-06       | trigger-history       | Trigger history: list of fired alerts               | no                    | Awaits S-05                                                        |
 | S-08       | daily-high-low-evaluation | Price alerts: evaluate against daily high/low, not just close | no       | Awaits S-05 (done); Yahoo response already carries high/low, needs parsing + schema + evaluation change |
 | S-09       | admin-panel            | Admin panel: manual market-data fetch/backfill for an instrument + date range | yes | Awaits S-01, F-02, F-03 (all done); run `/10x-plan admin-panel` |
-| F-04       | stooq-provider-support | Stooq provider: fetch daily closes (+ high/low) for a ticker from Stooq | yes | Awaits F-02, F-03 (both done); run `/10x-plan stooq-provider-support` |
+| F-04       | stooq-provider-support | GPW equity support: fetch daily closes (+ high/low) via Yahoo `.WA` ticker suffix (originally scoped as Stooq fetch) | yes | Awaits F-02, F-03 (both done); planned and implemented via `/10x-plan`/`/10x-implement stooq-provider-support` |
 | S-10       | admin-add-instrument   | Admin panel: add a new instrument (type combobox + ticker + name)  | yes | Awaits S-09, F-03 (both done); run `/10x-plan admin-add-instrument`; open naming/rsi_eligible unknowns worth a quick confirm before planning |
 
 ## Open Roadmap Questions
@@ -286,6 +288,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Parked
 
+- **Dynamic/admin-editable instrument categories** — browsing existing `instruments.type` values and adding new ones on the fly from the admin panel (e.g. a hypothetical "Spółka DE" for a future non-GPW, non-US market), rather than the current fixed enum (`index`/`pl_stock`/`us_stock`) with a hardcoded `CHECK` constraint and hardcoded Polish labels (`instrument-types.ts`). Why parked: raised during F-04 (`stooq-provider-support`) planning while discussing how the new `instruments.suffix` column should generalize beyond GPW — recognized as a separate, larger feature (new categories table + CRUD + `instruments.type` schema changes, plus touching S-10's creation form), not a small addition to F-04's actual scope (a working GPW data fetch).
 - **Additional instruments beyond VIX and NASDAQ-100 (FR-011)** — Why parked: PRD §Non-Goals; expanding the instrument set before the 2-instrument loop is proven working is premature.
 - **Additional indicator types beyond price and RSI** — Why parked: PRD §Non-Goals; MACD, Bollinger Bands, and volume-based indicators are post-MVP scope.
 - **Push notifications, SMS, webhooks** — Why parked: PRD §Non-Goals; email is the core value; additional channels add integration complexity without validating it.

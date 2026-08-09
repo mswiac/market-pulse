@@ -298,6 +298,10 @@
         <source>Ticker</source>
         <target>Ticker</target>
       </trans-unit>
+      <trans-unit id="addInstrument.suffix.label" datatype="html">
+        <source>Suffix (e.g. .WA)</source>
+        <target>Sufiks (np. .WA)</target>
+      </trans-unit>
       <trans-unit id="addInstrument.name.label" datatype="html">
         <source>Company name</source>
         <target>Nazwa spółki</target>
