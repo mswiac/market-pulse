@@ -287,25 +287,25 @@ None beyond what already exists — no additional network round-trips (currency 
 
 #### Manual
 
-- [ ] 1.4 Selecting "Spółki PL" pre-fills the Sufiks field with `.WA`; field is editable/clearable
-- [ ] 1.5 Adding an `index`/`us_stock` instrument still works unchanged
+- [x] 1.4 Selecting "Spółki PL" pre-fills the Sufiks field with `.WA`; field is editable/clearable
+- [x] 1.5 Adding an `index`/`us_stock` instrument still works unchanged
 
 ### Phase 2: Fetch layer + currency reconciliation
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npm run typecheck`
-- [x] 2.2 Worker unit tests pass: `npm run test:worker`
-- [x] 2.3 Full CI passes: `npm run ci`
+- [x] 2.1 Type checking passes: `npm run typecheck` — 0619532
+- [x] 2.2 Worker unit tests pass: `npm run test:worker` — 0619532
+- [x] 2.3 Full CI passes: `npm run ci` — 0619532
 
 #### Manual
 
-- [ ] 2.4 Real GPW ticker added + backfilled; `price_history` rows land under the bare ticker with plausible values
-- [ ] 2.5 Currency auto-corrected (and logged) when admin-entered value disagrees with Yahoo's reported currency
+- [x] 2.4 Real GPW ticker added + backfilled; `price_history` rows land under the bare ticker with plausible values
+- [x] 2.5 Currency auto-corrected (and logged) when admin-entered value disagrees with Yahoo's reported currency
 
 ### Phase 3: Documentation
 
 #### Manual
 
-- [ ] 3.1 `roadmap.md` F-04 section describes the Yahoo `.WA` approach, not a Stooq fetch path
-- [ ] 3.2 Dynamic-categories idea captured in the roadmap (Parked or backlog)
+- [x] 3.1 `roadmap.md` F-04 section describes the Yahoo `.WA` approach, not a Stooq fetch path
+- [ ] 3.2 Dynamic-categories idea captured in the roadmap (Parked or backlog) — skipped per user (2026-08-09): manual/hardcoded category additions likely to remain the approach, dynamic categories deprioritized
