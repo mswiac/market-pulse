@@ -3,7 +3,7 @@ project: MarketPulse
 version: 1
 status: draft
 created: 2026-06-21
-updated: 2026-08-02
+updated: 2026-08-09
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -42,6 +42,8 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | S-06 | trigger-history       | view a history of all previously triggered alerts         | S-05           | FR-010                          | done     |
 | S-08 | daily-high-low-evaluation | get an alert notification even when the threshold was only crossed intraday, not at close | S-05      | FR-012                          | done     |
 | S-09 | admin-panel            | (admin-only) manually fetch/backfill market data for a chosen instrument over a chosen date range | S-01, F-02, F-03 | —                       | done  |
+| F-04 | stooq-provider-support | (foundation) fetch daily closes for a ticker from Stooq, as a second provider alongside Yahoo | F-02, F-03 | —                          | proposed |
+| S-10 | admin-add-instrument   | (admin-only) add a new instrument to the registry — pick type (Index / Spółki PL / Spółki USA), enter ticker + company name | S-09, F-03 | —                          | proposed |
 
 ## Streams
 
@@ -51,6 +53,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 |--------|-----------------------------|-------------------------------------|---------------------------------------------------------------------------------|
 | A      | Auth & alert CRUD           | `F-01` → `F-01a` → `S-01` → `S-02` → `S-03`  | Delivers the north star (S-02); S-03 is a refinement slice after it lands.      |
 | B      | Data pipeline & notif.      | `F-02` → `F-03` → `S-04` → `S-05` → `S-06` → `S-08` | F-02 branches from F-01 parallel with S-01; S-04 joins Stream A at S-02; `F-03` also unlocks `S-07` (30-day history view), which runs parallel to S-04. `S-08` depends only on `S-05` and runs parallel to `S-06`. `S-09` crosses both streams — needs `S-01` (auth, Stream A) plus `F-02`/`F-03` (Stream B) — and can run any time after all three are done. |
+| C      | Multi-provider instruments  | `F-03` → (`F-04` ∥ `S-10`, both also need `S-09`)   | `F-04` (Stooq fetch support) and `S-10` (admin add-instrument UI) are independent of each other — either can land first. `S-10` alone is usable for `type='us_stock'` instruments (Yahoo already fetches any US ticker); `type='pl_stock'` instruments added via `S-10` have no working fetch until `F-04` lands. |
 
 ## Baseline
 
@@ -118,6 +121,21 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:** —
 - **Risk:** Renames the identifier used as the join key across three existing tables (`price_history.instrument`, `market_data.instrument`, `alerts.instrument`) from `VIX`/`NASDAQ100` to `^VIX`/`^NDX` — this is a data migration on existing rows, not just a new table. The existing `alerts` `CHECK` constraint (literal `'VIX'` match) must be replaced by an `rsi_eligible` lookup (or updated to the new literal `'^VIX'`) in the same migration, or existing alerts break.
 - **Status:** done
+
+### F-04: Stooq provider support
+
+- **Outcome:** (foundation) A second market-data fetch path — alongside the existing Yahoo fetch in `src/worker/lib/market-data.ts` — retrieves daily closes (and high/low, per S-08) for a given ticker from Stooq. Dispatch is driven by `instruments.provider` (already `'yahoo'` for all current rows): instruments with `provider = 'stooq'` are fetched through the new path instead. The daily cron (`scheduled.ts`) and the admin backfill action (S-09) both call whichever provider the instrument row specifies, transparently. Ticker format contract (resolved): `instruments.ticker` must be the exact symbol Stooq's own history/quote endpoint accepts for that instrument — i.e. entering the ticker and querying Stooq for its history must work directly, with no separate symbol-mapping layer (same "ticker = the value sent to the provider" principle F-03 already established for Yahoo).
+- **Change ID:** `stooq-provider-support`
+- **PRD refs:** — (new provider integration; not yet reflected in an FR)
+- **Unlocks:** S-10's `type='pl_stock'` instruments actually fetching data (S-10 itself does not require this to be built first — see Stream C)
+- **Prerequisites:** F-02, F-03
+- **Parallel with:** S-10
+- **Blockers:** —
+- **Unknowns:**
+  - Exact Stooq bulk-download URL/column format for individual PL-listed (GPW) equities (not indices — F-02 established Stooq lacks VIX coverage, but per-stock GPW data was never verified). — Owner: user. Block: no (researchable during `/10x-plan`).
+  - Does a PL-stock ticker need currency handling beyond the existing manual `instruments.currency` column, or does Stooq return values in a currency that needs conversion? — Owner: user. Block: no.
+- **Risk:** Stooq has no official API contract (already noted as a risk on F-02) — this reintroduces that dependency, previously dropped when F-02 moved fully to Yahoo (VIX has no Stooq coverage). Scoping this to non-index equities only avoids re-litigating that decision. Needs the same "raw close + high/low → `price_history`" write shape as the Yahoo path so downstream code (RSI calc, alert evaluation) doesn't need to branch on provider.
+- **Status:** proposed
 
 ## Slices
 
@@ -230,6 +248,18 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** First authorization tier beyond the flat "each user manages only their own alerts" model documented in `CLAUDE.md` — that doc needs updating alongside this slice. `ADMIN_EMAILS` living in env/secret (not a DB table) means adding/removing an admin requires a redeploy or secret update, not a UI action — deliberate minimal choice for a single-action admin panel. Reshaping `fetchDailyCloses`'s signature touches the existing cron call site — must verify the default `from`/`to` values reproduce today's cron behavior exactly. Directly resolves the "self-backfill window" gap flagged during `S-08` plan review (44-day RSI lookback vs. the cron's ~21-trading-day fetch) by giving a way to manually backfill deeper history.
 - **Status:** done
 
+### S-10: Admin can add a new instrument to the registry
+
+- **Outcome:** In the admin panel, an admin can add a new instrument via a form with three fields: a **type** combobox (`Indeks` — the existing type; `Spółki PL`; `Spółki USA`), a **ticker** text field, and a **company name** text field. Type selection drives `provider` automatically — `Spółki PL` → `stooq`, `Spółki USA` → `yahoo` (existing `Indeks` instruments keep `provider = 'yahoo'`, unchanged) — and `rsi_eligible` automatically: both `Spółki PL` and `Spółki USA` default to RSI-eligible (`1`), no separate toggle in the form. Ticker must be entered in the exact format the instrument's provider expects for that ticker's own history (same contract as F-04's ticker-format decision) — the admin is trusted to enter the correct provider symbol; the form validates non-empty, not provider-specific syntax. The new row is written to the `instruments` table and immediately available wherever the registry is already consumed: instrument history (S-07), alert creation (S-02/S-04), and admin backfill (S-09). `type='pl_stock'` instruments have no working data fetch until F-04 lands — see Stream C.
+- **Change ID:** `admin-add-instrument`
+- **PRD refs:** — (new admin-only capability; not yet reflected in an FR)
+- **Prerequisites:** S-09, F-03
+- **Parallel with:** F-04
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** Extends the `instruments` table's `type` CHECK constraint from `CHECK (type IN ('index'))` (`migrations/0008_instrument_registry.sql`) to include `'pl_stock'`/`'us_stock'` — same shadow-table migration pattern already used for SQLite CHECK/UNIQUE changes in this repo (`migrations/0008_instrument_registry.sql`, `migrations/0011_alert_notifications.sql`). Internal type values (`pl_stock`/`us_stock`) deliberately diverge from the Polish UI labels (`Spółki PL`/`Spółki USA`) and from provider names (`stooq`/`yahoo`) — code/comments stay English per `CLAUDE.md`, only the rendered combobox label is Polish. Because `provider` and `rsi_eligible` are both inferred from `type` (not admin-chosen), that type → provider/RSI mapping is a business rule baked into this slice — if a third provider or a type needing manual RSI-eligibility ever shows up, this slice's logic (not just the schema) needs revisiting.
+- **Status:** proposed
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID             | Suggested issue title                               | Ready for `/10x-plan` | Notes                                                              |
@@ -247,6 +277,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-06       | trigger-history       | Trigger history: list of fired alerts               | no                    | Awaits S-05                                                        |
 | S-08       | daily-high-low-evaluation | Price alerts: evaluate against daily high/low, not just close | no       | Awaits S-05 (done); Yahoo response already carries high/low, needs parsing + schema + evaluation change |
 | S-09       | admin-panel            | Admin panel: manual market-data fetch/backfill for an instrument + date range | yes | Awaits S-01, F-02, F-03 (all done); run `/10x-plan admin-panel` |
+| F-04       | stooq-provider-support | Stooq provider: fetch daily closes (+ high/low) for a ticker from Stooq | yes | Awaits F-02, F-03 (both done); run `/10x-plan stooq-provider-support` |
+| S-10       | admin-add-instrument   | Admin panel: add a new instrument (type combobox + ticker + name)  | yes | Awaits S-09, F-03 (both done); run `/10x-plan admin-add-instrument`; open naming/rsi_eligible unknowns worth a quick confirm before planning |
 
 ## Open Roadmap Questions
 
