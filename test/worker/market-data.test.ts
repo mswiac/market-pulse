@@ -220,4 +220,11 @@ describe('buildCurrencyCorrection', () => {
     expect(bound[0].sql).toContain('UPDATE instruments SET currency = ?');
     expect(bound[0].args).toEqual(['PLN', 'CDR']);
   });
+
+  it('returns null when the fetched currency is not a well-formed 3-letter code, even if it differs from stored', () => {
+    const { db } = fakeDb();
+    expect(buildCurrencyCorrection(db, 'CDR', 'USD', 'pln')).toBeNull();
+    expect(buildCurrencyCorrection(db, 'CDR', 'USD', 'PLZLOTY')).toBeNull();
+    expect(buildCurrencyCorrection(db, 'CDR', 'USD', '')).toBeNull();
+  });
 });

@@ -121,16 +121,24 @@ export async function fetchDailyCloses(symbol: string, from: string, to: string)
   return { closes: dailyCloses, currency };
 }
 
+// Mirrors admin.ts's CURRENCY_PATTERN — duplicated rather than imported to
+// keep this lib module independent of the routes layer. Yahoo always wins
+// over an admin-entered value when they disagree (see below), but only if
+// what Yahoo sent actually looks like a currency code — an unexpected/
+// malformed meta.currency should never overwrite a previously-valid one.
+const CURRENCY_PATTERN = /^[A-Z]{3}$/;
+
 // Pure statement-building, matching upsertPriceHistory's style — returns
-// null when there's nothing to correct (no fetched currency, or it already
-// matches), so callers can push the result straight into their batch.
+// null when there's nothing to correct (no fetched currency, it's not a
+// well-formed 3-letter code, or it already matches), so callers can push
+// the result straight into their batch.
 export function buildCurrencyCorrection(
   db: D1Database,
   ticker: string,
   storedCurrency: string,
   fetchedCurrency: string | null,
 ): D1PreparedStatement | null {
-  if (!fetchedCurrency || fetchedCurrency === storedCurrency) return null;
+  if (!fetchedCurrency || !CURRENCY_PATTERN.test(fetchedCurrency) || fetchedCurrency === storedCurrency) return null;
   return db.prepare('UPDATE instruments SET currency = ? WHERE ticker = ?').bind(fetchedCurrency, ticker);
 }
 

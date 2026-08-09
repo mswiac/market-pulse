@@ -41,7 +41,7 @@ instrumentsRoutes.get('/', async (c) => {
 instrumentsRoutes.get('/:ticker/history', async (c) => {
   const ticker = c.req.param('ticker');
 
-  const instrument = await c.env.DB.prepare('SELECT ticker, rsi_eligible, currency FROM instruments WHERE ticker = ?')
+  const instrument = await c.env.DB.prepare('SELECT ticker, rsi_eligible, currency, suffix FROM instruments WHERE ticker = ?')
     .bind(ticker)
     .first<InstrumentRow>();
 

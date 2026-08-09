@@ -70,10 +70,12 @@ export async function handleScheduled(env: Env): Promise<void> {
       const currencyCorrection = buildCurrencyCorrection(env.DB, ticker, currency, fetchedCurrency);
       if (currencyCorrection) {
         statements.push(currencyCorrection);
-        console.log(`market-data-pipeline: corrected currency for ${ticker}: ${currency} -> ${fetchedCurrency}`);
       }
 
       await env.DB.batch(statements);
+      if (currencyCorrection) {
+        console.log(`market-data-pipeline: corrected currency for ${ticker}: ${currency} -> ${fetchedCurrency}`);
+      }
     } catch (err) {
       console.error(`market-data-pipeline: failed to process ${ticker}`, err);
     }
