@@ -290,8 +290,8 @@ Phase 1's migration is additive/widening only (no existing row is altered in mea
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly locally: `npm run migrate:local`
-- [x] 1.2 Existing instrument tests still pass: `npm run test:worker`
+- [x] 1.1 Migration applies cleanly locally: `npm run migrate:local` — c0bf390
+- [x] 1.2 Existing instrument tests still pass: `npm run test:worker` — c0bf390
 
 #### Manual
 
@@ -301,8 +301,8 @@ Phase 1's migration is additive/widening only (no existing row is altered in mea
 
 #### Automated
 
-- [ ] 2.1 `npm run test:worker` passes, including new `admin.test.ts` cases
-- [ ] 2.2 `npm run typecheck` passes
+- [x] 2.1 `npm run test:worker` passes, including new `admin.test.ts` cases
+- [x] 2.2 `npm run typecheck` passes
 
 #### Manual
 
