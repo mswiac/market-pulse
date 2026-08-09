@@ -44,6 +44,8 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | S-09 | admin-panel            | (admin-only) manually fetch/backfill market data for a chosen instrument over a chosen date range | S-01, F-02, F-03 | —                       | done  |
 | F-04 | stooq-provider-support | (foundation) fetch daily closes for GPW-listed equities via Yahoo's `.WA` ticker suffix (supersedes the original Stooq-fetch scope — see F-04 section) | F-02, F-03 | —                          | done |
 | S-10 | admin-add-instrument   | (admin-only) add a new instrument to the registry — pick type (Index / Spółki PL / Spółki USA), enter ticker + company name | S-09, F-03 | —                          | done |
+| S-11 | admin-remove-instrument | (admin-only) remove an instrument from the registry | S-09, F-03 | —                          | planned |
+| S-12 | admin-remove-user      | (admin-only) remove a user account (cascades to their sessions/alerts/trigger history) | F-01a, S-01, S-09 | —              | planned |
 
 ## Streams
 
@@ -54,6 +56,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | A      | Auth & alert CRUD           | `F-01` → `F-01a` → `S-01` → `S-02` → `S-03`  | Delivers the north star (S-02); S-03 is a refinement slice after it lands.      |
 | B      | Data pipeline & notif.      | `F-02` → `F-03` → `S-04` → `S-05` → `S-06` → `S-08` | F-02 branches from F-01 parallel with S-01; S-04 joins Stream A at S-02; `F-03` also unlocks `S-07` (30-day history view), which runs parallel to S-04. `S-08` depends only on `S-05` and runs parallel to `S-06`. `S-09` crosses both streams — needs `S-01` (auth, Stream A) plus `F-02`/`F-03` (Stream B) — and can run any time after all three are done. |
 | C      | Multi-provider instruments  | `F-03` → (`F-04` ∥ `S-10`, both also need `S-09`)   | `F-04` (GPW equity fetch support via Yahoo `.WA`, originally scoped as Stooq fetch support) and `S-10` (admin add-instrument UI) are independent of each other — either can land first. `S-10` alone is usable for `type='us_stock'` instruments (Yahoo already fetches any US ticker); `type='pl_stock'` instruments added via `S-10` have no working fetch until `F-04` lands. |
+| D      | Admin panel data management  | `S-09` → (`S-11` ∥ `S-12`)                          | Two more admin-panel tabs alongside S-09/S-10, independent of each other and of Stream C. `S-11` (remove instrument) also needs `F-03`; `S-12` (remove user) also needs `F-01a`/`S-01`. |
 
 ## Baseline
 
@@ -262,6 +265,34 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Extends the `instruments` table's `type` CHECK constraint from `CHECK (type IN ('index'))` (`migrations/0008_instrument_registry.sql`) to include `'pl_stock'`/`'us_stock'` — same shadow-table migration pattern already used for SQLite CHECK/UNIQUE changes in this repo (`migrations/0008_instrument_registry.sql`, `migrations/0011_alert_notifications.sql`). Internal type values (`pl_stock`/`us_stock`) deliberately diverge from the Polish UI labels (`Spółki PL`/`Spółki USA`) and from provider names (`stooq`/`yahoo`) — code/comments stay English per `CLAUDE.md`, only the rendered combobox label is Polish. Because `provider` is inferred from `type` (not admin-chosen), that type → provider mapping is a business rule baked into this slice — if a third provider ever shows up, this slice's logic (not just the schema) needs revisiting. This slice also fixes an unrelated inconsistency surfaced during its own planning: two incompatible admin/write error-response shapes existed in the backend (`admin.ts`'s `{error, code}` vs `alerts.ts`'s `{error}` + string-matching) — `alerts.ts` and its frontend consumer are migrated to the same `{error, code}` convention as part of this slice, since the new endpoint needed to pick one.
 - **Status:** done
 
+### S-11: Admin can remove an instrument from the registry
+
+- **Outcome:** In the admin panel, a new "Remove instrument" tab lets an admin pick an instrument via the same type + instrument two-combobox pattern used elsewhere (S-07/S-09/S-10) and delete it from the `instruments` table. Because `ticker` is a plain string match (not an enforced foreign key) across `price_history`, `market_data`, and `alerts`, removal must decide what happens to those rows — deleting the registry row alone would leave existing user alerts pointing at a ticker no longer resolvable to a name/type, plus orphaned `price_history`/`market_data` rows behind. Exact cleanup behavior (block deletion while active alerts reference the ticker vs. cascade-delete those alerts too) is an open question for planning.
+- **Change ID:** `admin-remove-instrument`
+- **PRD refs:** — (new admin-only capability; not yet reflected in an FR)
+- **Prerequisites:** S-09, F-03
+- **Parallel with:** S-12
+- **Blockers:** —
+- **Unknowns:**
+  - Should removal be blocked when active alerts reference the ticker (safer, but leaves the admin unable to remove the instrument without contacting the user), or should it cascade-delete those alerts (matches the `users`→`alerts` `ON DELETE CASCADE` precedent used in S-12, but is a silent, admin-triggered destructive action on another user's data)? — Owner: user. Block: no (resolve during `/10x-plan`).
+  - Should historical `price_history`/`market_data` rows for the removed ticker be deleted too, or kept as orphaned history? — Owner: user. Block: no.
+- **Risk:** `instruments.ticker` has no `FOREIGN KEY` constraint from `price_history`, `market_data`, or `alerts` (confirmed in `migrations/0008_instrument_registry.sql` — plain `TEXT` join key) — unlike `users.id`, which cascades via real FKs (see S-12). Whatever cleanup policy is chosen must be implemented explicitly in the delete endpoint; there is no database-level safety net.
+- **Status:** planned
+
+### S-12: Admin can remove a user
+
+- **Outcome:** In the admin panel, a new "Remove user" tab lets an admin pick a user (e.g. by email) and delete their account. `users.id` is referenced with `ON DELETE CASCADE` from `sessions` (`migrations/0004_sessions_cascade_delete.sql`), `alerts` (`migrations/0008_instrument_registry.sql`), and `trigger_events` (`migrations/0011_alert_notifications.sql`), so a single `DELETE FROM users WHERE id = ?` removes the user's sessions, alerts, and trigger history in one statement — no manual cleanup needed, provided D1 enforces foreign keys.
+- **Change ID:** `admin-remove-user`
+- **PRD refs:** — (new admin-only capability; not yet reflected in an FR)
+- **Prerequisites:** F-01a, S-01, S-09
+- **Parallel with:** S-11
+- **Blockers:** —
+- **Unknowns:**
+  - Should an admin be able to delete their own account? Admin status comes from the `ADMIN_EMAILS` env allowlist, not a DB flag, so self-deletion wouldn't revoke admin rights on re-registration with the same email, but would immediately kill the admin's own session (cascade-deletes their own `sessions` row) mid-action. — Owner: user. Block: no (resolve during `/10x-plan`; likely just disable the delete action for the admin's own row).
+  - Confirm D1 actually enforces `PRAGMA foreign_keys = ON` (required for `ON DELETE CASCADE` to fire) in both local and remote environments before relying on it. — Owner: user. Block: no.
+- **Risk:** Irreversible and cascading by design — deleting a user silently deletes every alert and trigger-event row they own, with no soft-delete or undo. This is the first admin action that destroys another user's data outright (S-09's backfill and S-10's instrument-add only ever add or overwrite data).
+- **Status:** planned
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID             | Suggested issue title                               | Ready for `/10x-plan` | Notes                                                              |
@@ -281,6 +312,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-09       | admin-panel            | Admin panel: manual market-data fetch/backfill for an instrument + date range | yes | Awaits S-01, F-02, F-03 (all done); run `/10x-plan admin-panel` |
 | F-04       | stooq-provider-support | GPW equity support: fetch daily closes (+ high/low) via Yahoo `.WA` ticker suffix (originally scoped as Stooq fetch) | yes | Awaits F-02, F-03 (both done); planned and implemented via `/10x-plan`/`/10x-implement stooq-provider-support` |
 | S-10       | admin-add-instrument   | Admin panel: add a new instrument (type combobox + ticker + name)  | yes | Awaits S-09, F-03 (both done); run `/10x-plan admin-add-instrument`; open naming/rsi_eligible unknowns worth a quick confirm before planning |
+| S-11       | admin-remove-instrument | Admin panel: remove an instrument from the registry | yes | Awaits S-09, F-03 (both done); run `/10x-plan admin-remove-instrument`; resolve the block-vs-cascade-delete-alerts unknown before/at plan time |
+| S-12       | admin-remove-user      | Admin panel: remove a user account                  | yes | Awaits F-01a, S-01, S-09 (all done); run `/10x-plan admin-remove-user`; confirm self-delete behavior before/at plan time |
 
 ## Open Roadmap Questions
 
