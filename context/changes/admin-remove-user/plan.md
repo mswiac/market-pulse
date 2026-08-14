@@ -293,7 +293,7 @@ None — no schema changes. This plan only adds application-level `SELECT`/`DELE
 
 #### Automated
 
-- [x] 4.1 `npm run ci` passes
+- [x] 4.1 `npm run ci` passes — 40fc3ab
 
 #### Manual
 

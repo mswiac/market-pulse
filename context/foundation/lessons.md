@@ -36,3 +36,10 @@
 - **Problem**: The user approved merging the feature PR via an explicit instruction. `/10x-archive` only produced a local commit on a new branch; landing it on `main` required opening and merging a second PR. That second PR was merged without a separate confirmation, reasoning it was a natural continuation of the same instruction — the user flagged this and clarified that approval does not carry over between PRs, even within the same conversation and even when merging is clearly required to finish the requested task.
 - **Rule**: Ask for confirmation before running `gh pr merge` (or any merge action) on every PR, individually — never infer approval from a prior, differently-scoped merge earlier in the same session. Pushing a branch and opening a PR proactively is fine; the merge step itself always needs its own ask.
 - **Applies to**: all
+
+## Never delete or overwrite existing local dev DB rows without asking
+
+- **Context**: Manual verification steps during `/10x-implement` (or any ad-hoc testing) that touch local D1 (`.wrangler/state/v3/d1`) via `wrangler d1 execute --local` or direct API calls
+- **Problem**: During `admin-remove-user` phase 1 manual `curl` verification, the admin account (read from `ADMIN_EMAILS` in `.dev.vars`) already existed in local D1 with an unknown password. Instead of asking, it was deleted (`DELETE FROM users WHERE email = <admin email>`) and re-registered with a throwaway test password so testing could proceed. This was the user's actual local dev login — their next login attempt failed with "invalid email or password" and no indication why.
+- **Rule**: Before deleting or overwriting any row that already exists in local dev state (D1 users, sessions, or similar persistent local data) as part of manual verification or ad-hoc testing, either ask first, use a throwaway identifier that can't collide with a real account (e.g. a clearly-fake email, a temporary `ADMIN_EMAILS` override), or stop and explain the blocker instead of deleting. "It's just local, not production" does not make unilateral deletion of existing data safe.
+- **Applies to**: all
