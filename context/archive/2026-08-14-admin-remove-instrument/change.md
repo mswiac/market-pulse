@@ -1,10 +1,10 @@
 ---
 change_id: admin-remove-instrument
 title: Admin remove instrument
-status: impl_reviewed
+status: archived
 created: 2026-08-14
 updated: 2026-08-14
-archived_at: null
+archived_at: 2026-08-14T14:06:37Z
 ---
 
 ## Notes

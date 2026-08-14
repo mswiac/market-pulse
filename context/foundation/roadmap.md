@@ -3,7 +3,7 @@ project: MarketPulse
 version: 1
 status: draft
 created: 2026-06-21
-updated: 2026-08-09
+updated: 2026-08-14
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -44,7 +44,7 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | S-09 | admin-panel            | (admin-only) manually fetch/backfill market data for a chosen instrument over a chosen date range | S-01, F-02, F-03 | —                       | done  |
 | F-04 | stooq-provider-support | (foundation) fetch daily closes for GPW-listed equities via Yahoo's `.WA` ticker suffix (supersedes the original Stooq-fetch scope — see F-04 section) | F-02, F-03 | —                          | done |
 | S-10 | admin-add-instrument   | (admin-only) add a new instrument to the registry — pick type (Index / Spółki PL / Spółki USA), enter ticker + company name | S-09, F-03 | —                          | done |
-| S-11 | admin-remove-instrument | (admin-only) remove an instrument from the registry | S-09, F-03 | —                          | planned |
+| S-11 | admin-remove-instrument | (admin-only) remove an instrument from the registry | S-09, F-03 | —                          | done |
 | S-12 | admin-remove-user      | (admin-only) remove a user account (cascades to their sessions/alerts/trigger history) | F-01a, S-01, S-09 | —              | planned |
 
 ## Streams
@@ -277,7 +277,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Should removal be blocked when active alerts reference the ticker (safer, but leaves the admin unable to remove the instrument without contacting the user), or should it cascade-delete those alerts (matches the `users`→`alerts` `ON DELETE CASCADE` precedent used in S-12, but is a silent, admin-triggered destructive action on another user's data)? — Owner: user. Block: no (resolve during `/10x-plan`).
   - Should historical `price_history`/`market_data` rows for the removed ticker be deleted too, or kept as orphaned history? — Owner: user. Block: no.
 - **Risk:** `instruments.ticker` has no `FOREIGN KEY` constraint from `price_history`, `market_data`, or `alerts` (confirmed in `migrations/0008_instrument_registry.sql` — plain `TEXT` join key) — unlike `users.id`, which cascades via real FKs (see S-12). Whatever cleanup policy is chosen must be implemented explicitly in the delete endpoint; there is no database-level safety net.
-- **Status:** planned
+- **Status:** done
 
 ### S-12: Admin can remove a user
 
@@ -344,3 +344,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-09: An administrator — identified by an `ADMIN_EMAILS` allowlist stored as an environment variable / secret — sees an additional sidebar tile below "Historia", opening a panel visible only to them. The panel lets an admin pick a category and an instrument via the same two-combobox pattern as the instrument history page (F-03/S-07), pick a date range (from–to), and fetch. `fetchDailyCloses` moves from its fixed lookback window to an explicit `from`/`to` date-range parameter; the daily cron keeps its existing default range (today − 30 days, today) unchanged. Fetched rows overwrite existing `price_history` rows for those dates (deliberately never `market_data`, to avoid regressing the "current value" alerts are evaluated against). Framed as extensible: more admin actions can land in this panel later.** — Archived 2026-08-02 → `context/archive/2026-08-02-admin-panel/`. Lesson: —.
 - **S-10: In the admin panel, an admin can add a new instrument via a form with five fields: a type combobox (`Indeks` — the existing type; `Spółki PL`; `Spółki USA`), a ticker text field, a company name text field, a currency text field, and an RSI-eligible checkbox (checked by default). Type selection drives `provider` automatically — `Spółki PL` → `stooq`, `Spółki USA`/`Indeks` → `yahoo`. `rsi_eligible` is an explicit checkbox (not inferred from type, since the two existing `index` rows already disagree on it). The new row is written to the `instruments` table and immediately available wherever the registry is already consumed: instrument history (S-07), alert creation (S-02/S-04), and admin backfill (S-09). Delivered as a separate `/admin/add-instrument` page (not a second card on the existing admin page) after manual testing showed the stacked-card layout was confusing. `type='pl_stock'` instruments have no working data fetch until F-04 lands.** — Archived 2026-08-09 → `context/archive/2026-08-09-admin-add-instrument/`. Lesson: —.
 - **F-04: (foundation) GPW-listed equities (`instruments.type = 'pl_stock'`) get a working data fetch by extending the existing Yahoo fetch in `src/worker/lib/market-data.ts` — not via a second Stooq provider as originally scoped (see Risk for why). `instruments.suffix` (a new column, admin-set on creation with a per-type default suggestion — `.WA` for `pl_stock`, empty otherwise — freely overridable) is appended to `ticker` only when building the Yahoo query symbol; every persisted row (`price_history`, `market_data`) and every displayed value (alerts, instrument details, history) stays keyed on the bare `ticker`. The daily cron (`scheduled.ts`) and the admin backfill action (S-09) both use `ticker + suffix` for the fetch call and the bare `ticker` for all writes. `instruments.currency` self-corrects (and logs the correction) against whatever currency Yahoo reports on every successful fetch.** — Archived 2026-08-09 → `context/archive/2026-08-09-stooq-provider-support/`. Lesson: —.
+- **S-11: In the admin panel, a new "Remove instrument" tab lets an admin pick an instrument via the same type + instrument two-combobox pattern used elsewhere (S-07/S-09/S-10) and delete it from the `instruments` table. Because `ticker` is a plain string match (not an enforced foreign key) across `price_history`, `market_data`, and `alerts`, removal must decide what happens to those rows — deleting the registry row alone would leave existing user alerts pointing at a ticker no longer resolvable to a name/type, plus orphaned `price_history`/`market_data` rows behind. Exact cleanup behavior (block deletion while active alerts reference the ticker vs. cascade-delete those alerts too) is an open question for planning.** — Archived 2026-08-14 → `context/archive/2026-08-14-admin-remove-instrument/`. Lesson: —.
