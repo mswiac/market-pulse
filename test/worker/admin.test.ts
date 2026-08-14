@@ -103,6 +103,34 @@ async function insertAlert(ticker: string, userId: number): Promise<void> {
     .run();
 }
 
+async function insertTriggerEvent(ticker: string, userId: number): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO trigger_events (user_id, alert_id, ticker, alert_type, direction, threshold, value_at_trigger, notification_email, email_status)
+     VALUES (?, NULL, ?, 'PRICE', 'up', 100, 101, 'alerts@example.com', 'sent')`,
+  )
+    .bind(userId, ticker)
+    .run();
+}
+
+async function listUsers(cookie: string | null): Promise<Response> {
+  return exports.default.fetch(`${BASE_URL}/api/admin/users`, {
+    headers: cookie ? { Cookie: cookie } : {},
+  });
+}
+
+async function getUserImpact(cookie: string | null, id: number | string): Promise<Response> {
+  return exports.default.fetch(`${BASE_URL}/api/admin/users/${id}/impact`, {
+    headers: cookie ? { Cookie: cookie } : {},
+  });
+}
+
+async function removeUser(cookie: string | null, id: number | string): Promise<Response> {
+  return exports.default.fetch(`${BASE_URL}/api/admin/users/${id}`, {
+    method: 'DELETE',
+    headers: cookie ? { Cookie: cookie } : {},
+  });
+}
+
 function validNewInstrument(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     type: 'us_stock',
@@ -636,5 +664,198 @@ describe('DELETE /api/admin/instruments/:ticker', () => {
     const json = (await response.json()) as { code: string };
     expect(json.code).toBe('delete_failed');
     batchSpy.mockRestore();
+  });
+});
+
+describe('GET /api/admin/users', () => {
+  afterEach(async () => {
+    await env.DB.prepare("DELETE FROM users WHERE email LIKE 'list-users-%'").run();
+  });
+
+  it('returns 401 with no session', async () => {
+    const response = await listUsers(null);
+    expect(response.status).toBe(401);
+  });
+
+  it('returns 403 with code forbidden for a logged-in non-admin', async () => {
+    const cookie = await registerAndLogIn('not-admin-list-users@example.com');
+
+    const response = await listUsers(cookie);
+
+    expect(response.status).toBe(403);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('forbidden');
+  });
+
+  it("excludes the admin's own account and includes other registered users", async () => {
+    const cookie = await logInAsAdmin();
+    await registerAndLogIn('list-users-other@example.com');
+
+    const response = await listUsers(cookie);
+
+    expect(response.status).toBe(200);
+    const json = (await response.json()) as { users: Array<{ id: number; email: string }> };
+    expect(json.users.some((u) => u.email === ADMIN_EMAIL)).toBe(false);
+    expect(json.users.some((u) => u.email === 'list-users-other@example.com')).toBe(true);
+  });
+});
+
+describe('GET /api/admin/users/:id/impact', () => {
+  afterEach(async () => {
+    await env.DB.prepare("DELETE FROM users WHERE email LIKE 'impact-user-%'").run();
+  });
+
+  it('returns 401 with no session', async () => {
+    const response = await getUserImpact(null, 1);
+    expect(response.status).toBe(401);
+  });
+
+  it('returns 403 with code forbidden for a logged-in non-admin', async () => {
+    const cookie = await registerAndLogIn('not-admin-user-impact@example.com');
+
+    const response = await getUserImpact(cookie, 1);
+
+    expect(response.status).toBe(403);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('forbidden');
+  });
+
+  it('returns 400 with code invalid_user_id for a non-numeric id', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await getUserImpact(cookie, 'not-a-number');
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('invalid_user_id');
+  });
+
+  it('returns 404 with code unknown_user for a numeric id not in users', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await getUserImpact(cookie, 999999999);
+
+    expect(response.status).toBe(404);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('unknown_user');
+  });
+
+  it('returns zero counts for a user with no alerts or trigger events', async () => {
+    const cookie = await logInAsAdmin();
+    await registerAndLogIn('impact-user-empty@example.com');
+    const userId = await getUserId('impact-user-empty@example.com');
+
+    const response = await getUserImpact(cookie, userId);
+
+    expect(response.status).toBe(200);
+    const json = (await response.json()) as { id: number; email: string; alertsCount: number; triggerEventsCount: number };
+    expect(json).toEqual({ id: userId, email: 'impact-user-empty@example.com', alertsCount: 0, triggerEventsCount: 0 });
+  });
+
+  it('returns correct non-zero counts after seeding alerts and trigger events', async () => {
+    const cookie = await logInAsAdmin();
+    await registerAndLogIn('impact-user-full@example.com');
+    const userId = await getUserId('impact-user-full@example.com');
+    await insertAlert('^VIX', userId);
+    await insertAlert('^NDX', userId);
+    await insertTriggerEvent('^VIX', userId);
+
+    const response = await getUserImpact(cookie, userId);
+
+    expect(response.status).toBe(200);
+    const json = (await response.json()) as { alertsCount: number; triggerEventsCount: number };
+    expect(json.alertsCount).toBe(2);
+    expect(json.triggerEventsCount).toBe(1);
+  });
+});
+
+describe('DELETE /api/admin/users/:id', () => {
+  afterEach(async () => {
+    await env.DB.prepare("DELETE FROM users WHERE email LIKE 'delete-user-%'").run();
+  });
+
+  it('returns 401 with no session', async () => {
+    const response = await removeUser(null, 1);
+    expect(response.status).toBe(401);
+  });
+
+  it('returns 403 with code forbidden for a logged-in non-admin', async () => {
+    const cookie = await registerAndLogIn('not-admin-user-delete@example.com');
+
+    const response = await removeUser(cookie, 1);
+
+    expect(response.status).toBe(403);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('forbidden');
+  });
+
+  it('returns 400 with code invalid_user_id for a non-numeric id', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await removeUser(cookie, 'not-a-number');
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('invalid_user_id');
+  });
+
+  it('returns 403 with code cannot_delete_self when the admin targets their own id, and leaves the admin account intact', async () => {
+    const cookie = await logInAsAdmin();
+    const adminId = await getUserId(ADMIN_EMAIL);
+
+    const response = await removeUser(cookie, adminId);
+
+    expect(response.status).toBe(403);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('cannot_delete_self');
+
+    const stillThere = await env.DB.prepare('SELECT 1 FROM users WHERE id = ?').bind(adminId).first();
+    expect(stillThere).not.toBeNull();
+  });
+
+  it('returns 404 with code unknown_user for a numeric id not in users', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await removeUser(cookie, 999999999);
+
+    expect(response.status).toBe(404);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('unknown_user');
+  });
+
+  it('deletes the user and cascades sessions/alerts/trigger_events, leaving the admin untouched', async () => {
+    const cookie = await logInAsAdmin();
+    const adminId = await getUserId(ADMIN_EMAIL);
+    const targetCookie = await registerAndLogIn('delete-user-target@example.com');
+    const targetId = await getUserId('delete-user-target@example.com');
+    await insertAlert('^VIX', targetId);
+    await insertAlert('^NDX', targetId);
+    await insertTriggerEvent('^VIX', targetId);
+    const targetSessionId = targetCookie.split('=')[1];
+
+    const response = await removeUser(cookie, targetId);
+
+    expect(response.status).toBe(200);
+    const json = (await response.json()) as { id: number; email: string; alertsDeleted: number; triggerEventsDeleted: number };
+    expect(json).toEqual({ id: targetId, email: 'delete-user-target@example.com', alertsDeleted: 2, triggerEventsDeleted: 1 });
+
+    const userRow = await env.DB.prepare('SELECT 1 FROM users WHERE id = ?').bind(targetId).first();
+    expect(userRow).toBeNull();
+
+    const sessionRow = await env.DB.prepare('SELECT 1 FROM sessions WHERE id = ?').bind(targetSessionId).first();
+    expect(sessionRow).toBeNull();
+
+    const alertsCountRow = await env.DB.prepare('SELECT COUNT(*) AS count FROM alerts WHERE user_id = ?')
+      .bind(targetId)
+      .first<{ count: number }>();
+    expect(alertsCountRow?.count).toBe(0);
+
+    const triggerEventsCountRow = await env.DB.prepare('SELECT COUNT(*) AS count FROM trigger_events WHERE user_id = ?')
+      .bind(targetId)
+      .first<{ count: number }>();
+    expect(triggerEventsCountRow?.count).toBe(0);
+
+    const adminRow = await env.DB.prepare('SELECT 1 FROM users WHERE id = ?').bind(adminId).first();
+    expect(adminRow).not.toBeNull();
   });
 });

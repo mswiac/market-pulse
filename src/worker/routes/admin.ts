@@ -240,4 +240,90 @@ adminRoutes.delete('/instruments/:ticker', async (c) => {
   }
 });
 
+interface AdminUserRow {
+  id: number;
+  email: string;
+}
+
+adminRoutes.get('/users', async (c) => {
+  const { results } = await c.env.DB.prepare('SELECT id, email FROM users WHERE id != ? ORDER BY email')
+    .bind(c.get('userId'))
+    .all<AdminUserRow>();
+
+  return c.json({ users: results }, 200);
+});
+
+// Mirrors alerts.ts's parseAlertId — c.req.param() always returns a string,
+// while c.get('userId') is a number; comparing them directly (e.g. for the
+// self-delete guard below) would silently never match without this parse.
+function parseUserId(idParam: string): number | null {
+  const id = Number(idParam);
+  return Number.isInteger(id) ? id : null;
+}
+
+adminRoutes.get('/users/:id/impact', async (c) => {
+  const id = parseUserId(c.req.param('id'));
+  if (id === null) {
+    return c.json({ error: 'invalid user id', code: 'invalid_user_id' }, 400);
+  }
+
+  const user = await c.env.DB.prepare('SELECT id, email FROM users WHERE id = ?').bind(id).first<AdminUserRow>();
+  if (!user) {
+    return c.json({ error: 'unknown user', code: 'unknown_user' }, 404);
+  }
+
+  const [alertsCount, triggerEventsCount] = await Promise.all([
+    c.env.DB.prepare('SELECT COUNT(*) AS count FROM alerts WHERE user_id = ?').bind(id).first<{ count: number }>(),
+    c.env.DB.prepare('SELECT COUNT(*) AS count FROM trigger_events WHERE user_id = ?').bind(id).first<{ count: number }>(),
+  ]);
+
+  return c.json(
+    {
+      id: user.id,
+      email: user.email,
+      alertsCount: alertsCount?.count ?? 0,
+      triggerEventsCount: triggerEventsCount?.count ?? 0,
+    },
+    200,
+  );
+});
+
+// Deletes only the `users` row — `sessions`, `alerts`, and `trigger_events`
+// all carry real `REFERENCES users(id) ON DELETE CASCADE` constraints
+// (unlike instruments.ticker above, which has none), and D1 enforces
+// foreign keys by default, so the cascade happens at the DB level. No
+// batch() needed here, unlike the instrument delete above.
+adminRoutes.delete('/users/:id', async (c) => {
+  const id = parseUserId(c.req.param('id'));
+  if (id === null) {
+    return c.json({ error: 'invalid user id', code: 'invalid_user_id' }, 400);
+  }
+
+  if (id === c.get('userId')) {
+    return c.json({ error: 'cannot delete your own account', code: 'cannot_delete_self' }, 403);
+  }
+
+  const user = await c.env.DB.prepare('SELECT id, email FROM users WHERE id = ?').bind(id).first<AdminUserRow>();
+  if (!user) {
+    return c.json({ error: 'unknown user', code: 'unknown_user' }, 404);
+  }
+
+  const [alertsCount, triggerEventsCount] = await Promise.all([
+    c.env.DB.prepare('SELECT COUNT(*) AS count FROM alerts WHERE user_id = ?').bind(id).first<{ count: number }>(),
+    c.env.DB.prepare('SELECT COUNT(*) AS count FROM trigger_events WHERE user_id = ?').bind(id).first<{ count: number }>(),
+  ]);
+
+  await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
+
+  return c.json(
+    {
+      id: user.id,
+      email: user.email,
+      alertsDeleted: alertsCount?.count ?? 0,
+      triggerEventsDeleted: triggerEventsCount?.count ?? 0,
+    },
+    200,
+  );
+});
+
 export default adminRoutes;
