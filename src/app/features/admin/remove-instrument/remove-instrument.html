@@ -12,7 +12,7 @@
       <div class="filters">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label i18n="@@removeInstrument.type.label">Type</mat-label>
-          <mat-select [value]="selectedInstrumentType()" (selectionChange)="onTypeChange($event.value)">
+          <mat-select [value]="selectedInstrumentType()" [disabled]="submitting()" (selectionChange)="onTypeChange($event.value)">
             @for (type of instrumentTypes(); track type) {
               <mat-option [value]="type">{{ instrumentTypeLabel(type) }}</mat-option>
             }
@@ -21,7 +21,7 @@
 
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label i18n="@@removeInstrument.instrument.label">Instrument</mat-label>
-          <mat-select [value]="selectedTicker()" (selectionChange)="onTickerChange($event.value)">
+          <mat-select [value]="selectedTicker()" [disabled]="submitting()" (selectionChange)="onTickerChange($event.value)">
             @for (instrument of instrumentOptions(); track instrument.ticker) {
               <mat-option [value]="instrument.ticker">{{ instrument.name }}</mat-option>
             }

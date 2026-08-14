@@ -571,14 +571,17 @@ describe('DELETE /api/admin/instruments/:ticker', () => {
     const userId2 = await getUserId('delete-user2@example.com');
     await insertAlert(TICKER, userId1);
     await insertAlert(TICKER, userId2);
+    const alert1 = await env.DB.prepare('SELECT id FROM alerts WHERE user_id = ? AND ticker = ?')
+      .bind(userId1, TICKER)
+      .first<{ id: number }>();
 
     await env.DB.prepare('INSERT INTO price_history (ticker, date, close) VALUES (?, ?, ?)').bind(TICKER, '2026-01-05', 100).run();
     await env.DB.prepare('INSERT INTO market_data (ticker, price) VALUES (?, ?)').bind(TICKER, 100).run();
     await env.DB.prepare(
-      `INSERT INTO trigger_events (user_id, ticker, alert_type, direction, threshold, value_at_trigger, notification_email, email_status)
-       VALUES (?, ?, 'PRICE', 'up', 100, 101, 'alerts@example.com', 'sent')`,
+      `INSERT INTO trigger_events (user_id, alert_id, ticker, alert_type, direction, threshold, value_at_trigger, notification_email, email_status)
+       VALUES (?, ?, ?, 'PRICE', 'up', 100, 101, 'alerts@example.com', 'sent')`,
     )
-      .bind(userId1, TICKER)
+      .bind(userId1, alert1?.id, TICKER)
       .run();
 
     const response = await removeInstrument(cookie, TICKER);
@@ -601,8 +604,14 @@ describe('DELETE /api/admin/instruments/:ticker', () => {
     const marketDataRow = await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?').bind(TICKER).first();
     expect(marketDataRow).toBeNull();
 
-    const triggerEventRow = await env.DB.prepare('SELECT 1 FROM trigger_events WHERE ticker = ?').bind(TICKER).first();
+    const triggerEventRow = await env.DB.prepare('SELECT alert_id FROM trigger_events WHERE ticker = ?')
+      .bind(TICKER)
+      .first<{ alert_id: number | null }>();
     expect(triggerEventRow).not.toBeNull();
+    // D1 enforces the `alerts(id) ON DELETE SET NULL` FK on trigger_events.alert_id
+    // (confirmed empirically here) — the row itself survives, but its alert_id link
+    // to the now-deleted alert is nulled by the DB engine, not by this endpoint's code.
+    expect(triggerEventRow?.alert_id).toBeNull();
   });
 
   it('removes the ticker from GET /api/instruments after deletion', async () => {
@@ -614,5 +623,18 @@ describe('DELETE /api/admin/instruments/:ticker', () => {
     const listResponse = await exports.default.fetch(`${BASE_URL}/api/instruments`, { headers: { Cookie: cookie } });
     const instruments = (await listResponse.json()) as Record<string, unknown>[];
     expect(instruments.some((i) => i['ticker'] === TICKER)).toBe(false);
+  });
+
+  it('returns 500 with code delete_failed when the D1 batch delete fails', async () => {
+    const cookie = await logInAsAdmin();
+    await addInstrument(cookie, validNewInstrument({ ticker: TICKER }));
+    const batchSpy = vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('boom'));
+
+    const response = await removeInstrument(cookie, TICKER);
+
+    expect(response.status).toBe(500);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('delete_failed');
+    batchSpy.mockRestore();
   });
 });

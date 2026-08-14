@@ -194,7 +194,7 @@ adminRoutes.post('/instruments', async (c) => {
 });
 
 adminRoutes.get('/instruments/:ticker/impact', async (c) => {
-  const ticker = c.req.param('ticker');
+  const ticker = c.req.param('ticker').trim().toUpperCase();
 
   const instrument = await c.env.DB.prepare('SELECT ticker FROM instruments WHERE ticker = ?').bind(ticker).first();
   if (!instrument) {
@@ -214,7 +214,7 @@ adminRoutes.get('/instruments/:ticker/impact', async (c) => {
 // left untouched; it already tolerates a missing instrument via LEFT JOIN +
 // COALESCE (src/worker/routes/trigger-events.ts).
 adminRoutes.delete('/instruments/:ticker', async (c) => {
-  const ticker = c.req.param('ticker');
+  const ticker = c.req.param('ticker').trim().toUpperCase();
 
   const instrument = await c.env.DB.prepare('SELECT ticker FROM instruments WHERE ticker = ?').bind(ticker).first();
   if (!instrument) {
@@ -223,17 +223,21 @@ adminRoutes.delete('/instruments/:ticker', async (c) => {
 
   // Count runs in the same batch as the deletes so the reported alertsDeleted
   // always matches exactly what was removed, atomically.
-  const [countResult] = await c.env.DB.batch([
-    c.env.DB.prepare('SELECT COUNT(*) AS count FROM alerts WHERE ticker = ?').bind(ticker),
-    c.env.DB.prepare('DELETE FROM alerts WHERE ticker = ?').bind(ticker),
-    c.env.DB.prepare('DELETE FROM price_history WHERE ticker = ?').bind(ticker),
-    c.env.DB.prepare('DELETE FROM market_data WHERE ticker = ?').bind(ticker),
-    c.env.DB.prepare('DELETE FROM instruments WHERE ticker = ?').bind(ticker),
-  ]);
+  try {
+    const [countResult] = await c.env.DB.batch([
+      c.env.DB.prepare('SELECT COUNT(*) AS count FROM alerts WHERE ticker = ?').bind(ticker),
+      c.env.DB.prepare('DELETE FROM alerts WHERE ticker = ?').bind(ticker),
+      c.env.DB.prepare('DELETE FROM price_history WHERE ticker = ?').bind(ticker),
+      c.env.DB.prepare('DELETE FROM market_data WHERE ticker = ?').bind(ticker),
+      c.env.DB.prepare('DELETE FROM instruments WHERE ticker = ?').bind(ticker),
+    ]);
 
-  const alertsDeleted = (countResult.results[0] as { count: number } | undefined)?.count ?? 0;
+    const alertsDeleted = (countResult.results[0] as { count: number } | undefined)?.count ?? 0;
 
-  return c.json({ ticker, alertsDeleted }, 200);
+    return c.json({ ticker, alertsDeleted }, 200);
+  } catch {
+    return c.json({ error: 'failed to delete instrument', code: 'delete_failed' }, 500);
+  }
 });
 
 export default adminRoutes;
