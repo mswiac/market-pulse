@@ -1,0 +1,24 @@
+<div class="remove-user-page">
+  <h2 i18n="@@removeUser.title">Remove user</h2>
+
+  @if (loadError()) {
+    <p class="form-error" i18n="@@removeUser.error.usersLoadFailed">Failed to load users. Please refresh the page and try again.</p>
+  } @else if (noUsers()) {
+    <p class="form-error" i18n="@@removeUser.noUsers">No users available to remove.</p>
+  } @else {
+    <mat-card class="remove-card" appearance="outlined">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label i18n="@@removeUser.user.label">User</mat-label>
+        <mat-select [value]="selectedUserId()" [disabled]="submitting()" (selectionChange)="onUserChange($event.value)">
+          @for (user of users(); track user.id) {
+            <mat-option [value]="user.id">{{ user.email }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <button mat-flat-button color="warn" type="button" [disabled]="!canSubmit()" (click)="onSubmit()" i18n="@@removeUser.submit">
+        Remove user
+      </button>
+    </mat-card>
+  }
+</div>

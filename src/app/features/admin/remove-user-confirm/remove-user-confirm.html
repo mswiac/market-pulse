@@ -1,0 +1,19 @@
+<h2 mat-dialog-title i18n="@@removeUserConfirm.title">Remove this user?</h2>
+
+<mat-dialog-content>
+  <p i18n="@@removeUserConfirm.email">User: {{ data.email }}</p>
+  @if (data.alertsCount > 0) {
+    <p i18n="@@removeUserConfirm.alertsWarning">This will also delete {{ data.alertsCount }} alert(s).</p>
+  }
+  @if (data.triggerEventsCount > 0) {
+    <p i18n="@@removeUserConfirm.triggerEventsWarning">
+      This will also delete {{ data.triggerEventsCount }} trigger event(s) from the history.
+    </p>
+  }
+  <p i18n="@@removeUserConfirm.body">This action cannot be undone.</p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close cdkFocusInitial i18n="@@removeUserConfirm.cancel">Cancel</button>
+  <button mat-flat-button color="warn" [mat-dialog-close]="true" i18n="@@removeUserConfirm.confirm">Remove</button>
+</mat-dialog-actions>

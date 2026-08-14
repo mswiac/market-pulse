@@ -222,6 +222,10 @@
         <source>Remove instrument</source>
         <target>Usuń instrument</target>
       </trans-unit>
+      <trans-unit id="shell.nav.adminRemoveUser" datatype="html">
+        <source>Remove user</source>
+        <target>Usuń użytkownika</target>
+      </trans-unit>
       <trans-unit id="adminPanel.title" datatype="html">
         <source>Fetch market data</source>
         <target>Pobierz dane giełdowe</target>
@@ -398,6 +402,46 @@
         <source>Something went wrong. Please try again.</source>
         <target>Coś poszło nie tak. Spróbuj ponownie.</target>
       </trans-unit>
+      <trans-unit id="removeUser.title" datatype="html">
+        <source>Remove user</source>
+        <target>Usuń użytkownika</target>
+      </trans-unit>
+      <trans-unit id="removeUser.error.usersLoadFailed" datatype="html">
+        <source>Failed to load users. Please refresh the page and try again.</source>
+        <target>Nie udało się wczytać użytkowników. Odśwież stronę i spróbuj ponownie.</target>
+      </trans-unit>
+      <trans-unit id="removeUser.noUsers" datatype="html">
+        <source>No users available to remove.</source>
+        <target>Brak użytkowników do usunięcia.</target>
+      </trans-unit>
+      <trans-unit id="removeUser.user.label" datatype="html">
+        <source>User</source>
+        <target>Użytkownik</target>
+      </trans-unit>
+      <trans-unit id="removeUser.submit" datatype="html">
+        <source>Remove user</source>
+        <target>Usuń użytkownika</target>
+      </trans-unit>
+      <trans-unit id="removeUser.result.success" datatype="html">
+        <source>Removed <x id="INTERPOLATION" equiv-text="{{ result.email }}"/> (<x id="INTERPOLATION_1" equiv-text="{{ result.alertsDeleted }}"/> alert(s), <x id="INTERPOLATION_2" equiv-text="{{ result.triggerEventsDeleted }}"/> trigger event(s) deleted).</source>
+        <target>Usunięto <x id="INTERPOLATION" equiv-text="{{ result.email }}"/> (usunięto alerty: <x id="INTERPOLATION_1" equiv-text="{{ result.alertsDeleted }}"/>, zdarzenia historii: <x id="INTERPOLATION_2" equiv-text="{{ result.triggerEventsDeleted }}"/>).</target>
+      </trans-unit>
+      <trans-unit id="removeUser.error.forbidden" datatype="html">
+        <source>You don&apos;t have permission to do this.</source>
+        <target>Nie masz uprawnień do wykonania tej akcji.</target>
+      </trans-unit>
+      <trans-unit id="removeUser.error.unknownUser" datatype="html">
+        <source>Unknown user.</source>
+        <target>Nieznany użytkownik.</target>
+      </trans-unit>
+      <trans-unit id="removeUser.error.cannotDeleteSelf" datatype="html">
+        <source>You cannot delete your own account.</source>
+        <target>Nie możesz usunąć własnego konta.</target>
+      </trans-unit>
+      <trans-unit id="removeUser.error.generic" datatype="html">
+        <source>Something went wrong. Please try again.</source>
+        <target>Coś poszło nie tak. Spróbuj ponownie.</target>
+      </trans-unit>
       <trans-unit id="home.welcomeTitle" datatype="html">
         <source>Welcome back</source>
         <target>Witaj ponownie</target>
@@ -543,6 +587,34 @@
         <target>Anuluj</target>
       </trans-unit>
       <trans-unit id="removeInstrumentConfirm.confirm" datatype="html">
+        <source>Remove</source>
+        <target>Usuń</target>
+      </trans-unit>
+      <trans-unit id="removeUserConfirm.title" datatype="html">
+        <source>Remove this user?</source>
+        <target>Usunąć tego użytkownika?</target>
+      </trans-unit>
+      <trans-unit id="removeUserConfirm.email" datatype="html">
+        <source>User: <x id="INTERPOLATION" equiv-text="{{ data.email }}"/></source>
+        <target>Użytkownik: <x id="INTERPOLATION" equiv-text="{{ data.email }}"/></target>
+      </trans-unit>
+      <trans-unit id="removeUserConfirm.alertsWarning" datatype="html">
+        <source>This will also delete <x id="INTERPOLATION" equiv-text="{{ data.alertsCount }}"/> alert(s).</source>
+        <target>Spowoduje to również usunięcie <x id="INTERPOLATION" equiv-text="{{ data.alertsCount }}"/> alert(ów).</target>
+      </trans-unit>
+      <trans-unit id="removeUserConfirm.triggerEventsWarning" datatype="html">
+        <source> This will also delete <x id="INTERPOLATION" equiv-text="{{ data.triggerEventsCount }}"/> trigger event(s) from the history. </source>
+        <target> Spowoduje to również usunięcie <x id="INTERPOLATION" equiv-text="{{ data.triggerEventsCount }}"/> zdarzeń z historii wyzwolonych alertów. </target>
+      </trans-unit>
+      <trans-unit id="removeUserConfirm.body" datatype="html">
+        <source>This action cannot be undone.</source>
+        <target>Tej operacji nie można cofnąć.</target>
+      </trans-unit>
+      <trans-unit id="removeUserConfirm.cancel" datatype="html">
+        <source>Cancel</source>
+        <target>Anuluj</target>
+      </trans-unit>
+      <trans-unit id="removeUserConfirm.confirm" datatype="html">
         <source>Remove</source>
         <target>Usuń</target>
       </trans-unit>
