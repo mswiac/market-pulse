@@ -193,4 +193,47 @@ adminRoutes.post('/instruments', async (c) => {
   }
 });
 
+adminRoutes.get('/instruments/:ticker/impact', async (c) => {
+  const ticker = c.req.param('ticker');
+
+  const instrument = await c.env.DB.prepare('SELECT ticker FROM instruments WHERE ticker = ?').bind(ticker).first();
+  if (!instrument) {
+    return c.json({ error: 'unknown instrument', code: 'unknown_instrument' }, 404);
+  }
+
+  const alertsCount = await c.env.DB.prepare('SELECT COUNT(*) AS count FROM alerts WHERE ticker = ?')
+    .bind(ticker)
+    .first<{ count: number }>();
+
+  return c.json({ ticker, alertsCount: alertsCount?.count ?? 0 }, 200);
+});
+
+// Cascade-deletes alerts/price_history/market_data alongside the instruments
+// row itself, since `ticker` has no FK anywhere (see plan.md's Current State
+// Analysis) — nothing else cleans these up. trigger_events is intentionally
+// left untouched; it already tolerates a missing instrument via LEFT JOIN +
+// COALESCE (src/worker/routes/trigger-events.ts).
+adminRoutes.delete('/instruments/:ticker', async (c) => {
+  const ticker = c.req.param('ticker');
+
+  const instrument = await c.env.DB.prepare('SELECT ticker FROM instruments WHERE ticker = ?').bind(ticker).first();
+  if (!instrument) {
+    return c.json({ error: 'unknown instrument', code: 'unknown_instrument' }, 404);
+  }
+
+  // Count runs in the same batch as the deletes so the reported alertsDeleted
+  // always matches exactly what was removed, atomically.
+  const [countResult] = await c.env.DB.batch([
+    c.env.DB.prepare('SELECT COUNT(*) AS count FROM alerts WHERE ticker = ?').bind(ticker),
+    c.env.DB.prepare('DELETE FROM alerts WHERE ticker = ?').bind(ticker),
+    c.env.DB.prepare('DELETE FROM price_history WHERE ticker = ?').bind(ticker),
+    c.env.DB.prepare('DELETE FROM market_data WHERE ticker = ?').bind(ticker),
+    c.env.DB.prepare('DELETE FROM instruments WHERE ticker = ?').bind(ticker),
+  ]);
+
+  const alertsDeleted = (countResult.results[0] as { count: number } | undefined)?.count ?? 0;
+
+  return c.json({ ticker, alertsDeleted }, 200);
+});
+
 export default adminRoutes;
