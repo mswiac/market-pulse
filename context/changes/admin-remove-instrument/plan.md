@@ -42,6 +42,10 @@ Verify by: `npm run ci` passes; as an admin, removing an instrument with 2 exist
 
 Backend first (Phase 1: both new endpoints, since the delete endpoint's cascade logic and the impact endpoint's count query share the same `alerts WHERE ticker = ?` shape), then the reusable frontend pieces the page depends on (Phase 2: service methods + confirmation dialog), then the page itself (Phase 3), then routing/nav/i18n wiring last since it's what makes the page reachable (Phase 4).
 
+## Critical Implementation Details
+
+**`npm run build`'s i18n check only covers components reachable from a route — not everything in `src/`.** Discovered during implementation of Phases 2–3: Angular's esbuild-based application builder (unlike the older webpack/ivy AOT builder) only compiles the import graph actually reachable from `main.ts`/the app's routes, not every file matched by `tsconfig`'s `include`. Verified empirically by deliberately removing a `removeInstrument.*` `<trans-unit>` and re-running `npm run build` — it still passed with exit 0, because `RemoveInstrumentConfirm`/`RemoveInstrument` weren't routed yet. This means Phase 2's and Phase 3's "`npm run build` passes" checks did NOT actually validate those phases' new translation ids — only `npm run typecheck` (TypeScript-level correctness) was a genuine per-phase gate for them. The real i18n completeness check for every id introduced in this plan only happens once Phase 4 registers the route and `npm run ci` runs against a build where the page is actually reachable. Kept as informational rather than restructured — the ids were written carefully and cross-checked against existing translations during Phases 2–3, and Phase 4's `npm run ci` remains the authoritative final gate regardless.
+
 ## Phase 1: Backend endpoints
 
 ### Overview
@@ -274,15 +278,15 @@ None — no schema changes. This plan only adds application-level `DELETE` state
 
 #### Automated
 
-- [x] 2.1 `npm run typecheck` passes
-- [x] 2.2 `npm run build` passes (dialog i18n ids)
+- [x] 2.1 `npm run typecheck` passes — 21384ac
+- [x] 2.2 `npm run build` passes (dialog i18n ids) — 21384ac
 
 ### Phase 3: Remove-instrument page
 
 #### Automated
 
-- [ ] 3.1 `npm run typecheck` passes
-- [ ] 3.2 `npm run build` passes (page i18n ids)
+- [x] 3.1 `npm run typecheck` passes
+- [x] 3.2 `npm run build` passes (page i18n ids — see Critical Implementation Details: doesn't actually validate unrouted-component i18n, Phase 4's `npm run ci` is the real gate)
 
 ### Phase 4: Routing, nav, and i18n
 

@@ -358,6 +358,42 @@
         <source>Something went wrong. Please try again.</source>
         <target>Coś poszło nie tak. Spróbuj ponownie.</target>
       </trans-unit>
+      <trans-unit id="removeInstrument.title" datatype="html">
+        <source>Remove instrument</source>
+        <target>Usuń instrument</target>
+      </trans-unit>
+      <trans-unit id="removeInstrument.type.label" datatype="html">
+        <source>Type</source>
+        <target>Typ</target>
+      </trans-unit>
+      <trans-unit id="removeInstrument.instrument.label" datatype="html">
+        <source>Instrument</source>
+        <target>Instrument</target>
+      </trans-unit>
+      <trans-unit id="removeInstrument.submit" datatype="html">
+        <source>Remove instrument</source>
+        <target>Usuń instrument</target>
+      </trans-unit>
+      <trans-unit id="removeInstrument.noInstruments" datatype="html">
+        <source>No instruments available to remove.</source>
+        <target>Brak instrumentów do usunięcia.</target>
+      </trans-unit>
+      <trans-unit id="removeInstrument.result.success" datatype="html">
+        <source>Removed <x id="INTERPOLATION" equiv-text="{{ result.ticker }}"/> (<x id="INTERPOLATION_1" equiv-text="{{ result.alertsDeleted }}"/> alert(s) deleted).</source>
+        <target>Usunięto <x id="INTERPOLATION" equiv-text="{{ result.ticker }}"/> (usunięto alerty: <x id="INTERPOLATION_1" equiv-text="{{ result.alertsDeleted }}"/>).</target>
+      </trans-unit>
+      <trans-unit id="removeInstrument.error.forbidden" datatype="html">
+        <source>You don&apos;t have permission to do this.</source>
+        <target>Nie masz uprawnień do wykonania tej akcji.</target>
+      </trans-unit>
+      <trans-unit id="removeInstrument.error.unknownInstrument" datatype="html">
+        <source>Unknown instrument.</source>
+        <target>Nieznany walor.</target>
+      </trans-unit>
+      <trans-unit id="removeInstrument.error.generic" datatype="html">
+        <source>Something went wrong. Please try again.</source>
+        <target>Coś poszło nie tak. Spróbuj ponownie.</target>
+      </trans-unit>
       <trans-unit id="home.welcomeTitle" datatype="html">
         <source>Welcome back</source>
         <target>Witaj ponownie</target>
