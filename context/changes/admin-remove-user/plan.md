@@ -279,15 +279,15 @@ None — no schema changes. This plan only adds application-level `SELECT`/`DELE
 
 #### Automated
 
-- [x] 2.1 `npm run typecheck` passes
-- [x] 2.2 `npm run build` passes (dialog i18n ids)
+- [x] 2.1 `npm run typecheck` passes — da4a327
+- [x] 2.2 `npm run build` passes (dialog i18n ids) — da4a327
 
 ### Phase 3: Remove-user page
 
 #### Automated
 
-- [ ] 3.1 `npm run typecheck` passes
-- [ ] 3.2 `npm run build` passes (page i18n ids — see Critical Implementation Details in S-11's plan for why this doesn't fully validate until Phase 4)
+- [x] 3.1 `npm run typecheck` passes
+- [x] 3.2 `npm run build` passes (page i18n ids — see Critical Implementation Details in S-11's plan for why this doesn't fully validate until Phase 4)
 
 ### Phase 4: Routing, nav, and i18n
 

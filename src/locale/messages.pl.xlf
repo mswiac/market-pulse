@@ -398,6 +398,46 @@
         <source>Something went wrong. Please try again.</source>
         <target>Coś poszło nie tak. Spróbuj ponownie.</target>
       </trans-unit>
+      <trans-unit id="removeUser.title" datatype="html">
+        <source>Remove user</source>
+        <target>Usuń użytkownika</target>
+      </trans-unit>
+      <trans-unit id="removeUser.error.usersLoadFailed" datatype="html">
+        <source>Failed to load users. Please refresh the page and try again.</source>
+        <target>Nie udało się wczytać użytkowników. Odśwież stronę i spróbuj ponownie.</target>
+      </trans-unit>
+      <trans-unit id="removeUser.noUsers" datatype="html">
+        <source>No users available to remove.</source>
+        <target>Brak użytkowników do usunięcia.</target>
+      </trans-unit>
+      <trans-unit id="removeUser.user.label" datatype="html">
+        <source>User</source>
+        <target>Użytkownik</target>
+      </trans-unit>
+      <trans-unit id="removeUser.submit" datatype="html">
+        <source>Remove user</source>
+        <target>Usuń użytkownika</target>
+      </trans-unit>
+      <trans-unit id="removeUser.result.success" datatype="html">
+        <source>Removed <x id="INTERPOLATION" equiv-text="{{ result.email }}"/> (<x id="INTERPOLATION_1" equiv-text="{{ result.alertsDeleted }}"/> alert(s), <x id="INTERPOLATION_2" equiv-text="{{ result.triggerEventsDeleted }}"/> trigger event(s) deleted).</source>
+        <target>Usunięto <x id="INTERPOLATION" equiv-text="{{ result.email }}"/> (usunięto alerty: <x id="INTERPOLATION_1" equiv-text="{{ result.alertsDeleted }}"/>, zdarzenia historii: <x id="INTERPOLATION_2" equiv-text="{{ result.triggerEventsDeleted }}"/>).</target>
+      </trans-unit>
+      <trans-unit id="removeUser.error.forbidden" datatype="html">
+        <source>You don&apos;t have permission to do this.</source>
+        <target>Nie masz uprawnień do wykonania tej akcji.</target>
+      </trans-unit>
+      <trans-unit id="removeUser.error.unknownUser" datatype="html">
+        <source>Unknown user.</source>
+        <target>Nieznany użytkownik.</target>
+      </trans-unit>
+      <trans-unit id="removeUser.error.cannotDeleteSelf" datatype="html">
+        <source>You cannot delete your own account.</source>
+        <target>Nie możesz usunąć własnego konta.</target>
+      </trans-unit>
+      <trans-unit id="removeUser.error.generic" datatype="html">
+        <source>Something went wrong. Please try again.</source>
+        <target>Coś poszło nie tak. Spróbuj ponownie.</target>
+      </trans-unit>
       <trans-unit id="home.welcomeTitle" datatype="html">
         <source>Welcome back</source>
         <target>Witaj ponownie</target>
