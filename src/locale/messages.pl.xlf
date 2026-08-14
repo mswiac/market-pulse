@@ -218,6 +218,10 @@
         <source>Add instrument</source>
         <target>Dodaj instrument</target>
       </trans-unit>
+      <trans-unit id="shell.nav.adminRemoveInstrument" datatype="html">
+        <source>Remove instrument</source>
+        <target>Usuń instrument</target>
+      </trans-unit>
       <trans-unit id="adminPanel.title" datatype="html">
         <source>Fetch market data</source>
         <target>Pobierz dane giełdowe</target>
@@ -358,6 +362,42 @@
         <source>Something went wrong. Please try again.</source>
         <target>Coś poszło nie tak. Spróbuj ponownie.</target>
       </trans-unit>
+      <trans-unit id="removeInstrument.title" datatype="html">
+        <source>Remove instrument</source>
+        <target>Usuń instrument</target>
+      </trans-unit>
+      <trans-unit id="removeInstrument.type.label" datatype="html">
+        <source>Type</source>
+        <target>Typ</target>
+      </trans-unit>
+      <trans-unit id="removeInstrument.instrument.label" datatype="html">
+        <source>Instrument</source>
+        <target>Instrument</target>
+      </trans-unit>
+      <trans-unit id="removeInstrument.submit" datatype="html">
+        <source>Remove instrument</source>
+        <target>Usuń instrument</target>
+      </trans-unit>
+      <trans-unit id="removeInstrument.noInstruments" datatype="html">
+        <source>No instruments available to remove.</source>
+        <target>Brak instrumentów do usunięcia.</target>
+      </trans-unit>
+      <trans-unit id="removeInstrument.result.success" datatype="html">
+        <source>Removed <x id="INTERPOLATION" equiv-text="{{ result.ticker }}"/> (<x id="INTERPOLATION_1" equiv-text="{{ result.alertsDeleted }}"/> alert(s) deleted).</source>
+        <target>Usunięto <x id="INTERPOLATION" equiv-text="{{ result.ticker }}"/> (usunięto alerty: <x id="INTERPOLATION_1" equiv-text="{{ result.alertsDeleted }}"/>).</target>
+      </trans-unit>
+      <trans-unit id="removeInstrument.error.forbidden" datatype="html">
+        <source>You don&apos;t have permission to do this.</source>
+        <target>Nie masz uprawnień do wykonania tej akcji.</target>
+      </trans-unit>
+      <trans-unit id="removeInstrument.error.unknownInstrument" datatype="html">
+        <source>Unknown instrument.</source>
+        <target>Nieznany walor.</target>
+      </trans-unit>
+      <trans-unit id="removeInstrument.error.generic" datatype="html">
+        <source>Something went wrong. Please try again.</source>
+        <target>Coś poszło nie tak. Spróbuj ponownie.</target>
+      </trans-unit>
       <trans-unit id="home.welcomeTitle" datatype="html">
         <source>Welcome back</source>
         <target>Witaj ponownie</target>
@@ -476,6 +516,34 @@
       </trans-unit>
       <trans-unit id="deleteAlertConfirm.confirm" datatype="html">
         <source>Delete</source>
+        <target>Usuń</target>
+      </trans-unit>
+      <trans-unit id="removeInstrumentConfirm.title" datatype="html">
+        <source>Remove this instrument?</source>
+        <target>Usunąć ten instrument?</target>
+      </trans-unit>
+      <trans-unit id="removeInstrumentConfirm.ticker" datatype="html">
+        <source>Instrument: <x id="INTERPOLATION" equiv-text="{{ data.ticker }}"/></source>
+        <target>Instrument: <x id="INTERPOLATION" equiv-text="{{ data.ticker }}"/></target>
+      </trans-unit>
+      <trans-unit id="removeInstrumentConfirm.alertsWarning" datatype="html">
+        <source>This will also delete <x id="INTERPOLATION" equiv-text="{{ data.alertsCount }}"/> alert(s) belonging to other users.</source>
+        <target>Spowoduje to również usunięcie <x id="INTERPOLATION" equiv-text="{{ data.alertsCount }}"/> alert(ów) należących do innych użytkowników.</target>
+      </trans-unit>
+      <trans-unit id="removeInstrumentConfirm.historyWarning" datatype="html">
+        <source>Price and market history for this instrument will also be permanently deleted.</source>
+        <target>Historia cen i danych rynkowych tego instrumentu zostanie również trwale usunięta.</target>
+      </trans-unit>
+      <trans-unit id="removeInstrumentConfirm.body" datatype="html">
+        <source>This action cannot be undone.</source>
+        <target>Tej operacji nie można cofnąć.</target>
+      </trans-unit>
+      <trans-unit id="removeInstrumentConfirm.cancel" datatype="html">
+        <source>Cancel</source>
+        <target>Anuluj</target>
+      </trans-unit>
+      <trans-unit id="removeInstrumentConfirm.confirm" datatype="html">
+        <source>Remove</source>
         <target>Usuń</target>
       </trans-unit>
       <trans-unit id="instrumentHistory.title" datatype="html">

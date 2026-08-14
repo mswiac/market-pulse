@@ -76,6 +76,33 @@ async function addInstrument(cookie: string | null, body: Record<string, unknown
   });
 }
 
+async function getInstrumentImpact(cookie: string | null, ticker: string): Promise<Response> {
+  return exports.default.fetch(`${BASE_URL}/api/admin/instruments/${encodeURIComponent(ticker)}/impact`, {
+    headers: cookie ? { Cookie: cookie } : {},
+  });
+}
+
+async function removeInstrument(cookie: string | null, ticker: string): Promise<Response> {
+  return exports.default.fetch(`${BASE_URL}/api/admin/instruments/${encodeURIComponent(ticker)}`, {
+    method: 'DELETE',
+    headers: cookie ? { Cookie: cookie } : {},
+  });
+}
+
+async function getUserId(email: string): Promise<number> {
+  const row = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first<{ id: number }>();
+  if (!row) throw new Error(`no user found for ${email}`);
+  return row.id;
+}
+
+async function insertAlert(ticker: string, userId: number): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO alerts (user_id, ticker, alert_type, threshold, notification_email, direction) VALUES (?, ?, 'PRICE', 100, 'alerts@example.com', 'up')`,
+  )
+    .bind(userId, ticker)
+    .run();
+}
+
 function validNewInstrument(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     type: 'us_stock',
@@ -435,5 +462,179 @@ describe('POST /api/admin/instruments', () => {
     expect(response.status).toBe(409);
     const json = (await response.json()) as { code: string };
     expect(json.code).toBe('instrument_duplicate_ticker');
+  });
+});
+
+describe('GET /api/admin/instruments/:ticker/impact', () => {
+  const TICKER = 'TESTIMPACT';
+
+  afterEach(async () => {
+    await env.DB.prepare('DELETE FROM alerts WHERE ticker = ?').bind(TICKER).run();
+    await env.DB.prepare('DELETE FROM instruments WHERE ticker = ?').bind(TICKER).run();
+  });
+
+  it('returns 401 with no session', async () => {
+    const response = await getInstrumentImpact(null, TICKER);
+    expect(response.status).toBe(401);
+  });
+
+  it('returns 403 with code forbidden for a logged-in non-admin', async () => {
+    const cookie = await registerAndLogIn('not-admin-impact@example.com');
+
+    const response = await getInstrumentImpact(cookie, TICKER);
+
+    expect(response.status).toBe(403);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('forbidden');
+  });
+
+  it('returns 404 with code unknown_instrument for a ticker not in the registry', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await getInstrumentImpact(cookie, 'TESTIMPACTNOPE');
+
+    expect(response.status).toBe(404);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('unknown_instrument');
+  });
+
+  it('returns alertsCount: 0 for an instrument with no alerts', async () => {
+    const cookie = await logInAsAdmin();
+    await addInstrument(cookie, validNewInstrument({ ticker: TICKER }));
+
+    const response = await getInstrumentImpact(cookie, TICKER);
+
+    expect(response.status).toBe(200);
+    const json = (await response.json()) as { ticker: string; alertsCount: number };
+    expect(json).toEqual({ ticker: TICKER, alertsCount: 0 });
+  });
+
+  it('returns the correct non-zero alertsCount across multiple users', async () => {
+    const cookie = await logInAsAdmin();
+    await addInstrument(cookie, validNewInstrument({ ticker: TICKER }));
+    await registerAndLogIn('impact-user1@example.com');
+    await registerAndLogIn('impact-user2@example.com');
+    await insertAlert(TICKER, await getUserId('impact-user1@example.com'));
+    await insertAlert(TICKER, await getUserId('impact-user2@example.com'));
+
+    const response = await getInstrumentImpact(cookie, TICKER);
+
+    expect(response.status).toBe(200);
+    const json = (await response.json()) as { alertsCount: number };
+    expect(json.alertsCount).toBe(2);
+  });
+});
+
+describe('DELETE /api/admin/instruments/:ticker', () => {
+  const TICKER = 'TESTDELETE';
+
+  afterEach(async () => {
+    await env.DB.prepare('DELETE FROM trigger_events WHERE ticker = ?').bind(TICKER).run();
+    await env.DB.prepare('DELETE FROM alerts WHERE ticker = ?').bind(TICKER).run();
+    await env.DB.prepare('DELETE FROM price_history WHERE ticker = ?').bind(TICKER).run();
+    await env.DB.prepare('DELETE FROM market_data WHERE ticker = ?').bind(TICKER).run();
+    await env.DB.prepare('DELETE FROM instruments WHERE ticker = ?').bind(TICKER).run();
+  });
+
+  it('returns 401 with no session', async () => {
+    const response = await removeInstrument(null, TICKER);
+    expect(response.status).toBe(401);
+  });
+
+  it('returns 403 with code forbidden for a logged-in non-admin', async () => {
+    const cookie = await registerAndLogIn('not-admin-delete@example.com');
+
+    const response = await removeInstrument(cookie, TICKER);
+
+    expect(response.status).toBe(403);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('forbidden');
+  });
+
+  it('returns 404 with code unknown_instrument for a ticker not in the registry', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await removeInstrument(cookie, 'TESTDELETENOPE');
+
+    expect(response.status).toBe(404);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('unknown_instrument');
+  });
+
+  it('cascade-deletes alerts/price_history/market_data, leaves trigger_events untouched, and reports alertsDeleted', async () => {
+    const cookie = await logInAsAdmin();
+    await addInstrument(cookie, validNewInstrument({ ticker: TICKER }));
+
+    await registerAndLogIn('delete-user1@example.com');
+    await registerAndLogIn('delete-user2@example.com');
+    const userId1 = await getUserId('delete-user1@example.com');
+    const userId2 = await getUserId('delete-user2@example.com');
+    await insertAlert(TICKER, userId1);
+    await insertAlert(TICKER, userId2);
+    const alert1 = await env.DB.prepare('SELECT id FROM alerts WHERE user_id = ? AND ticker = ?')
+      .bind(userId1, TICKER)
+      .first<{ id: number }>();
+
+    await env.DB.prepare('INSERT INTO price_history (ticker, date, close) VALUES (?, ?, ?)').bind(TICKER, '2026-01-05', 100).run();
+    await env.DB.prepare('INSERT INTO market_data (ticker, price) VALUES (?, ?)').bind(TICKER, 100).run();
+    await env.DB.prepare(
+      `INSERT INTO trigger_events (user_id, alert_id, ticker, alert_type, direction, threshold, value_at_trigger, notification_email, email_status)
+       VALUES (?, ?, ?, 'PRICE', 'up', 100, 101, 'alerts@example.com', 'sent')`,
+    )
+      .bind(userId1, alert1?.id, TICKER)
+      .run();
+
+    const response = await removeInstrument(cookie, TICKER);
+
+    expect(response.status).toBe(200);
+    const json = (await response.json()) as { ticker: string; alertsDeleted: number };
+    expect(json).toEqual({ ticker: TICKER, alertsDeleted: 2 });
+
+    const instrumentRow = await env.DB.prepare('SELECT 1 FROM instruments WHERE ticker = ?').bind(TICKER).first();
+    expect(instrumentRow).toBeNull();
+
+    const alertsCountRow = await env.DB.prepare('SELECT COUNT(*) AS count FROM alerts WHERE ticker = ?')
+      .bind(TICKER)
+      .first<{ count: number }>();
+    expect(alertsCountRow?.count).toBe(0);
+
+    const priceHistoryRow = await env.DB.prepare('SELECT 1 FROM price_history WHERE ticker = ?').bind(TICKER).first();
+    expect(priceHistoryRow).toBeNull();
+
+    const marketDataRow = await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?').bind(TICKER).first();
+    expect(marketDataRow).toBeNull();
+
+    const triggerEventRow = await env.DB.prepare('SELECT alert_id FROM trigger_events WHERE ticker = ?')
+      .bind(TICKER)
+      .first<{ alert_id: number | null }>();
+    expect(triggerEventRow).not.toBeNull();
+    // D1 enforces the `alerts(id) ON DELETE SET NULL` FK on trigger_events.alert_id
+    // (confirmed empirically here) — the row itself survives, but its alert_id link
+    // to the now-deleted alert is nulled by the DB engine, not by this endpoint's code.
+    expect(triggerEventRow?.alert_id).toBeNull();
+  });
+
+  it('removes the ticker from GET /api/instruments after deletion', async () => {
+    const cookie = await logInAsAdmin();
+    await addInstrument(cookie, validNewInstrument({ ticker: TICKER }));
+
+    await removeInstrument(cookie, TICKER);
+
+    const listResponse = await exports.default.fetch(`${BASE_URL}/api/instruments`, { headers: { Cookie: cookie } });
+    const instruments = (await listResponse.json()) as Record<string, unknown>[];
+    expect(instruments.some((i) => i['ticker'] === TICKER)).toBe(false);
+  });
+
+  it('returns 500 with code delete_failed when the D1 batch delete fails', async () => {
+    const cookie = await logInAsAdmin();
+    await addInstrument(cookie, validNewInstrument({ ticker: TICKER }));
+    const batchSpy = vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('boom'));
+
+    const response = await removeInstrument(cookie, TICKER);
+
+    expect(response.status).toBe(500);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('delete_failed');
+    batchSpy.mockRestore();
   });
 });

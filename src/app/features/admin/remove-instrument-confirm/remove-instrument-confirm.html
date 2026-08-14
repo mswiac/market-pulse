@@ -1,0 +1,17 @@
+<h2 mat-dialog-title i18n="@@removeInstrumentConfirm.title">Remove this instrument?</h2>
+
+<mat-dialog-content>
+  <p i18n="@@removeInstrumentConfirm.ticker">Instrument: {{ data.ticker }}</p>
+  @if (data.alertsCount > 0) {
+    <p i18n="@@removeInstrumentConfirm.alertsWarning">
+      This will also delete {{ data.alertsCount }} alert(s) belonging to other users.
+    </p>
+  }
+  <p i18n="@@removeInstrumentConfirm.historyWarning">Price and market history for this instrument will also be permanently deleted.</p>
+  <p i18n="@@removeInstrumentConfirm.body">This action cannot be undone.</p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close cdkFocusInitial i18n="@@removeInstrumentConfirm.cancel">Cancel</button>
+  <button mat-flat-button color="warn" [mat-dialog-close]="true" i18n="@@removeInstrumentConfirm.confirm">Remove</button>
+</mat-dialog-actions>
