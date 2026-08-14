@@ -272,7 +272,7 @@ None — no schema changes. This plan only adds application-level `DELETE` state
 
 #### Manual
 
-- [x] 1.3 Manual `curl` calls to both endpoints confirm response shapes and cascade cleanup
+- [x] 1.3 Manual `curl` calls to both endpoints confirm response shapes and cascade cleanup — 6ca4413
 
 ### Phase 2: Frontend service methods + confirmation dialog
 
@@ -292,13 +292,13 @@ None — no schema changes. This plan only adds application-level `DELETE` state
 
 #### Automated
 
-- [x] 4.1 `npm run ci` passes
+- [x] 4.1 `npm run ci` passes — 6ca4413
 
 #### Manual
 
-- [x] 4.2 Remove an instrument with 0 alerts, success snackbar shown
-- [x] 4.3 Remove an instrument with alerts from 2 users, dialog shows correct count, both users' alerts gone afterward
-- [x] 4.4 Removed ticker disappears from all comboboxes without refresh
-- [x] 4.5 Trigger history for the removed ticker still renders (bare ticker as name)
-- [x] 4.6 Non-admin access remains blocked
-- [x] 4.7 Canceling the confirmation dialog leaves the instrument untouched
+- [x] 4.2 Remove an instrument with 0 alerts, success snackbar shown — 6ca4413
+- [x] 4.3 Remove an instrument with alerts from 2 users, dialog shows correct count, both users' alerts gone afterward — 6ca4413
+- [x] 4.4 Removed ticker disappears from all comboboxes without refresh — 6ca4413
+- [x] 4.5 Trigger history for the removed ticker still renders (bare ticker as name) — 6ca4413
+- [x] 4.6 Non-admin access remains blocked — 6ca4413
+- [x] 4.7 Canceling the confirmation dialog leaves the instrument untouched — 6ca4413

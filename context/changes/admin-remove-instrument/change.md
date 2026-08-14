@@ -1,7 +1,7 @@
 ---
 change_id: admin-remove-instrument
 title: Admin remove instrument
-status: implementing
+status: implemented
 created: 2026-08-14
 updated: 2026-08-14
 archived_at: null
