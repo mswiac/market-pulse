@@ -222,6 +222,10 @@
         <source>Remove instrument</source>
         <target>Usuń instrument</target>
       </trans-unit>
+      <trans-unit id="shell.nav.adminRemoveUser" datatype="html">
+        <source>Remove user</source>
+        <target>Usuń użytkownika</target>
+      </trans-unit>
       <trans-unit id="adminPanel.title" datatype="html">
         <source>Fetch market data</source>
         <target>Pobierz dane giełdowe</target>

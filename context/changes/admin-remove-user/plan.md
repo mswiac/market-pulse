@@ -286,14 +286,14 @@ None — no schema changes. This plan only adds application-level `SELECT`/`DELE
 
 #### Automated
 
-- [x] 3.1 `npm run typecheck` passes
-- [x] 3.2 `npm run build` passes (page i18n ids — see Critical Implementation Details in S-11's plan for why this doesn't fully validate until Phase 4)
+- [x] 3.1 `npm run typecheck` passes — 5a745b2
+- [x] 3.2 `npm run build` passes (page i18n ids — see Critical Implementation Details in S-11's plan for why this doesn't fully validate until Phase 4) — 5a745b2
 
 ### Phase 4: Routing, nav, and i18n
 
 #### Automated
 
-- [ ] 4.1 `npm run ci` passes
+- [x] 4.1 `npm run ci` passes
 
 #### Manual
 

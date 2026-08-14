@@ -32,6 +32,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/remove-instrument/remove-instrument').then((m) => m.RemoveInstrument),
         canActivate: [adminGuard],
       },
+      {
+        path: 'admin/remove-user',
+        loadComponent: () => import('./features/admin/remove-user/remove-user').then((m) => m.RemoveUser),
+        canActivate: [adminGuard],
+      },
     ],
   },
   {
