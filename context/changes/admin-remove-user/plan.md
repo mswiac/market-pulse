@@ -273,7 +273,7 @@ None — no schema changes. This plan only adds application-level `SELECT`/`DELE
 
 #### Manual
 
-- [ ] 1.3 Manual `curl` calls to all three endpoints confirm response shapes, self-delete rejection, and cascade cleanup
+- [x] 1.3 Manual `curl` calls to all three endpoints confirm response shapes, self-delete rejection, and cascade cleanup
 
 ### Phase 2: Frontend service methods + confirmation dialog
 
@@ -297,10 +297,10 @@ None — no schema changes. This plan only adds application-level `SELECT`/`DELE
 
 #### Manual
 
-- [ ] 4.2 Admin's own account excluded from the picker
-- [ ] 4.3 Remove a user with 0 alerts/trigger events, success snackbar shown
-- [ ] 4.4 Remove a user with alerts and trigger history, dialog shows correct counts, rows gone afterward
-- [ ] 4.5 Self-delete via direct API call rejected with `cannot_delete_self`
-- [ ] 4.6 Non-admin access remains blocked
-- [ ] 4.7 Canceling the confirmation dialog leaves the user untouched
-- [ ] 4.8 Polish translations render correctly
+- [x] 4.2 Admin's own account excluded from the picker
+- [x] 4.3 Remove a user with 0 alerts/trigger events, success snackbar shown
+- [x] 4.4 Remove a user with alerts and trigger history, dialog shows correct counts, rows gone afterward
+- [x] 4.5 Self-delete via direct API call rejected with `cannot_delete_self`
+- [x] 4.6 Non-admin access remains blocked
+- [x] 4.7 Canceling the confirmation dialog leaves the user untouched
+- [x] 4.8 Polish translations render correctly
