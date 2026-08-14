@@ -27,6 +27,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/add-instrument/add-instrument').then((m) => m.AddInstrument),
         canActivate: [adminGuard],
       },
+      {
+        path: 'admin/remove-instrument',
+        loadComponent: () => import('./features/admin/remove-instrument/remove-instrument').then((m) => m.RemoveInstrument),
+        canActivate: [adminGuard],
+      },
     ],
   },
   {

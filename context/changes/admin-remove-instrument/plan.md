@@ -272,7 +272,7 @@ None — no schema changes. This plan only adds application-level `DELETE` state
 
 #### Manual
 
-- [ ] 1.3 Manual `curl` calls to both endpoints confirm response shapes and cascade cleanup
+- [x] 1.3 Manual `curl` calls to both endpoints confirm response shapes and cascade cleanup
 
 ### Phase 2: Frontend service methods + confirmation dialog
 
@@ -285,20 +285,20 @@ None — no schema changes. This plan only adds application-level `DELETE` state
 
 #### Automated
 
-- [x] 3.1 `npm run typecheck` passes
-- [x] 3.2 `npm run build` passes (page i18n ids — see Critical Implementation Details: doesn't actually validate unrouted-component i18n, Phase 4's `npm run ci` is the real gate)
+- [x] 3.1 `npm run typecheck` passes — 89a617e
+- [x] 3.2 `npm run build` passes (page i18n ids — see Critical Implementation Details: doesn't actually validate unrouted-component i18n, Phase 4's `npm run ci` is the real gate) — 89a617e
 
 ### Phase 4: Routing, nav, and i18n
 
 #### Automated
 
-- [ ] 4.1 `npm run ci` passes
+- [x] 4.1 `npm run ci` passes
 
 #### Manual
 
-- [ ] 4.2 Remove an instrument with 0 alerts, success snackbar shown
-- [ ] 4.3 Remove an instrument with alerts from 2 users, dialog shows correct count, both users' alerts gone afterward
-- [ ] 4.4 Removed ticker disappears from all comboboxes without refresh
-- [ ] 4.5 Trigger history for the removed ticker still renders (bare ticker as name)
-- [ ] 4.6 Non-admin access remains blocked
-- [ ] 4.7 Canceling the confirmation dialog leaves the instrument untouched
+- [x] 4.2 Remove an instrument with 0 alerts, success snackbar shown
+- [x] 4.3 Remove an instrument with alerts from 2 users, dialog shows correct count, both users' alerts gone afterward
+- [x] 4.4 Removed ticker disappears from all comboboxes without refresh
+- [x] 4.5 Trigger history for the removed ticker still renders (bare ticker as name)
+- [x] 4.6 Non-admin access remains blocked
+- [x] 4.7 Canceling the confirmation dialog leaves the instrument untouched
