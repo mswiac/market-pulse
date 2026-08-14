@@ -19,6 +19,16 @@ export interface CreatedInstrument {
   suffix: string;
 }
 
+export interface InstrumentImpact {
+  ticker: string;
+  alertsCount: number;
+}
+
+export interface RemovedInstrument {
+  ticker: string;
+  alertsDeleted: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private readonly http = inject(HttpClient);
@@ -36,5 +46,13 @@ export class AdminService {
     suffix: string,
   ): Observable<CreatedInstrument> {
     return this.http.post<CreatedInstrument>('/api/admin/instruments', { type, ticker, name, currency, rsiEligible, suffix });
+  }
+
+  getInstrumentImpact(ticker: string): Observable<InstrumentImpact> {
+    return this.http.get<InstrumentImpact>(`/api/admin/instruments/${encodeURIComponent(ticker)}/impact`);
+  }
+
+  removeInstrument(ticker: string): Observable<RemovedInstrument> {
+    return this.http.delete<RemovedInstrument>(`/api/admin/instruments/${encodeURIComponent(ticker)}`);
   }
 }

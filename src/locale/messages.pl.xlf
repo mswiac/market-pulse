@@ -478,6 +478,34 @@
         <source>Delete</source>
         <target>Usuń</target>
       </trans-unit>
+      <trans-unit id="removeInstrumentConfirm.title" datatype="html">
+        <source>Remove this instrument?</source>
+        <target>Usunąć ten instrument?</target>
+      </trans-unit>
+      <trans-unit id="removeInstrumentConfirm.ticker" datatype="html">
+        <source>Instrument: <x id="INTERPOLATION" equiv-text="{{ data.ticker }}"/></source>
+        <target>Instrument: <x id="INTERPOLATION" equiv-text="{{ data.ticker }}"/></target>
+      </trans-unit>
+      <trans-unit id="removeInstrumentConfirm.alertsWarning" datatype="html">
+        <source>This will also delete <x id="INTERPOLATION" equiv-text="{{ data.alertsCount }}"/> alert(s) belonging to other users.</source>
+        <target>Spowoduje to również usunięcie <x id="INTERPOLATION" equiv-text="{{ data.alertsCount }}"/> alert(ów) należących do innych użytkowników.</target>
+      </trans-unit>
+      <trans-unit id="removeInstrumentConfirm.historyWarning" datatype="html">
+        <source>Price and market history for this instrument will also be permanently deleted.</source>
+        <target>Historia cen i danych rynkowych tego instrumentu zostanie również trwale usunięta.</target>
+      </trans-unit>
+      <trans-unit id="removeInstrumentConfirm.body" datatype="html">
+        <source>This action cannot be undone.</source>
+        <target>Tej operacji nie można cofnąć.</target>
+      </trans-unit>
+      <trans-unit id="removeInstrumentConfirm.cancel" datatype="html">
+        <source>Cancel</source>
+        <target>Anuluj</target>
+      </trans-unit>
+      <trans-unit id="removeInstrumentConfirm.confirm" datatype="html">
+        <source>Remove</source>
+        <target>Usuń</target>
+      </trans-unit>
       <trans-unit id="instrumentHistory.title" datatype="html">
         <source>Instrument history</source>
         <target>Historia walorów</target>

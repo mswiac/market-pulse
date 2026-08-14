@@ -263,8 +263,8 @@ None — no schema changes. This plan only adds application-level `DELETE` state
 
 #### Automated
 
-- [x] 1.1 `npm run test:worker` passes, including new `admin.test.ts` blocks
-- [x] 1.2 `npm run typecheck` passes
+- [x] 1.1 `npm run test:worker` passes, including new `admin.test.ts` blocks — c40861a
+- [x] 1.2 `npm run typecheck` passes — c40861a
 
 #### Manual
 
@@ -274,8 +274,8 @@ None — no schema changes. This plan only adds application-level `DELETE` state
 
 #### Automated
 
-- [ ] 2.1 `npm run typecheck` passes
-- [ ] 2.2 `npm run build` passes (dialog i18n ids)
+- [x] 2.1 `npm run typecheck` passes
+- [x] 2.2 `npm run build` passes (dialog i18n ids)
 
 ### Phase 3: Remove-instrument page
 
