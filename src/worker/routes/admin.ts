@@ -308,22 +308,31 @@ adminRoutes.delete('/users/:id', async (c) => {
     return c.json({ error: 'unknown user', code: 'unknown_user' }, 404);
   }
 
-  const [alertsCount, triggerEventsCount] = await Promise.all([
-    c.env.DB.prepare('SELECT COUNT(*) AS count FROM alerts WHERE user_id = ?').bind(id).first<{ count: number }>(),
-    c.env.DB.prepare('SELECT COUNT(*) AS count FROM trigger_events WHERE user_id = ?').bind(id).first<{ count: number }>(),
-  ]);
+  // Counts run in the same batch as the delete so the reported
+  // alertsDeleted/triggerEventsDeleted always match exactly what was
+  // removed, atomically — same reasoning as DELETE /instruments/:ticker above.
+  try {
+    const [alertsCountResult, triggerEventsCountResult] = await c.env.DB.batch([
+      c.env.DB.prepare('SELECT COUNT(*) AS count FROM alerts WHERE user_id = ?').bind(id),
+      c.env.DB.prepare('SELECT COUNT(*) AS count FROM trigger_events WHERE user_id = ?').bind(id),
+      c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id),
+    ]);
 
-  await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
+    const alertsDeleted = (alertsCountResult.results[0] as { count: number } | undefined)?.count ?? 0;
+    const triggerEventsDeleted = (triggerEventsCountResult.results[0] as { count: number } | undefined)?.count ?? 0;
 
-  return c.json(
-    {
-      id: user.id,
-      email: user.email,
-      alertsDeleted: alertsCount?.count ?? 0,
-      triggerEventsDeleted: triggerEventsCount?.count ?? 0,
-    },
-    200,
-  );
+    return c.json(
+      {
+        id: user.id,
+        email: user.email,
+        alertsDeleted,
+        triggerEventsDeleted,
+      },
+      200,
+    );
+  } catch {
+    return c.json({ error: 'failed to delete user', code: 'delete_failed' }, 500);
+  }
 });
 
 export default adminRoutes;

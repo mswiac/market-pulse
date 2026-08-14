@@ -858,4 +858,18 @@ describe('DELETE /api/admin/users/:id', () => {
     const adminRow = await env.DB.prepare('SELECT 1 FROM users WHERE id = ?').bind(adminId).first();
     expect(adminRow).not.toBeNull();
   });
+
+  it('returns 500 with code delete_failed when the D1 batch delete fails', async () => {
+    const cookie = await logInAsAdmin();
+    await registerAndLogIn('delete-user-batch-fail@example.com');
+    const targetId = await getUserId('delete-user-batch-fail@example.com');
+    const batchSpy = vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('boom'));
+
+    const response = await removeUser(cookie, targetId);
+
+    expect(response.status).toBe(500);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('delete_failed');
+    batchSpy.mockRestore();
+  });
 });
