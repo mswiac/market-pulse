@@ -61,8 +61,12 @@ idea-notes.md
 # MCP configuration (may contain tokens)
 .mcp.json
 
-# Claude Code / 10x-cli workspace — all contents are local/auto-managed
-.claude/
+# Claude Code / 10x-cli workspace — all contents are local/auto-managed,
+# except the shared settings.json + hooks/ (PreToolUse guard blocking
+# .dev.vars reads, see lessons.md "Never read or print a whole secrets file")
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
 .agents/
 
 # System / special files
