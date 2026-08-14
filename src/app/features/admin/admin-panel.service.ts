@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 export interface MarketDataFetchResult {
   ticker: string;
@@ -29,6 +29,25 @@ export interface RemovedInstrument {
   alertsDeleted: number;
 }
 
+export interface AdminUser {
+  id: number;
+  email: string;
+}
+
+export interface UserImpact {
+  id: number;
+  email: string;
+  alertsCount: number;
+  triggerEventsCount: number;
+}
+
+export interface RemovedUser {
+  id: number;
+  email: string;
+  alertsDeleted: number;
+  triggerEventsDeleted: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private readonly http = inject(HttpClient);
@@ -54,5 +73,17 @@ export class AdminService {
 
   removeInstrument(ticker: string): Observable<RemovedInstrument> {
     return this.http.delete<RemovedInstrument>(`/api/admin/instruments/${encodeURIComponent(ticker)}`);
+  }
+
+  listUsers(): Observable<AdminUser[]> {
+    return this.http.get<{ users: AdminUser[] }>('/api/admin/users').pipe(map((response) => response.users));
+  }
+
+  getUserImpact(id: number): Observable<UserImpact> {
+    return this.http.get<UserImpact>(`/api/admin/users/${id}/impact`);
+  }
+
+  removeUser(id: number): Observable<RemovedUser> {
+    return this.http.delete<RemovedUser>(`/api/admin/users/${id}`);
   }
 }

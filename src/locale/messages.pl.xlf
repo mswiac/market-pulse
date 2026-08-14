@@ -546,6 +546,34 @@
         <source>Remove</source>
         <target>Usuń</target>
       </trans-unit>
+      <trans-unit id="removeUserConfirm.title" datatype="html">
+        <source>Remove this user?</source>
+        <target>Usunąć tego użytkownika?</target>
+      </trans-unit>
+      <trans-unit id="removeUserConfirm.email" datatype="html">
+        <source>User: <x id="INTERPOLATION" equiv-text="{{ data.email }}"/></source>
+        <target>Użytkownik: <x id="INTERPOLATION" equiv-text="{{ data.email }}"/></target>
+      </trans-unit>
+      <trans-unit id="removeUserConfirm.alertsWarning" datatype="html">
+        <source>This will also delete <x id="INTERPOLATION" equiv-text="{{ data.alertsCount }}"/> alert(s).</source>
+        <target>Spowoduje to również usunięcie <x id="INTERPOLATION" equiv-text="{{ data.alertsCount }}"/> alert(ów).</target>
+      </trans-unit>
+      <trans-unit id="removeUserConfirm.triggerEventsWarning" datatype="html">
+        <source> This will also delete <x id="INTERPOLATION" equiv-text="{{ data.triggerEventsCount }}"/> trigger event(s) from the history. </source>
+        <target> Spowoduje to również usunięcie <x id="INTERPOLATION" equiv-text="{{ data.triggerEventsCount }}"/> zdarzeń z historii wyzwolonych alertów. </target>
+      </trans-unit>
+      <trans-unit id="removeUserConfirm.body" datatype="html">
+        <source>This action cannot be undone.</source>
+        <target>Tej operacji nie można cofnąć.</target>
+      </trans-unit>
+      <trans-unit id="removeUserConfirm.cancel" datatype="html">
+        <source>Cancel</source>
+        <target>Anuluj</target>
+      </trans-unit>
+      <trans-unit id="removeUserConfirm.confirm" datatype="html">
+        <source>Remove</source>
+        <target>Usuń</target>
+      </trans-unit>
       <trans-unit id="instrumentHistory.title" datatype="html">
         <source>Instrument history</source>
         <target>Historia walorów</target>
