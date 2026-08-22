@@ -31,7 +31,7 @@ function formatValue(value: number, alertType: 'PRICE' | 'RSI', currency: string
   return alertType === 'PRICE' ? `${formatted} ${currency}` : formatted;
 }
 
-function buildEmail(alert: AlertEvalRow, value: number): { subject: string; text: string } {
+export function buildEmail(alert: AlertEvalRow, value: number): { subject: string; text: string } {
   const triggeredAt = new Date().toLocaleDateString('pl-PL', {
     day: '2-digit',
     month: '2-digit',
@@ -130,7 +130,13 @@ export async function evaluateAlerts(env: Env): Promise<void> {
         const { subject, text } = buildEmail(alert, value);
         const sendResult = await sendAlertEmail(env, { to: alert.notification_email, subject, text });
 
-        await env.DB.batch([
+        // A transient send failure (network-level, not a permanent
+        // rejection like an unverified recipient) leaves the alert armed
+        // so tomorrow's cron run retries the notification naturally,
+        // instead of requiring a full re-arm-then-re-cross cycle.
+        const isTransientFailure = !sendResult.ok && sendResult.transient === true;
+
+        const statements = [
           env.DB.prepare(
             `INSERT INTO trigger_events
                (user_id, alert_id, ticker, alert_type, direction, threshold, value_at_trigger, high_at_trigger, low_at_trigger, notification_email, email_status, email_error)
@@ -149,8 +155,11 @@ export async function evaluateAlerts(env: Env): Promise<void> {
             sendResult.ok ? 'sent' : 'failed',
             sendResult.ok ? null : sendResult.error,
           ),
-          env.DB.prepare('UPDATE alerts SET armed = 0 WHERE id = ?').bind(alert.id),
-        ]);
+        ];
+        if (!isTransientFailure) {
+          statements.push(env.DB.prepare('UPDATE alerts SET armed = 0 WHERE id = ?').bind(alert.id));
+        }
+        await env.DB.batch(statements);
       } else {
         if (hasRetreatedPastMargin(alert.direction, value, alert.threshold, margin)) {
           await env.DB.prepare('UPDATE alerts SET armed = 1 WHERE id = ?').bind(alert.id).run();

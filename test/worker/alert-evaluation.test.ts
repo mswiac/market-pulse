@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { evaluateAlerts } from '../../src/worker/lib/alert-evaluation';
+import { buildEmail, evaluateAlerts } from '../../src/worker/lib/alert-evaluation';
 
 const VERIFIED_EMAIL = 'verified@example.com'; // matches vitest.config.mts RESEND_VERIFIED_EMAIL
 
@@ -248,7 +248,7 @@ describe('evaluateAlerts', () => {
     expect((await getAlert(alertId)).armed).toBe(0); // still disarms — the crossing itself is real
   });
 
-  it('keeps evaluating other alerts when one alert throws mid-run', async () => {
+  it('records a failed trigger event without disarming when the send throws mid-run, but still evaluates other alerts', async () => {
     // Both alerts target the Resend-verified recipient (so both actually
     // reach the fetch call, past the pre-flight check) but differ by ticker,
     // which the stub uses to fail only one of them.
@@ -275,10 +275,17 @@ describe('evaluateAlerts', () => {
 
     await evaluateAlerts(env);
 
-    // The broken alert's send threw before its trigger_events/armed write —
-    // it stays armed and unrecorded, but the healthy one still fired.
+    // The broken alert's send threw — resend.ts catches it as a transient
+    // failure, so a "failed" trigger event is recorded but the alert stays
+    // armed (tomorrow's cron retries naturally). The healthy alert still
+    // fires and disarms normally.
     expect((await getAlert(brokenId)).armed).toBe(1);
-    expect(await triggerEventsFor(brokenId)).toHaveLength(0);
+    const brokenEvents = await triggerEventsFor(brokenId);
+    expect(brokenEvents).toHaveLength(1);
+    expect(brokenEvents[0]).toMatchObject({
+      email_status: 'failed',
+      email_error: expect.stringContaining('network error'),
+    });
     expect((await getAlert(healthyId)).armed).toBe(0);
     expect(await triggerEventsFor(healthyId)).toHaveLength(1);
   });
@@ -366,5 +373,61 @@ describe('evaluateAlerts', () => {
     const events = await triggerEventsFor(alertId);
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({ value_at_trigger: 75, high_at_trigger: null, low_at_trigger: null });
+  });
+});
+
+describe('buildEmail', () => {
+  const basePriceAlert = {
+    id: 1,
+    user_id: 1,
+    ticker: '^VIX',
+    alert_type: 'PRICE' as const,
+    threshold: 20,
+    direction: 'up' as const,
+    armed: 1,
+    notification_email: VERIFIED_EMAIL,
+    instrumentName: 'VIX',
+    currency: 'USD',
+    price: 25,
+    rsi: null,
+    high: null,
+    low: null,
+  };
+
+  it('includes both high and low lines when both are present', () => {
+    const { text } = buildEmail({ ...basePriceAlert, high: 26, low: 24 }, 25);
+    expect(text).toContain('Maksimum dnia:');
+    expect(text).toContain('Minimum dnia:');
+    expect(text).toContain('Zamknięcie:');
+  });
+
+  it('omits the low line when only high is present', () => {
+    const { text } = buildEmail({ ...basePriceAlert, high: 26, low: null }, 25);
+    expect(text).toContain('Maksimum dnia:');
+    expect(text).not.toContain('Minimum dnia:');
+    expect(text).toContain('Zamknięcie:');
+  });
+
+  it('omits the high line when only low is present', () => {
+    const { text } = buildEmail({ ...basePriceAlert, high: null, low: 24 }, 25);
+    expect(text).not.toContain('Maksimum dnia:');
+    expect(text).toContain('Minimum dnia:');
+    expect(text).toContain('Zamknięcie:');
+  });
+
+  it('omits both high and low lines when neither is present', () => {
+    const { text } = buildEmail({ ...basePriceAlert, high: null, low: null }, 25);
+    expect(text).not.toContain('Maksimum dnia:');
+    expect(text).not.toContain('Minimum dnia:');
+    expect(text).toContain('Zamknięcie:');
+  });
+
+  it('uses the single-value line for an RSI alert, with no high/low/close lines', () => {
+    const rsiAlert = { ...basePriceAlert, alert_type: 'RSI' as const, rsi: 75, high: null, low: null };
+    const { text } = buildEmail(rsiAlert, 75);
+    expect(text).toContain('Wartość w dniu wyzwolenia:');
+    expect(text).not.toContain('Maksimum dnia:');
+    expect(text).not.toContain('Minimum dnia:');
+    expect(text).not.toContain('Zamknięcie:');
   });
 });
