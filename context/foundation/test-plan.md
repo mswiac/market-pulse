@@ -6,7 +6,7 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-08-22 (post-implementation refresh — all 18 roadmap
+> Last updated: 2026-08-22 (post-implementation refresh — all 17 roadmap
 > slices done; see `context/changes/test-plan-refresh-2026-08-22/`)
 
 ## 1. Strategy
@@ -136,18 +136,15 @@ the relevant rollout phase ships; before that, it reads "TBD."
 
 ### 6.1 Adding a Worker unit test
 
-TBD — see §3 Phase 1 (RSI calculation, Stooq validation, and cron error
-surfacing patterns).
+TBD — see §3 Phase 1.
 
 ### 6.2 Adding a Worker integration test
 
-TBD — see §3 Phase 2 (Hono endpoint + local D1 binding, two-fixture-user
-pattern).
+TBD — see §3 Phase 2.
 
 ### 6.3 Adding a test with an external service stub
 
-TBD — see §3 Phase 3 (Resend stub call-assertion pattern; Stooq mock
-response pattern from Phase 1).
+TBD — see §3 Phase 1.
 
 ### 6.4 Adding a test for a new API endpoint
 
