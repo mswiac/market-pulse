@@ -1,10 +1,10 @@
 ---
 change_id: project-readme
 title: Add repo README covering local dev, Cloudflare deployment, and the CI quality gate
-status: impl_reviewed
+status: archived
 created: 2026-08-22
 updated: 2026-08-22
-archived_at: null
+archived_at: 2026-08-22T19:30:34Z
 ---
 
 ## Notes
