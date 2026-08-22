@@ -1,10 +1,10 @@
 ---
 change_id: test-plan-refresh-2026-08-22
 title: Refresh test-plan.md against post-implementation codebase state
-status: impl_reviewed
+status: archived
 created: 2026-08-22
 updated: 2026-08-22
-archived_at: null
+archived_at: 2026-08-22T20:17:30Z
 ---
 
 ## Notes
