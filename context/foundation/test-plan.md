@@ -6,7 +6,8 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-06-28 (Phase 1 → change opened)
+> Last updated: 2026-08-22 (post-implementation refresh — all 18 roadmap
+> slices done; see `context/changes/test-plan-refresh-2026-08-22/`)
 
 ## 1. Strategy
 
@@ -28,9 +29,13 @@ Tests follow three non-negotiable principles for this project:
    ground truth.
 
 Hot-spot scope used for likelihood weighting: `src/`, `migrations/`. Git
-history spans 30 days with 3 commits — project inception only; churn data
-has insufficient signal. Likelihood ratings rely on PRD, roadmap, and Phase
-2 interview.
+history over the last 30 days now shows real signal: `src/app/features`
+(the Angular frontend) is the highest-churn area in the repo at 14 commits
+/ 83 file touches; `src/worker/lib` shows 14 touches (`market-data.ts` 5,
+`instruments.ts` 3, `rsi.ts` 2, `alert-evaluation.ts` 2, `resend.ts` 1,
+`admin.ts` 1). Likelihood ratings below combine this churn data with PRD,
+roadmap, and the current codebase state as grounded in
+`context/changes/test-plan-refresh-2026-08-22/research.md`.
 
 ## 2. Risk Map
 
@@ -42,23 +47,25 @@ research's job, see §1 principle #3).
 
 | # | Risk (failure scenario) | Impact | Likelihood | Source (evidence — not anchor) |
 |---|---|---|---|---|
-| 1 | Threshold crossed, no email sent — cron runs to completion but Resend delivery fails silently; user never knows the alert triggered | High | Medium | PRD NFR ("missed notification is core product failure"); interview Q1 (VIX at 23 triggers 2–3×/year, no recovery window, stock market reaction time critical); roadmap S-05 |
-| 2 | Cron Worker crashes or hits CPU budget mid-evaluation — unhandled exception or timeout silently skips the evaluation for the day | High | Medium | Roadmap F-02 risk note (free tier CPU limit; no built-in retry on Cron Trigger); interview Q3 (infrastructure alignment is the biggest risk professionally); PRD NFR |
-| 3 | Stooq returns bad or missing data accepted without validation — fetch failure, changed column format, or HTTP error treated as valid; incorrect closes written to D1 | High | Medium | Roadmap F-02 unknown (Stooq has no official API contract, endpoint and column format can change without notice); PRD BL (RSI derived from daily closes sourced from Stooq) |
-| 4 | RSI calculation produces wrong values — off-by-one in lookback period, wrong Wilder's smoothing formula, or edge case with fewer than 14 closes causes threshold evaluation against incorrect RSI | High | Medium | PRD BL (RSI calculation is custom server-side; correct result is the product's core guarantee); roadmap F-02 (custom implementation, no tests yet) |
-| 5 | Cross-user data isolation failure — missing `user_id` scope on a CRUD endpoint allows user A to read or mutate user B's alerts | High | Low-Medium | PRD NFR ("each user's alerts fully isolated"); PRD Access Control (multi-user by design); archived `2026-06-26-backend-scaffold` (users table establishes isolation boundary) |
-| 6 | IDOR — valid JWT for user A used to access or delete an alert owned by user B via a manipulated alert ID | High | Low | PRD NFR isolation; abuse/authorization lens (ownership check is distinct from authentication check); PRD Access Control |
+| 1 | S-08 (daily high/low evaluation) introduced `resolveFiringValue`/`conditionMet` logic in `alert-evaluation.ts` with no independent oracle, unlike `rsi.ts` — a regression here could silently mis-fire or silently fail to fire an alert | High | Medium | User-stated least-confident area (interview); highest backend churn (14 touches/30d — `market-data.ts` 5, `instruments.ts` 3, `rsi.ts` 2, `alert-evaluation.ts` 2, `resend.ts` 1, `admin.ts` 1); research.md confirms `rsi.ts` has an external Python oracle but the S-08 high/low logic does not, plus three untested branches (`avgGain === 0`, `buildEmail` line-omission, asymmetric-null case) |
+| 2 | Threshold crossed, no email sent — a thrown `fetch()` (network/DNS/timeout) inside `resend.ts` is uncaught, propagates to a generic catch that only `console.error`s, and writes no `trigger_events` row at all | High | Medium | User's top-stated concern; PRD NFR ("missed notification is core product failure"); research.md confirms a real, currently-unguarded gap — `resend.ts:23-42` catches only non-ok HTTP responses, not a throwing `fetch` |
+| 3 | Multi-provider fetch (Yahoo + `.WA` suffix for GPW, self-correcting currency) silently corrupts `price_history`/`market_data` joins by leaking a suffixed symbol into a DB key | High | Low | Roadmap F-04 flagged the ticker-vs-suffix split as capable of silent corruption; research.md found this is NOT happening today — ticker/suffix kept separate at all call sites, DB writes always keyed on bare `ticker`, verified by explicit negative-assertion tests; remaining gap is narrower — no side-by-side bare/suffixed assertion in one test |
+| 4 | Zero automated frontend coverage (Angular, `src/app/features`) — Alert Form's custom and cross-field validators regress silently since no `.spec.ts` file exists anywhere under `src/` | Medium | Medium | User's stated under-tested concern; highest overall repo churn (83 file touches/30d); research.md found validation logic is better than assumed (Alert Form has custom + cross-field validators) but a tooling contradiction exists — `CLAUDE.md` claimed Karma, but no Karma package exists and `tsconfig.spec.json` already declares `vitest/globals` |
+| 5 | Cascading/orphaned deletes in the admin panel (S-11 instrument removal, S-12 user removal) behave differently on remote D1 than on local D1 | High | Low-Medium | Roadmap left block-vs-cascade as an unresolved unknown for S-11; S-12's cascade verified only against local D1; research.md confirms the split is intentional and well-tested locally but `PRAGMA foreign_keys` is never explicitly set anywhere and no test or manual check has ever run against remote D1 |
+| 6 | Cross-user isolation / IDOR across alert and admin endpoints — a request from one user reaches another user's data | High | Low | PRD NFR (isolation); abuse/authorization lens; research.md found this is the strongest-covered risk already — `user_id` scoping is baked into every SQL statement, admin gate is a single non-bypassable middleware, with explicit two-user isolation tests already in place |
+| 7 | Resource abuse via repeated wide-range admin backfill (S-09) against the tight Workers Free CPU budget | Medium | Low | Abuse lens (resource abuse); roadmap F-02 risk note on CPU budget; research.md confirms a hard cap (`MAX_RANGE_DAYS = 730`) exists and is boundary-tested but was sized by reasoning, never benchmarked, and no rate limiting exists at all |
 
 ### Risk Response Guidance
 
-| Risk | What would prove protection | Must challenge | Context `/10x-research` must ground | Likely cheapest layer | Anti-pattern to avoid |
+| Risk | What would prove protection | Must challenge | Context `/10x-research` grounded | Likely cheapest layer | Anti-pattern to avoid |
 |---|---|---|---|---|---|
-| #1 | When a threshold is crossed, Resend is called with the correct recipient and content; a `trigger_events` row is written; no duplicate call for the same alert+day | "cron completed = email sent" (trigger_events write ≠ Resend delivery) | How Resend SDK errors are surfaced; trigger_events dedup logic; whether delivery errors are swallowed silently | Integration test with a Resend stub asserting call args + dedup | Testing only that trigger_events was written, not that Resend was invoked |
-| #2 | An evaluation Worker that throws an unhandled exception surfaces the error (logged or recorded) rather than silently succeeding | "cron invocation = successful evaluation" | How the cron handler catches or propagates errors; whether partial D1 writes are possible on crash; CPU budget under real workload | Unit test of the evaluation function with an injected throw; verify the error surfaces rather than being swallowed | Testing only the happy path |
-| #3 | When Stooq returns an HTTP error, empty body, or unexpected column format, the system rejects the data and does not write closes to D1 | "HTTP 200 = data valid" | Stooq response format and expected columns; where response parsing happens; what a missing or extra column looks like at runtime | Unit tests with mocked Stooq responses: missing fields, wrong types, 4xx/5xx | Testing only with a perfect valid response |
-| #4 | A fixed series of daily closes produces an RSI value matching a hand-computed Wilder's RSI result sourced from an external reference, not from the implementation output | "it runs = it's correct" (oracle problem — expected value copied from implementation) | RSI formula variant used (Wilder's smoothing vs simple average), lookback period, handling of <14 closes, how the first average is seeded | Pure unit test with a known input/output pair from an external RSI reference (e.g. published Wilder tables) | Using the implementation's own output as the expected value (tautological assertion that passes even when the formula is wrong) |
-| #5 | A request authenticated as user A against user B's alert ID returns 403 or 404, not user B's data | "logged in = authorized for this resource" | All CRUD endpoints; how user_id is extracted from the JWT and applied in D1 queries | Integration tests with two D1 fixture users; cross-user ID requests asserted 403/404; includes registration with duplicate email → 409 | Testing only with a single user (isolation failure is invisible with one user) |
-| #6 | PUT/DELETE on an alert owned by user B using user A's valid JWT returns 403 or 404, not success | "auth middleware passed = resource is mine" | Alert ownership check at the endpoint level (not just the auth middleware) | Integration test with two fixture users and explicit cross-user ID manipulation | Testing only that auth is required, not that resource ownership is verified per request |
+| #1 | An independent/external check that `resolveFiringValue`/`conditionMet` resolve high/low/close correctly per direction, not just self-consistency — plus coverage of the `avgGain === 0`, `buildEmail` line-omission, and asymmetric-null branches | "it runs without throwing = it's correct" — `alert-evaluation.test.ts` has no external oracle today, only self-consistency assertions | `rsi.ts` already has an external Python oracle (`rsi.test.ts:4-18`); `alert-evaluation.ts`'s S-08 logic (`resolveFiringValue`/`conditionMet`, `:76-97`) has none; three specific untested branches identified: `rsi.ts`'s `avgGain === 0`, `buildEmail`'s high/low line-omission (`:34-66`), and the asymmetric-null case (only "both null" is covered today, `alert-evaluation.test.ts:343-356`) | Unit tests targeting the three named gaps directly — existing Vitest + Workers pool setup already covers this file | Assuming `rsi.ts`'s oracle discipline extends to `alert-evaluation.ts` by association |
+| #2 | Resend is called with correct `to`/`subject`/`text` args (not just DB state), plus a test that a throwing `fetch` (not just a non-ok response) is caught and recorded rather than silently dropped | "`trigger_events.email_status === 'sent'` proves the email was sent" — every existing assertion checks DB state only, and the test's own unconditional 200-stub would set that value regardless of what was actually sent (`alert-evaluation.test.ts:130`) | `resend.ts:23-42` wraps only the non-ok-response path; a thrown `fetch` propagates uncaught to `alert-evaluation.ts`'s generic per-alert catch (`:116,159-161`), which only `console.error`s — no `trigger_events` row is written and the alert stays `armed = 1` | Unit test with a rejecting `fetch` mock, once `resend.ts` gains the try/catch fix (Phase 1 scope) that makes the failure observable instead of silently swallowed | Only testing the non-ok-HTTP-response path (already covered) and calling notification risk closed |
+| #3 | `price_history`/`market_data` always key on bare `ticker`, verified across all instrument types side-by-side (bare + suffixed) in one assertion, not just the negative case per-type | The original worry ("the suffix distinction is untested") — research.md found this already false; the real remaining gap is narrower | Ticker/suffix kept separate at every call site (`scheduled.ts:50`, `admin.ts:74`); `upsertPriceHistory` always binds the bare `ticker` param (`market-data.ts:149-158`); negative assertions already exist (`scheduled.test.ts:239`, `admin.test.ts:302`); "self-correcting currency" (`buildCurrencyCorrection`, `market-data.ts:135-143`) is also already tested | One additional unit test asserting a bare and a suffixed ticker side-by-side in the same test | Re-testing what's already well-covered (suffix-vs-DB-key separation) instead of the actual remaining gap |
+| #4 | Admin/alert forms reject invalid input before it reaches the API — Alert Form's custom + cross-field validators (`positiveNumberValidator`, RSI min/max, dynamic threshold-control swap) actually behave as coded | The roadmap's "non-empty-only" assumption — research.md found Alert Form and Register both exceed that (custom validators, `minLength`); only Login and Add Instrument are required-only as assumed | `alert-form.ts:18-23,72,101-111` has custom + dynamic cross-field validation; zero `.spec.ts` files exist anywhere under `src/`; `CLAUDE.md` documented Karma but no Karma package exists and `tsconfig.spec.json:8` already declares `vitest/globals` | Angular component tests via Vitest, starting with Alert Form's cross-field logic — the richest untested surface | Bootstrapping Karma to match the stale doc instead of using the tooling the project already half-configured |
+| #5 | Instrument/user removal on remote D1 behaves identically to local (cascade or block, per the documented per-resource decision) | "a passing local-D1 test proves the migration's FK behavior in production" — `PRAGMA foreign_keys` is never explicitly set anywhere, so this is currently an assumption | Instrument removal is a manual application-level cascade (`admin.ts:227-233`, no FK on `instruments.ticker`); user removal relies on DB-level `ON DELETE CASCADE`/`SET NULL` (`migrations/0004`, `0008:32`, `0011:13,75`); both well-tested locally (`admin.test.ts:592-643,826-860`); the S-12 plan explicitly states remote behavior "is assumed... rather than separately verified" | One-time manual `wrangler d1 execute --remote` check — not an automated recurring CI step, matching the project's existing "no D1 migration SQL correctness automation" convention (§7) | Treating a passing local-D1 test as proof of remote behavior when `PRAGMA foreign_keys` is never explicitly set in code |
+| #6 | A request authenticated as one user/non-admin against another user's resource, or an admin session against a non-admin route using someone else's resource ID, returns 403/404 | Treating this as an open risk at all — research.md found it's already the strongest-covered risk in the codebase; the real question is whether the two narrow remaining gaps matter | `user_id` scoping is baked into every SQL statement across `alerts.ts:204-301` and `trigger-events.ts:47-59` (no fetch-then-check window); `adminMiddleware` (`lib/admin.ts:14-23`) re-derives admin status from D1 per request; `alerts.test.ts` has 3 two-user isolation tests, `admin.test.ts` has 401+403 on all 7 admin routes; the only gaps are an admin-session-vs-non-admin-route cross-user test and a two-admin scenario | Two small integration tests closing the two named gaps — reuses the existing two-fixture-user pattern | Spending budget broadly re-testing isolation that's already well-proven instead of the two specific named gaps |
+| #7 | Repeated wide-range admin backfill calls stay within a bounded CPU/latency envelope, not just that the 730-day boundary is rejected | "the cap exists, therefore abuse is prevented" — `MAX_RANGE_DAYS = 730` was sized by reasoning, never benchmarked, and there is no rate limiting at all | `admin.ts:8,37-100` defines the cap and rejects >730 days (`admin.test.ts:210-218`); the figure assumes ~500 trading days ≈ one Yahoo fetch + one ~500-statement D1 batch "within D1 limits" per the original admin-panel plan, but no test exercises a near-730-day range to observe actual CPU time; rate limiting was explicitly scoped out for "a single-admin, low-frequency internal tool" | Unit/integration test on a near-730-day boundary range observing actual execution time/D1 batch size, within the project's tight Workers Free CPU budget | Treating the existing boundary-rejection test (which only proves >730 is rejected) as proof that 730 itself is safe under the Free plan's CPU budget |
 
 ## 3. Phased Rollout
 
@@ -68,10 +75,19 @@ orchestrator updates Status as artifacts appear on disk.
 
 | # | Phase name | Goal (one line) | Risks covered | Test types | Status | Change folder |
 |---|---|---|---|---|---|---|
-| 1 | Bootstrap + pipeline units | Bootstrap Vitest + Workers pool; first unit tests for RSI calculation, Stooq response validation, and cron error surfacing | #2, #3, #4 | unit (Workers runtime emulation) | change opened | context/changes/testing-bootstrap-pipeline-units |
-| 2 | Auth and isolation integration | Verify user isolation and IDOR protection on auth + CRUD endpoints against local D1, including duplicate-email registration edge case | #5, #6 | integration (Hono + D1 local) | not started | — |
-| 3 | Notification pipeline integration | Verify alert evaluation → Resend call path; assert correct args and dedup; confirm no duplicate email per alert per day | #1 | integration (Resend stub) | not started | — |
-| 4 | Quality gates wiring | Lock typecheck + lint + unit+integration suite as required CI gates | cross-cutting | CI config | not started | — |
+| 1 | Notification/evaluation pipeline regression audit | Verify existing tests actually prove protection for risks #1 and #2 post-S-08; close identified gaps, including a `resend.ts` fetch-throw fix | #1, #2 | unit (Workers runtime emulation) | not started | — |
+| 2 | Multi-provider + admin-delete data integrity | Verify risk #3's side-by-side coverage gap and risk #5's remote D1 cascade behavior via a one-time manual check | #3, #5 | unit + one-time manual remote D1 check | not started | — |
+| 3 | Frontend test bootstrap | First Angular component tests (Alert Form validators, admin panel forms) via Vitest, addressing risk #4 | #4 | component (Vitest) | not started | — |
+| 4 | Abuse-lens closure + local quality-gate hook | Close risks #6 and #7's narrow remaining gaps; add the still-open local post-edit hook | #6, #7 | integration + local tooling | not started | — |
+
+**Scope notes** (grounded in this refresh's planning decisions — see `context/changes/test-plan-refresh-2026-08-22/plan.md`'s Key Discoveries):
+
+- **Phase 1**: covers risks #1 and #2. Includes *fixing* the uncaught-`fetch`-throw gap in `resend.ts` (a small `try/catch` addition), not just testing the current silent-failure behavior, and a quick check of whether `market-data.ts`'s Yahoo `fetch` call has the same uncaught-throw pattern.
+- **Phase 2**: covers risks #3 and #5. Includes one one-time manual `wrangler d1 execute --remote` verification of `PRAGMA foreign_keys` + cascade behavior, not an automated recurring CI step.
+- **Phase 3**: covers risk #4. Uses Vitest for Angular component tests, not Karma — `tsconfig.spec.json` already declares `vitest/globals` and no Karma package exists in the repo.
+- **Phase 4**: covers risks #6 and #7, plus the still-open local post-edit hook (§5). Drops the "wire `npm run ci` as an actually-enforced gate" item from the original proposal — research confirmed it's already enforced via Cloudflare Workers Builds (see §5).
+
+If phases must be sequenced under time pressure, Phase 1 is the top priority — it covers both the user's top-stated concern (risk #2) and the one confirmed real code gap.
 
 ## 4. Stack
 
@@ -83,14 +99,14 @@ signal at a fraction of the cost.
 |---|---|---|---|
 | unit + integration (Worker) | Vitest + `@cloudflare/vitest-pool-workers` | latest | Workers runtime emulation; D1 binding available in test context; none yet — see §3 Phase 1 |
 | HTTP edge mocking (Stooq / Resend) | Vitest built-in mocks or MSW | latest | Mock only at the HTTP edge; never mock internal Worker modules; none yet — see §3 Phase 1 |
-| Angular component tests | none yet | — | Frontend is currently empty; revisit when S-01 auth forms land |
+| Angular component tests | Vitest (not Karma — see §3 Phase 3 scope notes) | latest | `tsconfig.spec.json` already declares `vitest/globals`; no separate Angular-specific test runner (Karma) is being introduced — none yet, see §3 Phase 3 |
 | e2e | none planned for MVP | — | No critical flow requires the full deployed Workers shape at this scale |
 
 **Stack grounding tools (current session):**
-- Docs: none — not available in current session; stack evidence from local manifests only; checked: 2026-06-28
-- Search: none — not available in current session; checked: 2026-06-28
-- Runtime/browser: none — not available in current session; checked: 2026-06-28
-- Provider/platform: none — not available in current session; checked: 2026-06-28
+- Docs: none — not available in current session; stack evidence from local manifests only; checked: 2026-08-22
+- Search: none — not available in current session; checked: 2026-08-22
+- Runtime/browser: none — not available in current session; checked: 2026-08-22
+- Provider/platform: none — not available in current session; checked: 2026-08-22
 
 ## 5. Quality Gates
 
@@ -100,10 +116,18 @@ phase lands; before that, the gate is planned.
 
 | Gate | Where | Required? | Catches |
 |---|---|---|---|
-| lint + typecheck | local + CI | required | syntactic / type drift |
-| unit + integration (Worker) | local + CI | required after §3 Phase 1 | pipeline logic regressions, isolation failures |
+| lint + typecheck | local + CI (Cloudflare Workers Builds: "Workers Builds: marketpulse") | required — enforced via Cloudflare Workers Builds status check on `main` | syntactic / type drift |
+| unit + integration (Worker) | local + CI (Cloudflare Workers Builds: "Workers Builds: marketpulse") | required — enforced via Cloudflare Workers Builds status check on `main` | pipeline logic regressions, isolation failures |
 | post-edit hook | local (agent loop) | recommended after §3 Phase 1 | regressions at edit time |
 | pre-prod smoke (health + manual eval trigger) | between merge + prod | optional | environment-specific failures on Cloudflare |
+
+Cloudflare Workers Builds is a GitHub-App-based required status check
+(app_id 85455) configured in the Cloudflare dashboard, not a
+`.github/workflows/*.yml` file — its build command is `npm run ci`
+(`typecheck && test:worker && build`), so both gates above already run and
+block merge to `main` on every PR. Verify directly with
+`gh api repos/mswiac/market-pulse/branches/main/protection` rather than
+searching the repo for workflow files, which won't find it.
 
 ## 6. Cookbook Patterns
 
@@ -132,12 +156,16 @@ unless the failure mode requires the full deployed Worker shape.
 
 ## 7. What We Deliberately Don't Test
 
-- **Angular component snapshot tests** — no Angular components with business
-  logic exist yet; when they do, snapshot tests for layout/forms break
-  constantly and catch nothing that a typed template check would not catch
-  first. Re-evaluate if the Angular layer acquires significant client-side
-  validation logic. (Source: PRD scope; tech-stack.md `skipTests: true`
-  global default.)
+- **Angular component snapshot tests** — components with real business logic
+  now exist (e.g. Alert Form's custom and cross-field validators, see §2
+  Risk #4), so this is no longer a "nothing to test yet" gap. It's deferred
+  because the tooling decision (Vitest, not Karma — §3 Phase 3 scope notes)
+  needed resolving first and Phase 3 hasn't started yet, not because
+  snapshot tests would be worthless: they'd still break constantly on
+  layout/form changes and catch nothing a typed template check or a
+  behavioral Vitest test wouldn't catch first. Re-evaluate scope once Phase
+  3 ships. (Source: research.md Risk #4 finding; tech-stack.md
+  `skipTests: true` global default.)
 - **E2e against the live Cloudflare deployment** — Workers runtime emulation
   in Phase 1 gives sufficient signal at MVP scale with a single user.
   Re-evaluate when multi-user concurrency or Cloudflare-specific routing
@@ -149,8 +177,8 @@ unless the failure mode requires the full deployed Worker shape.
 
 ## 8. Freshness Ledger
 
-- Strategy (§1–§5) last reviewed: 2026-06-28
-- Stack versions last verified: 2026-06-28
+- Strategy (§1–§5) last reviewed: 2026-08-22
+- Stack versions last verified: 2026-08-22
 - AI-native tool references last verified: n/a (no AI-native layer)
 
 Refresh (`/10x-test-plan --refresh`) when:

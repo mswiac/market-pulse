@@ -31,7 +31,7 @@ Key flows:
 npm start           # dev server at http://localhost:4200 (live reload)
 npm run build       # production build → dist/
 npm run watch       # incremental dev build
-npm test            # Karma unit tests
+npm test            # not yet configured — Angular component tests planned via Vitest (test-plan.md §4)
 ng generate component path/to/name   # scaffold a component (skipTests is on by default)
 ```
 

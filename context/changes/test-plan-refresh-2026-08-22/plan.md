@@ -141,13 +141,13 @@ Not applicable — this is a documentation-only change. No test suite covers Mar
 
 #### Automated
 
-- [ ] 1.1 test-plan.md renders as valid Markdown with no broken table syntax
-- [ ] 1.2 No remaining reference to `testing-bootstrap-pipeline-units`
-- [ ] 1.3 No remaining stale "17 commits" figure
-- [ ] 1.4 CLAUDE.md no longer claims Karma as the active test runner
+- [x] 1.1 test-plan.md renders as valid Markdown with no broken table syntax
+- [x] 1.2 No remaining reference to `testing-bootstrap-pipeline-units`
+- [x] 1.3 No remaining stale "17 commits" figure
+- [x] 1.4 CLAUDE.md no longer claims Karma as the active test runner
 
 #### Manual
 
-- [ ] 1.5 Full read-through of updated test-plan.md confirms every risk/coverage/gate claim traces to research.md
-- [ ] 1.6 All 4 rollout-phase scope notes match the six Key Discoveries
-- [ ] 1.7 §5's gate table doesn't overclaim the local post-edit hook's status
+- [x] 1.5 Full read-through of updated test-plan.md confirms every risk/coverage/gate claim traces to research.md
+- [x] 1.6 All 4 rollout-phase scope notes match the six Key Discoveries
+- [x] 1.7 §5's gate table doesn't overclaim the local post-edit hook's status
