@@ -26,6 +26,11 @@ describe('calculateRSI', () => {
     const strictlyIncreasing = Array.from({ length: 16 }, (_, i) => i + 1);
     expect(calculateRSI(strictlyIncreasing)).toBe(100);
   });
+
+  it('returns 0 when average gain is zero (strictly decreasing closes)', () => {
+    const strictlyDecreasing = Array.from({ length: 16 }, (_, i) => 16 - i);
+    expect(calculateRSI(strictlyDecreasing)).toBe(0);
+  });
 });
 
 describe('calculateRSISeries', () => {

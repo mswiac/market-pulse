@@ -75,7 +75,7 @@ orchestrator updates Status as artifacts appear on disk.
 
 | # | Phase name | Goal (one line) | Risks covered | Test types | Status | Change folder |
 |---|---|---|---|---|---|---|
-| 1 | Notification/evaluation pipeline regression audit | Verify existing tests actually prove protection for risks #1 and #2 post-S-08; close identified gaps, including a `resend.ts` fetch-throw fix | #1, #2 | unit (Workers runtime emulation) | not started | — |
+| 1 | Notification/evaluation pipeline regression audit | Verify existing tests actually prove protection for risks #1 and #2 post-S-08; close identified gaps, including a `resend.ts` fetch-throw fix | #1, #2 | unit (Workers runtime emulation) | shipped | `context/changes/notification-pipeline-test-audit/` |
 | 2 | Multi-provider + admin-delete data integrity | Verify risk #3's side-by-side coverage gap and risk #5's remote D1 cascade behavior via a one-time manual check | #3, #5 | unit + one-time manual remote D1 check | not started | — |
 | 3 | Frontend test bootstrap | First Angular component tests (Alert Form validators, admin panel forms) via Vitest, addressing risk #4 | #4 | component (Vitest) | not started | — |
 | 4 | Abuse-lens closure + local quality-gate hook | Close risks #6 and #7's narrow remaining gaps; add the still-open local post-edit hook | #6, #7 | integration + local tooling | not started | — |
@@ -136,7 +136,21 @@ the relevant rollout phase ships; before that, it reads "TBD."
 
 ### 6.1 Adding a Worker unit test
 
-TBD — see §3 Phase 1.
+Give each `src/worker/lib/*.ts` module its own `test/worker/<module>.test.ts`
+file (`rsi.ts` → `rsi.test.ts`, `resend.ts` → `resend.test.ts`). Import the
+D1-backed `env` from `'cloudflare:workers'` (Vitest +
+`@cloudflare/vitest-pool-workers` provides the Workers runtime emulation
+and D1 binding automatically per `vitest.config.mts`) — but only reach for
+`env.DB` when the function under test actually touches the database. A
+pure function (e.g. `sendAlertEmail`, `buildEmail`, `calculateRSI`) needs
+no D1 setup at all; construct its inputs as plain object literals and
+assert on its return value directly. See `test/worker/resend.test.ts` and
+`test/worker/rsi.test.ts`'s `avgGain === 0` case for the pattern.
+
+When a module's core logic is a private helper you need to unit test
+directly (rather than only through the public function that calls it),
+export it — see `buildEmail` in `alert-evaluation.ts`, tested directly in
+`test/worker/alert-evaluation.test.ts`'s `describe('buildEmail')` block.
 
 ### 6.2 Adding a Worker integration test
 
@@ -144,7 +158,22 @@ TBD — see §3 Phase 2.
 
 ### 6.3 Adding a test with an external service stub
 
-TBD — see §3 Phase 1.
+Stub only at the HTTP edge (`fetch`) — never mock an internal Worker
+module. Use `vi.stubGlobal('fetch', vi.fn().mockImplementation(...))` in
+the test, and `vi.unstubAllGlobals()` in an `afterEach` so the stub
+doesn't leak into later tests. Cover each outcome the real service can
+produce as a separate case: success (assert the request URL/headers/body,
+not just the return value), a non-ok HTTP response (both a JSON and a
+non-JSON error body, since the error-parsing path has its own fallback),
+and a rejecting `fetch` (network/DNS/timeout) — the last one exercises a
+different code path than a non-ok response and is easy to forget. See
+`test/worker/resend.test.ts` for all four cases against Resend.
+
+When a test needs to fail only one of several concurrent calls (e.g. one
+alert's send fails while others in the same `evaluateAlerts` run succeed),
+match on a marker in the request body rather than call order — see
+`stubFetchThrowingFor` in `test/worker/alert-evaluation.test.ts`, which
+fails only the request whose body mentions a given ticker.
 
 ### 6.4 Adding a test for a new API endpoint
 

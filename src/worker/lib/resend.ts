@@ -6,7 +6,7 @@ export interface SendEmailInput {
   text: string;
 }
 
-export type SendEmailResult = { ok: true } | { ok: false; error: string };
+export type SendEmailResult = { ok: true } | { ok: false; error: string; transient?: boolean };
 
 const RESEND_FROM_ADDRESS = 'onboarding@resend.dev';
 
@@ -20,14 +20,23 @@ export async function sendAlertEmail(env: Env, { to, subject, text }: SendEmailI
     return { ok: false, error: 'recipient not verified in Resend sandbox' };
   }
 
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ from: RESEND_FROM_ADDRESS, to, subject, text }),
-  });
+  let response: Response;
+  try {
+    response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ from: RESEND_FROM_ADDRESS, to, subject, text }),
+    });
+  } catch (err) {
+    // A rejecting fetch (network/DNS/timeout) is retry-worthy, unlike a
+    // non-ok HTTP response or an unverified recipient — the `transient`
+    // flag lets alert-evaluation.ts leave the alert armed instead of
+    // disarming on a failure that may resolve itself by tomorrow's cron.
+    return { ok: false, error: `network error: ${err instanceof Error ? err.message : String(err)}`, transient: true };
+  }
 
   if (!response.ok) {
     let message = response.statusText;
