@@ -47,7 +47,10 @@ export async function sendAlertEmail(env: Env, { to, subject, text }: SendEmailI
       // Resend's error responses are normally JSON; fall back to statusText
       // if this one wasn't (e.g. an upstream gateway error).
     }
-    return { ok: false, error: message };
+    // A 5xx is Resend's own server failing, not a rejection of this
+    // specific request — retry-worthy like a network-level throw, unlike a
+    // 4xx (bad request/unverified recipient), which won't change on retry.
+    return { ok: false, error: message, transient: response.status >= 500 };
   }
 
   return { ok: true };

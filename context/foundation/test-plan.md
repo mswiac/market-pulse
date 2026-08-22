@@ -163,11 +163,15 @@ module. Use `vi.stubGlobal('fetch', vi.fn().mockImplementation(...))` in
 the test, and `vi.unstubAllGlobals()` in an `afterEach` so the stub
 doesn't leak into later tests. Cover each outcome the real service can
 produce as a separate case: success (assert the request URL/headers/body,
-not just the return value), a non-ok HTTP response (both a JSON and a
-non-JSON error body, since the error-parsing path has its own fallback),
-and a rejecting `fetch` (network/DNS/timeout) — the last one exercises a
-different code path than a non-ok response and is easy to forget. See
-`test/worker/resend.test.ts` for all four cases against Resend.
+not just the return value), a pre-flight rejection that never reaches the
+service at all (e.g. an unverified recipient — assert `fetch` wasn't
+called), a non-ok HTTP response (both a JSON and a non-JSON error body,
+since the error-parsing path has its own fallback — and, when the failure
+can be transient vs. permanent, assert that distinction per status code
+too, e.g. 5xx vs. 4xx), and a rejecting `fetch` (network/DNS/timeout) —
+the last one exercises a different code path than a non-ok response and
+is easy to forget. See `test/worker/resend.test.ts` for all five cases
+against Resend.
 
 When a test needs to fail only one of several concurrent calls (e.g. one
 alert's send fails while others in the same `evaluateAlerts` run succeed),

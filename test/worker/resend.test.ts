@@ -39,15 +39,15 @@ describe('sendAlertEmail', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('returns the Resend error message for a non-ok JSON response', async () => {
+  it('returns the Resend error message for a non-ok JSON response, not marked transient (4xx)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(422, { message: 'invalid from address' })));
 
     const result = await sendAlertEmail(env, INPUT);
 
-    expect(result).toEqual({ ok: false, error: 'invalid from address' });
+    expect(result).toEqual({ ok: false, error: 'invalid from address', transient: false });
   });
 
-  it('falls back to statusText for a non-ok response with a non-JSON body', async () => {
+  it('falls back to statusText for a non-ok response with a non-JSON body, marked transient (5xx)', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(new Response('gateway error', { status: 502, statusText: 'Bad Gateway' })),
@@ -55,7 +55,7 @@ describe('sendAlertEmail', () => {
 
     const result = await sendAlertEmail(env, INPUT);
 
-    expect(result).toEqual({ ok: false, error: 'Bad Gateway' });
+    expect(result).toEqual({ ok: false, error: 'Bad Gateway', transient: true });
   });
 
   it('catches a throwing fetch and reports it as a transient failure', async () => {
