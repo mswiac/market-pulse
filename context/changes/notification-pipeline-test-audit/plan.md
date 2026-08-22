@@ -202,10 +202,10 @@ the `UPDATE alerts SET armed = 0 WHERE id = ?` statement only when
 
 #### Automated
 
-- [x] 1.1 Typecheck passes: `npm run typecheck`
-- [x] 1.2 Worker test suite passes: `npm run test:worker`
+- [x] 1.1 Typecheck passes: `npm run typecheck` — 232582b
+- [x] 1.2 Worker test suite passes: `npm run test:worker` — 232582b
 
 #### Manual
 
-- [ ] 1.3 Skim the renamed alert-evaluation.test.ts throw-path test assertions
-- [ ] 1.4 Skim test-plan.md §6.1/§6.3 cookbook text for accuracy
+- [x] 1.3 Skim the renamed alert-evaluation.test.ts throw-path test assertions — 232582b
+- [x] 1.4 Skim test-plan.md §6.1/§6.3 cookbook text for accuracy — 232582b
