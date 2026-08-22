@@ -125,12 +125,12 @@ N/A — documentation-only change, no automated tests apply. Verification is the
 
 #### Automated
 
-- [x] 1.1 README.md is non-empty and contains all required section headings
-- [x] 1.2 No literal secret values appear in the file
-- [x] 1.3 Every command mentioned exists as a real script/invocation
+- [x] 1.1 README.md is non-empty and contains all required section headings — 7e97c52
+- [x] 1.2 No literal secret values appear in the file — 7e97c52
+- [x] 1.3 Every command mentioned exists as a real script/invocation — 7e97c52
 
 #### Manual
 
-- [ ] 1.4 Full read-through as a new contributor would, confirming commands are accurate
-- [ ] 1.5 Confirm the proxy.conf.json routing claim before it ships
-- [ ] 1.6 Confirm no stale npm test (Karma) claim slipped in
+- [x] 1.4 Full read-through as a new contributor would, confirming commands are accurate — 7e97c52
+- [x] 1.5 Confirm the proxy.conf.json routing claim before it ships — 7e97c52
+- [x] 1.6 Confirm no stale npm test (Karma) claim slipped in — 7e97c52
