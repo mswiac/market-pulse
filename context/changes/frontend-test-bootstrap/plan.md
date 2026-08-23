@@ -325,10 +325,10 @@ Not applicable — no data or schema changes.
 
 #### Automated
 
-- [x] 3.1 `npm run test -- --watch=false` passes, including new Register assertions
-- [x] 3.2 `npm run ci` passes end-to-end
-- [x] 3.3 `npm run lint` passes
+- [x] 3.1 `npm run test -- --watch=false` passes, including new Register assertions — f5ed59e
+- [x] 3.2 `npm run ci` passes end-to-end — f5ed59e
+- [x] 3.3 `npm run lint` passes — f5ed59e
 
 #### Manual
 
-- [x] 3.4 `context/foundation/test-plan.md` §6.5 reads as a usable pattern (self-review)
+- [x] 3.4 `context/foundation/test-plan.md` §6.5 reads as a usable pattern (self-review) — f5ed59e
