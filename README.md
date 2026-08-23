@@ -80,6 +80,19 @@ This check is configured entirely in the Cloudflare dashboard as a GitHub-App-ba
 gh api repos/mswiac/market-pulse/branches/main/protection
 ```
 
+## Mutation testing
+
+[Stryker](https://stryker-mutator.io/) is set up (`stryker.config.json`) as an optional, manual quality gate on top of `npm run test:worker` — it is **not** part of `npm run ci` and does not gate PRs. Run it by hand when you want to check whether a test suite actually catches bugs, not just executes the code:
+
+```bash
+npx stryker run                                    # full configured scope
+npx stryker run --mutate "src/worker/lib/rsi.ts"   # a single file — much faster, prefer this
+```
+
+Currently scoped to `src/worker/**` only, since `src/app/**` (Angular) has no test coverage yet. As `context/foundation/test-plan.md`'s rollout phases land — starting with Phase 3 (Angular component tests) — extend `stryker.config.json`'s `mutate` array to cover the newly-tested code, then run Stryker and address the survived mutants it surfaces.
+
+See `CLAUDE.md`'s "Mutation testing" section for how to scope a run and a known gotcha with this repo's Worker test style. Reports land at `reports/mutation/mutation.html` (gitignored).
+
 ## Project structure notes
 
 - `context/` — the 10x-\* change-tracking structure: `context/changes/` holds in-flight work (research, plans, reviews), `context/archive/` holds completed work, and `context/foundation/` holds living project documents (roadmap, test plan, lessons learned).

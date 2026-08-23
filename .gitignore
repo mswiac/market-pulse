@@ -29,6 +29,8 @@ testem.log
 # Testing
 /coverage
 __screenshots__/
+.stryker-tmp/
+/reports
 
 # IDEs and editors
 .idea
