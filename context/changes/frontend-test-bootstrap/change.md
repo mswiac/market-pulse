@@ -1,7 +1,7 @@
 ---
 change_id: frontend-test-bootstrap
 title: Wire up Vitest for Angular component tests and cover Alert Form validators
-status: implemented
+status: impl_reviewed
 created: 2026-08-23
 updated: 2026-08-23
 archived_at: null

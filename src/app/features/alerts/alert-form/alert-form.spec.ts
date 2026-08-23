@@ -22,6 +22,8 @@ async function renderAlertForm() {
         useValue: { currentUser: () => ({ id: 1, email: 'user@example.com', isAdmin: false }) },
       },
       {
+        // Plain functions, not signal()/computed() — non-reactive on purpose.
+        // A test that mutates the instrument list mid-run would need real signals here.
         provide: InstrumentsService,
         useValue: {
           instruments: () => INSTRUMENTS,
@@ -78,6 +80,9 @@ describe('AlertForm', () => {
     fixture.detectChanges();
 
     expect(form.controls.ticker.value).toBe('CDR');
+    // The ticker mat-select's closed trigger renders the selected option's
+    // label — proves the template reflects the cascade, not just the control.
+    expect(await screen.findByText('CD Projekt')).toBeTruthy();
   });
 
   it('resets alertType to PRICE when the ticker switches to a non-RSI-eligible instrument', async () => {
@@ -86,10 +91,14 @@ describe('AlertForm', () => {
     form.controls.alertType.setValue('RSI');
     fixture.detectChanges();
     expect(form.controls.alertType.value).toBe('RSI');
+    expect(screen.getByText('RSI')).toBeTruthy();
 
     form.controls.ticker.setValue('^VIX');
     fixture.detectChanges();
 
     expect(form.controls.alertType.value).toBe('PRICE');
+    // showRsiOption() must re-evaluate to false — the @if removes the RSI
+    // mat-option from the DOM entirely, not just deselect it.
+    expect(screen.queryByText('RSI')).toBeNull();
   });
 });
