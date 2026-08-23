@@ -309,17 +309,17 @@ Not applicable — no data or schema changes.
 
 #### Automated
 
-- [x] 1.1 `npm run test -- --watch=false` runner wired correctly — errors only with "No tests found" (expected with zero spec files; the builder has no zero-tests-is-ok mode, unlike the plan's original assumption — full pass verified end-to-end by 2.1 once Phase 2 adds real spec files)
-- [x] 1.2 `npm run typecheck` passes
-- [x] 1.3 `npm run lint` passes
+- [x] 1.1 `npm run test -- --watch=false` runner wired correctly — errors only with "No tests found" (expected with zero spec files; the builder has no zero-tests-is-ok mode, unlike the plan's original assumption — full pass verified end-to-end by 2.1 once Phase 2 adds real spec files) — 80fb755
+- [x] 1.2 `npm run typecheck` passes — 80fb755
+- [x] 1.3 `npm run lint` passes — 80fb755
 
 ### Phase 2: Alert Form component tests
 
 #### Automated
 
-- [ ] 2.1 `npm run test -- --watch=false` passes, including new Alert Form assertions
-- [ ] 2.2 `npm run typecheck` passes
-- [ ] 2.3 `npm run lint` passes
+- [x] 2.1 `npm run test -- --watch=false` passes, including new Alert Form assertions
+- [x] 2.2 `npm run typecheck` passes
+- [x] 2.3 `npm run lint` passes
 
 ### Phase 3: Register component tests + cookbook documentation
 
