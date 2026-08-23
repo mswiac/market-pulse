@@ -15,7 +15,8 @@
     "lint": "eslint .",
     "test:worker": "vitest run",
     "ci": "npm run typecheck && npm run test:worker && npm run build",
-    "extract-i18n": "ng extract-i18n --output-path src/locale"
+    "extract-i18n": "ng extract-i18n --output-path src/locale",
+    "prepare": "husky"
   },
   "private": true,
   "packageManager": "npm@11.13.0",
@@ -46,6 +47,8 @@
     "angular-eslint": "^22.1.0",
     "eslint": "^10.9.0",
     "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.67.0",
