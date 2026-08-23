@@ -1,10 +1,10 @@
 ---
 change_id: multi-provider-admin-delete-integrity
 title: Verify multi-provider ticker integrity and remote D1 cascade behavior
-status: impl_reviewed
+status: archived
 created: 2026-08-23
 updated: 2026-08-23
-archived_at: null
+archived_at: 2026-08-23T12:02:32Z
 ---
 
 ## Notes
