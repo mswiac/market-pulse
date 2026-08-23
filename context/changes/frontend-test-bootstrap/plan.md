@@ -317,18 +317,18 @@ Not applicable — no data or schema changes.
 
 #### Automated
 
-- [x] 2.1 `npm run test -- --watch=false` passes, including new Alert Form assertions
-- [x] 2.2 `npm run typecheck` passes
-- [x] 2.3 `npm run lint` passes
+- [x] 2.1 `npm run test -- --watch=false` passes, including new Alert Form assertions — 28fdd98
+- [x] 2.2 `npm run typecheck` passes — 28fdd98
+- [x] 2.3 `npm run lint` passes — 28fdd98
 
 ### Phase 3: Register component tests + cookbook documentation
 
 #### Automated
 
-- [ ] 3.1 `npm run test -- --watch=false` passes, including new Register assertions
-- [ ] 3.2 `npm run ci` passes end-to-end
-- [ ] 3.3 `npm run lint` passes
+- [x] 3.1 `npm run test -- --watch=false` passes, including new Register assertions
+- [x] 3.2 `npm run ci` passes end-to-end
+- [x] 3.3 `npm run lint` passes
 
 #### Manual
 
-- [ ] 3.4 `context/foundation/test-plan.md` §6.5 reads as a usable pattern (self-review)
+- [x] 3.4 `context/foundation/test-plan.md` §6.5 reads as a usable pattern (self-review)

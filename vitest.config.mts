@@ -21,6 +21,14 @@ export default defineConfig(async () => {
         },
       }),
     ],
-    test: { setupFiles: ["./test/setup/apply-migrations.ts"] },
+    test: {
+      // Without an explicit include, Vitest's default glob also picks up
+      // src/app/**/*.spec.ts (Angular component tests, run separately via
+      // `npm run test` / the @angular/build:unit-test builder) — those need
+      // a DOM + the Angular JIT compiler, not the Workers runtime emulation
+      // this config provides, and fail here with a JIT-compilation error.
+      include: ["test/worker/**/*.test.ts"],
+      setupFiles: ["./test/setup/apply-migrations.ts"],
+    },
   };
 });
