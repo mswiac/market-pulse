@@ -12,9 +12,11 @@
     "migrate:local": "wrangler d1 migrations apply marketpulse-db --local",
     "migrate:remote": "wrangler d1 migrations apply marketpulse-db --remote",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.worker.json",
+    "lint": "eslint .",
     "test:worker": "vitest run",
     "ci": "npm run typecheck && npm run test:worker && npm run build",
-    "extract-i18n": "ng extract-i18n --output-path src/locale"
+    "extract-i18n": "ng extract-i18n --output-path src/locale",
+    "prepare": "husky"
   },
   "private": true,
   "packageManager": "npm@11.13.0",
@@ -38,9 +40,18 @@
     "@angular/localize": "^22.0.6",
     "@cloudflare/vitest-pool-workers": "^0.18.4",
     "@cloudflare/workers-types": "^4",
+    "@eslint/js": "^10.0.1",
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/vitest-runner": "^10.0.0",
     "@types/node": "^26.1.1",
+    "angular-eslint": "^22.1.0",
+    "eslint": "^10.9.0",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",
+    "typescript-eslint": "^8.67.0",
     "vitest": "^4.1.10",
     "wrangler": "^4"
   }
