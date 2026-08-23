@@ -240,6 +240,35 @@ describe('scheduled handler', () => {
     expect(wrongTicker).toBeNull();
   });
 
+  it('writes a bare and a suffixed ticker side-by-side, both keyed on their bare ticker', async () => {
+    await insertSuffixInstrument();
+
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS))),
+        ),
+    );
+
+    await runScheduled();
+
+    const barePriceHistoryRow = await env.DB.prepare('SELECT 1 FROM price_history WHERE ticker = ?').bind('^NDX').first();
+    const suffixedPriceHistoryRow = await env.DB.prepare('SELECT 1 FROM price_history WHERE ticker = ?').bind('TEST').first();
+    expect(barePriceHistoryRow).not.toBeNull();
+    expect(suffixedPriceHistoryRow).not.toBeNull();
+
+    const bareMarketDataRow = await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?').bind('^NDX').first();
+    const suffixedMarketDataRow = await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?').bind('TEST').first();
+    expect(bareMarketDataRow).not.toBeNull();
+    expect(suffixedMarketDataRow).not.toBeNull();
+
+    // Never a row keyed on the provider symbol itself, checked alongside the bare rows above.
+    const wrongKeyRow = await env.DB.prepare('SELECT 1 FROM price_history WHERE ticker = ?').bind('TEST.WA').first();
+    expect(wrongKeyRow).toBeNull();
+  });
+
   it('auto-corrects instruments.currency when the fetched currency disagrees with the stored value', async () => {
     await insertSuffixInstrument('USD');
 

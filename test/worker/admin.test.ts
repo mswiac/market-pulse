@@ -320,6 +320,44 @@ describe('POST /api/admin/market-data', () => {
       .first<{ currency: string }>();
     expect(row?.currency).toBe('PLN');
   });
+
+  it('backfills a bare and a suffixed ticker side-by-side, both keyed on their bare ticker', async () => {
+    await insertSuffixInstrument();
+    const cookie = await logInAsAdmin();
+
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url.includes(encodeURIComponent('TESTBACKFILL.WA'))) {
+        return Promise.resolve(jsonResponse(200, yahooBody([1767620200], [50.5])));
+      }
+      return Promise.resolve(jsonResponse(200, yahooBody([1767620200], [100.5])));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const bareResponse = await fetchMarketData(cookie, { ticker: '^VIX', from: '2026-01-01', to: '2026-01-05' });
+    const suffixedResponse = await fetchMarketData(cookie, {
+      ticker: 'TESTBACKFILL',
+      from: '2026-01-01',
+      to: '2026-01-05',
+    });
+
+    expect(bareResponse.status).toBe(200);
+    expect(suffixedResponse.status).toBe(200);
+
+    const bareRow = await env.DB.prepare('SELECT close FROM price_history WHERE ticker = ?')
+      .bind('^VIX')
+      .first<{ close: number }>();
+    const suffixedRow = await env.DB.prepare('SELECT close FROM price_history WHERE ticker = ?')
+      .bind('TESTBACKFILL')
+      .first<{ close: number }>();
+    expect(bareRow?.close).toBe(100.5);
+    expect(suffixedRow?.close).toBe(50.5);
+
+    // Never a row keyed on the provider symbol itself, checked alongside the bare row above.
+    const wrongKeyRow = await env.DB.prepare('SELECT 1 FROM price_history WHERE ticker = ?')
+      .bind('TESTBACKFILL.WA')
+      .first();
+    expect(wrongKeyRow).toBeNull();
+  });
 });
 
 describe('POST /api/admin/instruments', () => {
