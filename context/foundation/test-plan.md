@@ -184,18 +184,72 @@ fails only the request whose body mentions a given ticker.
 TBD — see §3 Phase 2. Rule of thumb: prefer integration test over e2e
 unless the failure mode requires the full deployed Worker shape.
 
+### 6.5 Adding an Angular component test
+
+Colocate `<name>.spec.ts` next to the component it tests (e.g.
+`alert-form.ts` → `alert-form.spec.ts`) — matches `tsconfig.spec.json`'s
+`src/**/*.spec.ts` include, and is picked up automatically by the `test`
+architect target (`@angular/build:unit-test`, `runner: "vitest"`, jsdom).
+Run via `npm run test -- --watch=false` (already part of `npm run ci`).
+
+Render via `@testing-library/angular`'s `render()` — import from the
+**`/zoneless`** subpath (`@testing-library/angular/zoneless`), not the
+package root, since this app has no `zone.js` dependency and runs
+zoneless by default. The zoneless `render()` returns a `fixture` you call
+`fixture.detectChanges()` on after any change made outside a DOM event
+(e.g. driving a `FormControl` directly via `.setValue()`) — the zoneless
+change-detection scheduler doesn't pick up mutations made from test code,
+only from real DOM events or signal writes it's already tracking.
+
+Provide an explicit stub for **every** injected service or token — a
+missing one throws at render time, not silently. Two easy-to-miss cases
+seen in practice: `MatDialogRef` is injected without `{ optional: true }`
+in dialog components (`NullInjectorError` if omitted), and `RouterLink`
+directives inject `ActivatedRoute` even when the component never reads
+route data (`NG0201` if omitted — provide `{ provide: ActivatedRoute,
+useValue: {} }`).
+
+Drive form/validator behavior by mutating the component's (often
+`protected`) `FormGroup` directly — `(fixture.componentInstance as
+unknown as { form: YourForm['form'] }).form` — rather than simulating
+every keystroke; this exercises the same `valueChanges` subscriptions and
+validators the real UI does, since `.setValue()` on a `FormControl`
+behaves identically regardless of what triggered it. Assert through the
+rendered DOM (`screen.findByText(...)` for `mat-error` visibility, not the
+component instance's error state directly) so the test fails if the
+template stops rendering the message, not only if the validator logic
+breaks. Server-driven states not reachable through client-side validators
+(e.g. a manually-set `setErrors({ server: true })` after an HTTP 409) need
+a stubbed service method that returns a rejecting Observable — see
+`register.spec.ts`'s 409 case.
+
+See `src/app/features/alerts/alert-form/alert-form.spec.ts` (custom
+validator + two reactive cascades) and
+`src/app/features/auth/register/register.spec.ts` (required/format/length
+validators + a server-error path) for full examples.
+
+`vitest.config.mts` (the `test:worker` config) scopes `test.include` to
+`test/worker/**/*.test.ts` specifically so it does NOT also pick up
+`src/app/**/*.spec.ts` — Vitest's default glob would otherwise match both,
+and the Workers runtime emulation in that config has no Angular JIT
+compiler, so any Angular spec files it picked up fail immediately with a
+"needs to be compiled using the JIT compiler" error. Keep new Angular spec
+files under `src/app/` (matched only by the `test` architect target) and
+new Worker test files under `test/worker/` (matched only by
+`vitest.config.mts`) — don't let the two glob scopes overlap.
+
 ## 7. What We Deliberately Don't Test
 
 - **Angular component snapshot tests** — components with real business logic
   now exist (e.g. Alert Form's custom and cross-field validators, see §2
-  Risk #4), so this is no longer a "nothing to test yet" gap. It's deferred
-  because the tooling decision (Vitest, not Karma — §3 Phase 3 scope notes)
-  needed resolving first and Phase 3 hasn't started yet, not because
-  snapshot tests would be worthless: they'd still break constantly on
+  Risk #4), so this is no longer a "nothing to test yet" gap. It stays
+  deliberately deferred even now that Phase 3 has shipped behavioral
+  component tests (§6.5): snapshot tests would still break constantly on
   layout/form changes and catch nothing a typed template check or a
-  behavioral Vitest test wouldn't catch first. Re-evaluate scope once Phase
-  3 ships. (Source: research.md Risk #4 finding; tech-stack.md
-  `skipTests: true` global default.)
+  behavioral Vitest test doesn't already catch first. Re-evaluate only if
+  a real regression class emerges that behavioral tests demonstrably miss.
+  (Source: research.md Risk #4 finding; tech-stack.md `skipTests: true`
+  global default.)
 - **E2e against the live Cloudflare deployment** — Workers runtime emulation
   in Phase 1 gives sufficient signal at MVP scale with a single user.
   Re-evaluate when multi-user concurrency or Cloudflare-specific routing
