@@ -144,12 +144,12 @@ None — no schema changes.
 
 #### Automated
 
-- [x] 1.1 `npm run test:worker` passes, including both new tests
-- [x] 1.2 `npm run typecheck` passes
+- [x] 1.1 `npm run test:worker` passes, including both new tests — 0bc0445
+- [x] 1.2 `npm run typecheck` passes — 0bc0445
 
 ### Phase 2: Remote D1 foreign-key enforcement check
 
 #### Manual
 
-- [ ] 2.1 `PRAGMA foreign_keys` run against production D1, output recorded in `remote-d1-verification.md`
-- [ ] 2.2 A `0` result (if it occurs) escalated to the user rather than silently accepted
+- [x] 2.1 `PRAGMA foreign_keys` run against production D1, output recorded in `remote-d1-verification.md`
+- [x] 2.2 A `0` result (if it occurs) escalated to the user rather than silently accepted
