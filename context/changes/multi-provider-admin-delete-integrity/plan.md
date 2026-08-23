@@ -151,5 +151,5 @@ None — no schema changes.
 
 #### Manual
 
-- [x] 2.1 `PRAGMA foreign_keys` run against production D1, output recorded in `remote-d1-verification.md`
-- [x] 2.2 A `0` result (if it occurs) escalated to the user rather than silently accepted
+- [x] 2.1 `PRAGMA foreign_keys` run against production D1, output recorded in `remote-d1-verification.md` — 33fab92
+- [x] 2.2 A `0` result (if it occurs) escalated to the user rather than silently accepted — 33fab92
