@@ -1,10 +1,10 @@
 ---
 change_id: abuse-lens-closure
 title: Abuse-lens test gaps: admin cross-user isolation and backfill CPU bound
-status: impl_reviewed
+status: archived
 created: 2026-08-24
 updated: 2026-08-24
-archived_at: null
+archived_at: 2026-08-24T19:57:39Z
 ---
 
 ## Notes
