@@ -14,6 +14,12 @@
 > orchestrator, which was never re-run after Phase 2 (see
 > `context/archive/2026-08-23-multi-provider-admin-delete-integrity/plan.md`'s
 > "What We're NOT Doing"). No change to strategy (§1-§2) or risk map.
+>
+> Refreshed again 2026-08-25 — added Risk #8 (admin panel zero
+> component-test coverage) and §3 Phase 5; recorded the PR #91
+> mutation-testing sweep in §4/§8 (test-only, no risk-map change of its
+> own — Risk #8 is a separate, interview-sourced addition). See
+> `context/archive/2026-08-25-test-plan-refresh-2026-08-25/`.
 
 ## 1. Strategy
 
@@ -60,6 +66,7 @@ research's job, see §1 principle #3).
 | 5 | Cascading/orphaned deletes in the admin panel (S-11 instrument removal, S-12 user removal) behave differently on remote D1 than on local D1 | High | Low-Medium | Roadmap left block-vs-cascade as an unresolved unknown for S-11; S-12's cascade verified only against local D1; research.md confirms the split is intentional and well-tested locally but `PRAGMA foreign_keys` is never explicitly set anywhere and no test or manual check has ever run against remote D1 |
 | 6 | Cross-user isolation / IDOR across alert and admin endpoints — a request from one user reaches another user's data | High | Low | PRD NFR (isolation); abuse/authorization lens; research.md found this is the strongest-covered risk already — `user_id` scoping is baked into every SQL statement, admin gate is a single non-bypassable middleware, with explicit two-user isolation tests already in place |
 | 7 | Resource abuse via repeated wide-range admin backfill (S-09) against the tight Workers Free CPU budget | Medium | Low | Abuse lens (resource abuse); roadmap F-02 risk note on CPU budget; research.md confirms a hard cap (`MAX_RANGE_DAYS = 730`) exists and is boundary-tested but was sized by reasoning, never benchmarked, and no rate limiting exists at all |
+| 8 | Admin panel (Angular) has zero component-test coverage across 6 components (admin-panel, add-instrument, remove-instrument[-confirm], remove-user[-confirm]) handling destructive/irreversible actions and non-trivial form logic (type→suffix mapping) | High | Medium | User interview (2026-08-25); 5 commits/30d in src/app/features/admin/ (S-09..S-12, shipped in the last 3 weeks); zero test coverage confirmed (research.md); roadmap S-11 risk note (no FK safety net — cleanup logic lives in the delete endpoint, so UI must send the right target) |
 
 ### Risk Response Guidance
 
@@ -72,6 +79,7 @@ research's job, see §1 principle #3).
 | #5 | Instrument/user removal on remote D1 behaves identically to local (cascade or block, per the documented per-resource decision) | "a passing local-D1 test proves the migration's FK behavior in production" — `PRAGMA foreign_keys` is never explicitly set anywhere, so this is currently an assumption | Instrument removal is a manual application-level cascade (`admin.ts:227-233`, no FK on `instruments.ticker`); user removal relies on DB-level `ON DELETE CASCADE`/`SET NULL` (`migrations/0004`, `0008:32`, `0011:13,75`); both well-tested locally (`admin.test.ts:592-643,826-860`); the S-12 plan explicitly states remote behavior "is assumed... rather than separately verified" | One-time manual `wrangler d1 execute --remote` check — not an automated recurring CI step, matching the project's existing "no D1 migration SQL correctness automation" convention (§7) | Treating a passing local-D1 test as proof of remote behavior when `PRAGMA foreign_keys` is never explicitly set in code |
 | #6 | A request authenticated as one user/non-admin against another user's resource, or an admin session against a non-admin route using someone else's resource ID, returns 403/404 | Treating this as an open risk at all — research.md found it's already the strongest-covered risk in the codebase; the real question is whether the two narrow remaining gaps matter | `user_id` scoping is baked into every SQL statement across `alerts.ts:204-301` and `trigger-events.ts:47-59` (no fetch-then-check window); `adminMiddleware` (`lib/admin.ts:14-23`) re-derives admin status from D1 per request; `alerts.test.ts` has 3 two-user isolation tests, `admin.test.ts` has 401+403 on all 7 admin routes; the only gaps are an admin-session-vs-non-admin-route cross-user test and a two-admin scenario | Two small integration tests closing the two named gaps — reuses the existing two-fixture-user pattern | Spending budget broadly re-testing isolation that's already well-proven instead of the two specific named gaps |
 | #7 | Repeated wide-range admin backfill calls stay within a bounded CPU/latency envelope, not just that the 730-day boundary is rejected | "the cap exists, therefore abuse is prevented" — `MAX_RANGE_DAYS = 730` was sized by reasoning, never benchmarked, and there is no rate limiting at all | `admin.ts:8,37-100` defines the cap and rejects >730 days (`admin.test.ts:210-218`); the figure assumes ~500 trading days ≈ one Yahoo fetch + one ~500-statement D1 batch "within D1 limits" per the original admin-panel plan, but no test exercises a near-730-day range to observe actual CPU time; rate limiting was explicitly scoped out for "a single-admin, low-frequency internal tool" | Unit/integration test on a near-730-day boundary range observing actual execution time/D1 batch size, within the project's tight Workers Free CPU budget | Treating the existing boundary-rejection test (which only proves >730 is rejected) as proof that 730 itself is safe under the Free plan's CPU budget |
+| #8 | Confirm/cancel dialogs call the delete service only on explicit confirmation; add-instrument's type→suffix mapping and ticker-uppercase-on-blur behave as coded; each component's error-code map renders the correct message | "it's just a confirm dialog, too simple to break" — nothing today proves the UI sends the right id/payload or that the dialog can't be bypassed | research.md confirms none of the 6 components use FormGroup (all signal-based); MatDialog (non-optional) is injected by the two "opener" components (remove-instrument.ts, remove-user.ts), while the two `*-confirm` dialog components never inject MatDialogRef directly — the `mat-dialog-close` template directive requires it from TestBed providers regardless; both delete flows share a repeated impact-preview→confirm→delete pattern | Angular component tests via Vitest + `@testing-library/angular/zoneless` — same tooling as §6.5, but needs a new signal-driven testing pattern since §6.5's FormGroup-cast trick doesn't apply here | Assuming §6.5's existing FormGroup-driven pattern transfers directly to these components without adaptation |
 
 ## 3. Phased Rollout
 
@@ -85,6 +93,7 @@ orchestrator updates Status as artifacts appear on disk.
 | 2 | Multi-provider + admin-delete data integrity | Verify risk #3's side-by-side coverage gap and risk #5's remote D1 cascade behavior via a one-time manual check | #3, #5 | unit + one-time manual remote D1 check | shipped | `context/archive/2026-08-23-multi-provider-admin-delete-integrity/` |
 | 3 | Frontend test bootstrap | First Angular component tests (Alert Form validators, admin panel forms) via Vitest, addressing risk #4 | #4 | component (Vitest) | shipped | `context/archive/2026-08-23-frontend-test-bootstrap/` |
 | 4 | Abuse-lens closure + local quality-gate hook | Close risks #6 and #7's narrow remaining gaps; add the still-open local post-edit hook | #6, #7 | integration + local tooling | shipped | `context/archive/2026-08-24-abuse-lens-closure/` |
+| 5 | Admin panel component coverage | Component tests (Vitest) for all 6 admin-panel components, closing risk #8 | #8 | component (Vitest) | not started | — |
 
 **Scope notes** (grounded in this refresh's planning decisions — see `context/archive/2026-08-22-test-plan-refresh-2026-08-22/plan.md`'s Key Discoveries):
 
@@ -92,6 +101,7 @@ orchestrator updates Status as artifacts appear on disk.
 - **Phase 2**: covers risks #3 and #5. Includes one one-time manual `wrangler d1 execute --remote` verification of `PRAGMA foreign_keys` + cascade behavior, not an automated recurring CI step.
 - **Phase 3**: covers risk #4. Uses Vitest for Angular component tests, not Karma — `tsconfig.spec.json` already declares `vitest/globals` and no Karma package exists in the repo.
 - **Phase 4**: covers risks #6 and #7. The local post-edit hook (§5) shipped separately in PR #90 before this phase's change folder was even opened, so `abuse-lens-closure` covered only risk #6/#7's two narrow test gaps (admin-session-vs-non-admin-route isolation, two-admin scenario, near-730-day backfill batch-size observation) — see `context/archive/2026-08-24-abuse-lens-closure/plan.md`. Drops the "wire `npm run ci` as an actually-enforced gate" item from the original proposal — research confirmed it's already enforced via Cloudflare Workers Builds (see §5).
+- **Phase 5**: covers risk #8. Scope includes all 6 admin components named in Risk #8, including `admin-panel.ts`'s manual backfill form — not just the destructive-action components. §6.5's cookbook stays `TBD` for this phase's signal-driven (no-`FormGroup`) testing pattern until it actually ships; `research.md` (`context/changes/test-plan-refresh-2026-08-25/research.md`) already documents the DI/dialog specifics per component for whoever picks this phase up.
 
 If phases must be sequenced under time pressure, Phase 1 is the top priority — it covers both the user's top-stated concern (risk #2) and the one confirmed real code gap.
 
@@ -103,9 +113,9 @@ signal at a fraction of the cost.
 
 | Layer | Tool | Version | Notes |
 |---|---|---|---|
-| unit + integration (Worker) | Vitest + `@cloudflare/vitest-pool-workers` | latest | Workers runtime emulation; D1 binding available in test context; none yet — see §3 Phase 1 |
-| HTTP edge mocking (Stooq / Resend) | Vitest built-in mocks or MSW | latest | Mock only at the HTTP edge; never mock internal Worker modules; none yet — see §3 Phase 1 |
-| Angular component tests | Vitest (not Karma — see §3 Phase 3 scope notes) | latest | `tsconfig.spec.json` already declares `vitest/globals`; no separate Angular-specific test runner (Karma) is being introduced — none yet, see §3 Phase 3 |
+| unit + integration (Worker) | Vitest + `@cloudflare/vitest-pool-workers` | latest | Workers runtime emulation; D1 binding available in test context; hardened by Stryker mutation testing (`npx stryker run`, scope `src/worker/**/*.ts` per `stryker.config.json`) — most recently PR #91 (2026-08-24/25) closed survivor gaps across all `src/worker/**` modules |
+| HTTP edge mocking (Stooq / Resend) | Vitest built-in mocks or MSW | latest | Mock only at the HTTP edge; never mock internal Worker modules |
+| Angular component tests | Vitest (not Karma — see §3 Phase 3 scope notes) | latest | `tsconfig.spec.json` already declares `vitest/globals`; no separate Angular-specific test runner (Karma) was introduced. Two component test files shipped in §3 Phase 3 (`alert-form.spec.ts`, `register.spec.ts`); admin panel components remain uncovered — see §3 Phase 5 (risk #8) |
 | e2e | none planned for MVP | — | No critical flow requires the full deployed Workers shape at this scale |
 
 **Stack grounding tools (current session):**
@@ -267,9 +277,10 @@ new Worker test files under `test/worker/` (matched only by
 
 ## 8. Freshness Ledger
 
-- Strategy (§1–§5) last reviewed: 2026-08-22
+- Strategy (§1–§5) last reviewed: 2026-08-25
 - Stack versions last verified: 2026-08-22
 - AI-native tool references last verified: n/a (no AI-native layer)
+- 2026-08-25 — PR #91 mutation-testing triage (commits `8a2884f`..`07bef80`, 6 commits): test-only sweep closing Stryker survivor gaps across `src/worker/**` (session/auth, scheduled/admin routes, index/email, market-data/password, alert-evaluation, alerts/trigger-events/admin/resend/rsi). ~823 lines added across 12 `test/worker/*.test.ts` files. No production code changed, no risk-map delta from this sweep itself (Risk #8 is a separate, interview-sourced addition — see §2).
 
 Refresh (`/10x-test-plan --refresh`) when:
 
