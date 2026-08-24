@@ -189,8 +189,8 @@ describe('POST /api/admin/market-data', () => {
     const response = await fetchMarketData(cookie, { ticker: '^VIX', from: '2026-01-01', to: '2026-01-05' });
 
     expect(response.status).toBe(403);
-    const json = (await response.json()) as { code: string };
-    expect(json.code).toBe('forbidden');
+    const json = (await response.json()) as { error: string; code: string };
+    expect(json).toMatchObject({ error: 'forbidden', code: 'forbidden' });
   });
 
   it('returns 400 with code unknown_instrument for an unknown ticker', async () => {

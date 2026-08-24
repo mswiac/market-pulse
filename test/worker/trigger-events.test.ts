@@ -187,4 +187,36 @@ describe('trigger events endpoint', () => {
     expect(body.events.map((e) => e.triggeredAt)).toEqual([1000]);
     expect(body.hasMore).toBe(false);
   });
+
+  it('ignores an invalid limit (0) and falls back to the default page size instead of returning zero rows', async () => {
+    const { cookie, userId } = await registerAndLogIn('trigger-limit-zero@example.com');
+    await seedTriggerEvent(userId, 1000);
+    await seedTriggerEvent(userId, 2000);
+    await seedTriggerEvent(userId, 3000);
+
+    const response = await getTriggerEvents(cookie, { limit: 0 });
+    const body = (await response.json()) as { events: unknown[] };
+    expect(body.events).toHaveLength(3);
+  });
+
+  it('respects a limit of exactly 1 (lower boundary)', async () => {
+    const { cookie, userId } = await registerAndLogIn('trigger-limit-one@example.com');
+    await seedTriggerEvent(userId, 1000);
+    await seedTriggerEvent(userId, 2000);
+    await seedTriggerEvent(userId, 3000);
+
+    const response = await getTriggerEvents(cookie, { limit: 1 });
+    const body = (await response.json()) as { events: unknown[] };
+    expect(body.events).toHaveLength(1);
+  });
+
+  it('ignores a negative offset and falls back to 0 instead of passing it through to the query', async () => {
+    const { cookie, userId } = await registerAndLogIn('trigger-negative-offset@example.com');
+    await seedTriggerEvent(userId, 1000);
+    await seedTriggerEvent(userId, 2000);
+
+    const response = await getTriggerEvents(cookie, { limit: 2, offset: -5 });
+    const body = (await response.json()) as { events: { triggeredAt: number }[] };
+    expect(body.events.map((e) => e.triggeredAt)).toEqual([2000, 1000]);
+  });
 });

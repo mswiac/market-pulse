@@ -24,9 +24,12 @@ describe('sendAlertEmail', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('https://api.resend.com/emails');
-    expect((init.headers as Record<string, string>)['Authorization']).toBe(`Bearer ${env.RESEND_API_KEY}`);
+    expect(init.method).toBe('POST');
+    const headers = init.headers as Record<string, string>;
+    expect(headers['Authorization']).toBe(`Bearer ${env.RESEND_API_KEY}`);
+    expect(headers['Content-Type']).toBe('application/json');
     const body = JSON.parse(init.body as string);
-    expect(body).toMatchObject({ to: VERIFIED_EMAIL, subject: INPUT.subject, text: INPUT.text });
+    expect(body).toMatchObject({ from: 'onboarding@resend.dev', to: VERIFIED_EMAIL, subject: INPUT.subject, text: INPUT.text });
   });
 
   it('rejects a recipient that is not the Resend-verified address, without calling fetch', async () => {
@@ -45,6 +48,22 @@ describe('sendAlertEmail', () => {
     const result = await sendAlertEmail(env, INPUT);
 
     expect(result).toEqual({ ok: false, error: 'invalid from address', transient: false });
+  });
+
+  it('falls back to statusText when the JSON error body has no message field', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 422, statusText: 'Unprocessable Entity' })));
+
+    const result = await sendAlertEmail(env, INPUT);
+
+    expect(result).toEqual({ ok: false, error: 'Unprocessable Entity', transient: false });
+  });
+
+  it('marks exactly a 500 status as transient (inclusive boundary)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 500 })));
+
+    const result = await sendAlertEmail(env, INPUT);
+
+    expect(result).toMatchObject({ transient: true });
   });
 
   it('falls back to statusText for a non-ok response with a non-JSON body, marked transient (5xx)', async () => {
