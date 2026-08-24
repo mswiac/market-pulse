@@ -7,7 +7,13 @@
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
 > Last updated: 2026-08-22 (post-implementation refresh — all 17 roadmap
-> slices done; see `context/changes/test-plan-refresh-2026-08-22/`)
+> slices done; see `context/archive/2026-08-22-test-plan-refresh-2026-08-22/`).
+> §3 Phased Rollout table corrected 2026-08-24 — Phases 2-4 marked
+> "shipped" with their archive paths; each phase's own plan had
+> deliberately left this status update to the `/10x-test-plan`
+> orchestrator, which was never re-run after Phase 2 (see
+> `context/archive/2026-08-23-multi-provider-admin-delete-integrity/plan.md`'s
+> "What We're NOT Doing"). No change to strategy (§1-§2) or risk map.
 
 ## 1. Strategy
 
@@ -35,7 +41,7 @@ history over the last 30 days now shows real signal: `src/app/features`
 `instruments.ts` 3, `rsi.ts` 2, `alert-evaluation.ts` 2, `resend.ts` 1,
 `admin.ts` 1). Likelihood ratings below combine this churn data with PRD,
 roadmap, and the current codebase state as grounded in
-`context/changes/test-plan-refresh-2026-08-22/research.md`.
+`context/archive/2026-08-22-test-plan-refresh-2026-08-22/research.md`.
 
 ## 2. Risk Map
 
@@ -75,17 +81,17 @@ orchestrator updates Status as artifacts appear on disk.
 
 | # | Phase name | Goal (one line) | Risks covered | Test types | Status | Change folder |
 |---|---|---|---|---|---|---|
-| 1 | Notification/evaluation pipeline regression audit | Verify existing tests actually prove protection for risks #1 and #2 post-S-08; close identified gaps, including a `resend.ts` fetch-throw fix | #1, #2 | unit (Workers runtime emulation) | shipped | `context/changes/notification-pipeline-test-audit/` |
-| 2 | Multi-provider + admin-delete data integrity | Verify risk #3's side-by-side coverage gap and risk #5's remote D1 cascade behavior via a one-time manual check | #3, #5 | unit + one-time manual remote D1 check | not started | — |
-| 3 | Frontend test bootstrap | First Angular component tests (Alert Form validators, admin panel forms) via Vitest, addressing risk #4 | #4 | component (Vitest) | not started | — |
-| 4 | Abuse-lens closure + local quality-gate hook | Close risks #6 and #7's narrow remaining gaps; add the still-open local post-edit hook | #6, #7 | integration + local tooling | not started | — |
+| 1 | Notification/evaluation pipeline regression audit | Verify existing tests actually prove protection for risks #1 and #2 post-S-08; close identified gaps, including a `resend.ts` fetch-throw fix | #1, #2 | unit (Workers runtime emulation) | shipped | `context/archive/2026-08-22-notification-pipeline-test-audit/` |
+| 2 | Multi-provider + admin-delete data integrity | Verify risk #3's side-by-side coverage gap and risk #5's remote D1 cascade behavior via a one-time manual check | #3, #5 | unit + one-time manual remote D1 check | shipped | `context/archive/2026-08-23-multi-provider-admin-delete-integrity/` |
+| 3 | Frontend test bootstrap | First Angular component tests (Alert Form validators, admin panel forms) via Vitest, addressing risk #4 | #4 | component (Vitest) | shipped | `context/archive/2026-08-23-frontend-test-bootstrap/` |
+| 4 | Abuse-lens closure + local quality-gate hook | Close risks #6 and #7's narrow remaining gaps; add the still-open local post-edit hook | #6, #7 | integration + local tooling | shipped | `context/archive/2026-08-24-abuse-lens-closure/` |
 
-**Scope notes** (grounded in this refresh's planning decisions — see `context/changes/test-plan-refresh-2026-08-22/plan.md`'s Key Discoveries):
+**Scope notes** (grounded in this refresh's planning decisions — see `context/archive/2026-08-22-test-plan-refresh-2026-08-22/plan.md`'s Key Discoveries):
 
 - **Phase 1**: covers risks #1 and #2. Includes *fixing* the uncaught-`fetch`-throw gap in `resend.ts` (a small `try/catch` addition), not just testing the current silent-failure behavior, and a quick check of whether `market-data.ts`'s Yahoo `fetch` call has the same uncaught-throw pattern.
 - **Phase 2**: covers risks #3 and #5. Includes one one-time manual `wrangler d1 execute --remote` verification of `PRAGMA foreign_keys` + cascade behavior, not an automated recurring CI step.
 - **Phase 3**: covers risk #4. Uses Vitest for Angular component tests, not Karma — `tsconfig.spec.json` already declares `vitest/globals` and no Karma package exists in the repo.
-- **Phase 4**: covers risks #6 and #7, plus the still-open local post-edit hook (§5). Drops the "wire `npm run ci` as an actually-enforced gate" item from the original proposal — research confirmed it's already enforced via Cloudflare Workers Builds (see §5).
+- **Phase 4**: covers risks #6 and #7. The local post-edit hook (§5) shipped separately in PR #90 before this phase's change folder was even opened, so `abuse-lens-closure` covered only risk #6/#7's two narrow test gaps (admin-session-vs-non-admin-route isolation, two-admin scenario, near-730-day backfill batch-size observation) — see `context/archive/2026-08-24-abuse-lens-closure/plan.md`. Drops the "wire `npm run ci` as an actually-enforced gate" item from the original proposal — research confirmed it's already enforced via Cloudflare Workers Builds (see §5).
 
 If phases must be sequenced under time pressure, Phase 1 is the top priority — it covers both the user's top-stated concern (risk #2) and the one confirmed real code gap.
 
