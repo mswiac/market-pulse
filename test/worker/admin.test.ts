@@ -393,10 +393,7 @@ describe('POST /api/admin/market-data', () => {
     );
     const batchSpy = vi.spyOn(env.DB, 'batch');
 
-    const start = performance.now();
     const response = await fetchMarketData(cookie, { ticker: '^VIX', from, to });
-    const elapsedMs = performance.now() - start;
-    console.log(`near-730-day backfill: ${timestamps.length} closes written in ${elapsedMs.toFixed(1)}ms`);
 
     expect(response.status).toBe(200);
     const json = (await response.json()) as { daysWritten: number };
@@ -859,7 +856,7 @@ describe('GET /api/admin/users/:id/impact', () => {
 
 describe('DELETE /api/admin/users/:id', () => {
   afterEach(async () => {
-    await env.DB.prepare("DELETE FROM users WHERE email LIKE 'delete-user-%'").run();
+    await env.DB.prepare("DELETE FROM users WHERE email LIKE 'delete-user-%' OR email = 'admin2@example.com'").run();
   });
 
   it('returns 401 with no session', async () => {
