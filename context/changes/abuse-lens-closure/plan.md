@@ -134,11 +134,11 @@ None beyond the observational logging described above — no threshold, no produ
 
 #### Automated
 
-- [x] 1.1 Unit/integration tests pass: `npm run test:worker`
-- [x] 1.2 Typecheck passes: `npm run typecheck`
-- [x] 1.3 Lint passes: `npm run lint`
-- [x] 1.4 Full CI gate passes: `npm run ci`
+- [x] 1.1 Unit/integration tests pass: `npm run test:worker` — b99facf
+- [x] 1.2 Typecheck passes: `npm run typecheck` — b99facf
+- [x] 1.3 Lint passes: `npm run lint` — b99facf
+- [x] 1.4 Full CI gate passes: `npm run ci` — b99facf
 
 #### Manual
 
-- [x] 1.5 Skim the risk #7 test's logged timing once for a sanity check
+- [x] 1.5 Skim the risk #7 test's logged timing once for a sanity check — b99facf
