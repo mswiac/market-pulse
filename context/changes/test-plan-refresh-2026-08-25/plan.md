@@ -134,15 +134,15 @@ Not applicable — this is a documentation-only change. No test suite covers Mar
 
 #### Automated
 
-- [x] 1.1 test-plan.md renders as valid Markdown with no broken table syntax
-- [x] 1.2 No remaining "none yet" phrasing anywhere in test-plan.md
-- [x] 1.3 Risk #8 row present in the risk map
-- [x] 1.4 Phase 5 row present in the Phased Rollout table
-- [x] 1.5 PR #91 milestone recorded in the Freshness Ledger
+- [x] 1.1 test-plan.md renders as valid Markdown with no broken table syntax — f56c734
+- [x] 1.2 No remaining "none yet" phrasing anywhere in test-plan.md — f56c734
+- [x] 1.3 Risk #8 row present in the risk map — f56c734
+- [x] 1.4 Phase 5 row present in the Phased Rollout table — f56c734
+- [x] 1.5 PR #91 milestone recorded in the Freshness Ledger — f56c734
 
 #### Manual
 
-- [ ] 1.6 Full read-through confirms Risk #8 and its Risk Response Guidance row trace to research.md findings
-- [ ] 1.7 New Phase 5 scope note matches Key Discoveries #2 and #3
-- [ ] 1.8 No existing risk was renumbered; archived phases' risk-number references still make sense
-- [ ] 1.9 §4's three corrected rows read naturally with no leftover stale phrasing artifacts
+- [x] 1.6 Full read-through confirms Risk #8 and its Risk Response Guidance row trace to research.md findings — f56c734
+- [x] 1.7 New Phase 5 scope note matches Key Discoveries #2 and #3 — f56c734
+- [x] 1.8 No existing risk was renumbered; archived phases' risk-number references still make sense — f56c734
+- [x] 1.9 §4's three corrected rows read naturally with no leftover stale phrasing artifacts — f56c734
