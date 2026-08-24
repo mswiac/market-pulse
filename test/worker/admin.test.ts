@@ -48,6 +48,23 @@ function yahooBody(timestamps: number[], closes: Array<number | null>, currency?
   };
 }
 
+// Generates one Unix-seconds timestamp per weekday (Mon-Fri) in [fromIso, toIso],
+// so a near-730-day range test gets realistic trading-day density without
+// hand-listing ~500 entries.
+function weekdayTimestampsBetween(fromIso: string, toIso: string): number[] {
+  const timestamps: number[] = [];
+  const cursor = new Date(`${fromIso}T00:00:00Z`);
+  const end = new Date(`${toIso}T00:00:00Z`);
+  while (cursor.getTime() <= end.getTime()) {
+    const day = cursor.getUTCDay();
+    if (day !== 0 && day !== 6) {
+      timestamps.push(Math.floor(cursor.getTime() / 1000));
+    }
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return timestamps;
+}
+
 async function insertSuffixInstrument(currency = 'PLN'): Promise<void> {
   await env.DB.prepare(
     `INSERT INTO instruments (ticker, name, type, rsi_eligible, provider, currency, suffix) VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -357,6 +374,39 @@ describe('POST /api/admin/market-data', () => {
       .bind('TESTBACKFILL.WA')
       .first();
     expect(wrongKeyRow).toBeNull();
+  });
+
+  // Only the >730-day rejection path was ever tested before — this exercises
+  // a range just under the cap to observe the real batch size. No hard
+  // latency threshold: this work is I/O-bound (Yahoo fetch + one D1.batch()),
+  // not CPU-bound, and vitest-pool-workers timing doesn't reflect Cloudflare's
+  // real budget — see context/archive/2026-08-02-admin-panel/plan.md.
+  it('backfills a near-730-day range with a batch matching the fetched close count, no chunking', async () => {
+    const cookie = await logInAsAdmin();
+    const from = '2024-01-03';
+    const to = '2026-01-01'; // 729 days — under the 730-day cap
+    const timestamps = weekdayTimestampsBetween(from, to);
+    const closes = timestamps.map(() => 100.5);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(timestamps, closes)))),
+    );
+    const batchSpy = vi.spyOn(env.DB, 'batch');
+
+    const start = performance.now();
+    const response = await fetchMarketData(cookie, { ticker: '^VIX', from, to });
+    const elapsedMs = performance.now() - start;
+    console.log(`near-730-day backfill: ${timestamps.length} closes written in ${elapsedMs.toFixed(1)}ms`);
+
+    expect(response.status).toBe(200);
+    const json = (await response.json()) as { daysWritten: number };
+    expect(json.daysWritten).toBe(timestamps.length);
+
+    expect(batchSpy).toHaveBeenCalledTimes(1);
+    const statements = batchSpy.mock.calls[0]?.[0] as unknown[];
+    expect(statements).toHaveLength(timestamps.length);
+
+    batchSpy.mockRestore();
   });
 });
 
@@ -895,6 +945,31 @@ describe('DELETE /api/admin/users/:id', () => {
 
     const adminRow = await env.DB.prepare('SELECT 1 FROM users WHERE id = ?').bind(adminId).first();
     expect(adminRow).not.toBeNull();
+  });
+
+  // Two admin accounts exist (ADMIN_EMAILS in vitest.config.mts lists both
+  // ADMIN_EMAIL and 'admin2@example.com') — a fellow admin must get no
+  // special immunity from another admin's user-management actions, and the
+  // reported counts must stay scoped to the target account only.
+  it('lets one admin act on a second admin\'s account exactly like a regular user', async () => {
+    const cookieA = await logInAsAdmin();
+    await registerAndLogIn('admin2@example.com');
+    const adminBId = await getUserId('admin2@example.com');
+    await insertAlert('^VIX', adminBId);
+    await insertTriggerEvent('^VIX', adminBId);
+
+    const impactResponse = await getUserImpact(cookieA, adminBId);
+    expect(impactResponse.status).toBe(200);
+    const impactJson = (await impactResponse.json()) as { alertsCount: number; triggerEventsCount: number };
+    expect(impactJson).toEqual({ id: adminBId, email: 'admin2@example.com', alertsCount: 1, triggerEventsCount: 1 });
+
+    const deleteResponse = await removeUser(cookieA, adminBId);
+    expect(deleteResponse.status).toBe(200);
+    const deleteJson = (await deleteResponse.json()) as { alertsDeleted: number; triggerEventsDeleted: number };
+    expect(deleteJson).toEqual({ id: adminBId, email: 'admin2@example.com', alertsDeleted: 1, triggerEventsDeleted: 1 });
+
+    const adminBRow = await env.DB.prepare('SELECT 1 FROM users WHERE id = ?').bind(adminBId).first();
+    expect(adminBRow).toBeNull();
   });
 
   it('returns 500 with code delete_failed when the D1 batch delete fails', async () => {
