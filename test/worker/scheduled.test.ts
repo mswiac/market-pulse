@@ -269,6 +269,41 @@ describe('scheduled handler', () => {
     expect(wrongKeyRow).toBeNull();
   });
 
+  it('requests a 30-day lookback window ending today, as valid UTC-midnight unix timestamps', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await runScheduled();
+
+    const calledUrl = new URL(fetchMock.mock.calls[0]?.[0] as string);
+    const period1 = Number(calledUrl.searchParams.get('period1'));
+    const period2 = Number(calledUrl.searchParams.get('period2'));
+
+    expect(Number.isFinite(period1)).toBe(true);
+    expect(Number.isFinite(period2)).toBe(true);
+    expect(period2 - period1).toBe(30 * 24 * 60 * 60);
+
+    const todayUtcMidnight = Math.floor(Date.now() / 1000 / 86400) * 86400;
+    expect(period2).toBe(todayUtcMidnight);
+  });
+
+  it('retries a failing fetch exactly 3 times before giving up on that ticker', async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url.includes(encodeURIComponent('^VIX'))) {
+        return Promise.resolve(jsonResponse(500, {}));
+      }
+      return Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES)));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await runScheduled();
+
+    const vixCalls = fetchMock.mock.calls.filter((call) => (call[0] as string).includes(encodeURIComponent('^VIX')));
+    expect(vixCalls).toHaveLength(3);
+  });
+
   it('auto-corrects instruments.currency when the fetched currency disagrees with the stored value', async () => {
     await insertSuffixInstrument('USD');
 
