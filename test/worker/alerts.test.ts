@@ -495,6 +495,24 @@ describe('alerts endpoints', () => {
     await expect(listForA.json()).resolves.toHaveLength(1);
   });
 
+  // 'admin@example.com' matches ADMIN_EMAILS in vitest.config.mts, but these
+  // routes never mount adminMiddleware — an admin session must get the same
+  // 404 as any other non-owning user, never a bypass.
+  it('returns 404 updating/deleting another user\'s alert for an admin session (isolation)', async () => {
+    const adminCookie = await registerAndLogIn('admin@example.com');
+    const ownerCookie = await registerAndLogIn('admin-route-isolation-owner@example.com');
+    const created = (await (await createAlert(ownerCookie)).json()) as Record<string, unknown>;
+
+    const updateResponse = await updateAlert(adminCookie, created['id'] as number, { threshold: 99 });
+    expect(updateResponse.status).toBe(404);
+
+    const deleteResponse = await deleteAlert(adminCookie, created['id'] as number);
+    expect(deleteResponse.status).toBe(404);
+
+    const listForOwner = await listAlerts(ownerCookie);
+    await expect(listForOwner.json()).resolves.toHaveLength(1);
+  });
+
   it('rejects DELETE without a session cookie', async () => {
     const response = await exports.default.fetch(`${BASE_URL}/api/alerts/1`, { method: 'DELETE' });
     expect(response.status).toBe(401);
