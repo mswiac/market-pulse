@@ -189,8 +189,8 @@ describe('POST /api/admin/market-data', () => {
     const response = await fetchMarketData(cookie, { ticker: '^VIX', from: '2026-01-01', to: '2026-01-05' });
 
     expect(response.status).toBe(403);
-    const json = (await response.json()) as { code: string };
-    expect(json.code).toBe('forbidden');
+    const json = (await response.json()) as { error: string; code: string };
+    expect(json).toMatchObject({ error: 'forbidden', code: 'forbidden' });
   });
 
   it('returns 400 with code unknown_instrument for an unknown ticker', async () => {
@@ -232,6 +232,74 @@ describe('POST /api/admin/market-data', () => {
     expect(response.status).toBe(400);
     const json = (await response.json()) as { code: string };
     expect(json.code).toBe('range_too_large');
+  });
+
+  it('returns 400 with code ticker_required when ticker is missing', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await fetchMarketData(cookie, { from: '2026-01-01', to: '2026-01-05' });
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('ticker_required');
+  });
+
+  it('returns 400 with code ticker_required (not a crash) when ticker is a non-string value', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await fetchMarketData(cookie, { ticker: 12345, from: '2026-01-01', to: '2026-01-05' });
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('ticker_required');
+  });
+
+  it('returns 400 with code invalid_dates when from/to are missing', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await fetchMarketData(cookie, { ticker: '^VIX' });
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('invalid_dates');
+  });
+
+  it('returns 400 with code invalid_dates for a date that only partially matches YYYY-MM-DD', async () => {
+    const cookie = await logInAsAdmin();
+
+    const trailingGarbage = await fetchMarketData(cookie, { ticker: '^VIX', from: '2026-01-01-extra', to: '2026-01-05' });
+    expect(trailingGarbage.status).toBe(400);
+    await expect(trailingGarbage.json()).resolves.toMatchObject({ code: 'invalid_dates' });
+
+    const leadingGarbage = await fetchMarketData(cookie, { ticker: '^VIX', from: 'x2026-01-01', to: '2026-01-05' });
+    expect(leadingGarbage.status).toBe(400);
+    await expect(leadingGarbage.json()).resolves.toMatchObject({ code: 'invalid_dates' });
+  });
+
+  it('returns 400 with code ticker_required for a malformed JSON body', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await exports.default.fetch(`${BASE_URL}/api/admin/market-data`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: cookie },
+      body: 'not json',
+    });
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('ticker_required');
+  });
+
+  it('accepts a single-day range where from equals to', async () => {
+    const cookie = await logInAsAdmin();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody([1767225600], [100])))),
+    );
+
+    const response = await fetchMarketData(cookie, { ticker: '^VIX', from: '2026-01-01', to: '2026-01-01' });
+
+    expect(response.status).toBe(200);
   });
 
   it('fetches and writes price_history for an admin, overwriting pre-existing rows', async () => {
@@ -479,6 +547,70 @@ describe('POST /api/admin/instruments', () => {
     expect(response.status).toBe(400);
     const json = (await response.json()) as { code: string };
     expect(json.code).toBe('instrument_currency_invalid');
+  });
+
+  it('returns 400 with code instrument_currency_invalid for a currency code longer than 3 letters', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(cookie, validNewInstrument({ currency: 'USDX' }));
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('instrument_currency_invalid');
+  });
+
+  it('returns 400 with code instrument_currency_invalid for a currency code with a leading extra character', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(cookie, validNewInstrument({ currency: '1USD' }));
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('instrument_currency_invalid');
+  });
+
+  it('returns 400 with code instrument_ticker_required (not a crash) when ticker is a non-string value', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(cookie, validNewInstrument({ ticker: 12345 }));
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('instrument_ticker_required');
+  });
+
+  it('returns 400 with code instrument_name_required (not a crash) when name is a non-string value', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(cookie, validNewInstrument({ name: 12345 }));
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('instrument_name_required');
+  });
+
+  it('trims surrounding whitespace from name and currency', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(
+      cookie,
+      validNewInstrument({ ticker: 'TEST.TRIM', name: '  Test Co  ', currency: '  usd  ' }),
+    );
+
+    expect(response.status).toBe(201);
+    const created = (await response.json()) as { name: string; currency: string };
+    expect(created.name).toBe('Test Co');
+    expect(created.currency).toBe('USD');
+  });
+
+  it('trims surrounding whitespace from suffix', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(cookie, validNewInstrument({ ticker: 'TEST.SUFFIXTRIM', suffix: '  .WA  ' }));
+
+    expect(response.status).toBe(201);
+    const created = (await response.json()) as { suffix: string };
+    expect(created.suffix).toBe('.WA');
   });
 
   it('returns 400 with code instrument_rsi_eligible_invalid for a non-boolean rsiEligible', async () => {

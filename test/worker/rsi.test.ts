@@ -31,6 +31,14 @@ describe('calculateRSI', () => {
     const strictlyDecreasing = Array.from({ length: 16 }, (_, i) => 16 - i);
     expect(calculateRSI(strictlyDecreasing)).toBe(0);
   });
+
+  it('returns 100, not NaN, for a completely flat price series (both average gain and loss are zero)', () => {
+    // avgGain/avgLoss = 0/0 = NaN without the explicit avgLoss === 0 guard —
+    // unlike the strictly-increasing case, where avgGain/0 = Infinity still
+    // happens to resolve to 100 through the general formula on its own.
+    const flat = Array.from({ length: 16 }, () => 100);
+    expect(calculateRSI(flat)).toBe(100);
+  });
 });
 
 describe('calculateRSISeries', () => {

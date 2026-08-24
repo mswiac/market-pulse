@@ -374,6 +374,90 @@ describe('evaluateAlerts', () => {
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({ value_at_trigger: 75, high_at_trigger: null, low_at_trigger: null });
   });
+
+  it('does not fire an armed "down" alert whose condition is not yet met', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('down-not-armed-yet@example.com');
+    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'down', armed: 1 });
+    await seedMarketData('^VIX', 25);
+
+    await evaluateAlerts(env);
+
+    expect((await getAlert(alertId)).armed).toBe(1);
+    expect(await triggerEventsFor(alertId)).toHaveLength(0);
+  });
+
+  it('fires an armed "up" alert when the value equals the threshold exactly (inclusive boundary)', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('up-boundary@example.com');
+    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    await seedMarketData('^VIX', 20);
+
+    await evaluateAlerts(env);
+
+    expect((await getAlert(alertId)).armed).toBe(0);
+    expect(await triggerEventsFor(alertId)).toHaveLength(1);
+  });
+
+  it('fires an armed "down" alert when the value equals the threshold exactly (inclusive boundary)', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('down-boundary@example.com');
+    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'down', armed: 1 });
+    await seedMarketData('^VIX', 20);
+
+    await evaluateAlerts(env);
+
+    expect((await getAlert(alertId)).armed).toBe(0);
+    expect(await triggerEventsFor(alertId)).toHaveLength(1);
+  });
+
+  it('does not re-arm a "down" PRICE alert until the value rises back past the margin', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('down-margin-not-enough@example.com');
+    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'down', armed: 1 });
+    await seedMarketData('^VIX', 15);
+    await evaluateAlerts(env);
+    expect((await getAlert(alertId)).armed).toBe(0);
+
+    // Margin is 10% of 20 = 2, so re-arm requires value >= 22. 21 isn't enough.
+    await seedMarketData('^VIX', 21);
+    await evaluateAlerts(env);
+    expect((await getAlert(alertId)).armed).toBe(0);
+
+    // 22 clears the margin — re-arms.
+    await seedMarketData('^VIX', 22);
+    await evaluateAlerts(env);
+    expect((await getAlert(alertId)).armed).toBe(1);
+  });
+
+  it('fires an RSI alert using the actual RSI value, not the coincidental raw price, when they would disagree', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('rsi-not-price-fallback@example.com');
+    const alertId = await seedAlert(userId, { ticker: '^NDX', alertType: 'RSI', threshold: 70, direction: 'up', armed: 1 });
+    // RSI (75) crosses the threshold (70), but the raw index price (50) does
+    // not — if resolveFiringValue ever silently fell back to price instead
+    // of rsi here, this would incorrectly stay unfired.
+    await seedMarketData('^NDX', 50, 75);
+
+    await evaluateAlerts(env);
+
+    expect((await getAlert(alertId)).armed).toBe(0);
+    const events = await triggerEventsFor(alertId);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ value_at_trigger: 75 });
+  });
+
+  it('does not touch an unarmed RSI alert\'s armed state while rsi is still null', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('rsi-null-unarmed@example.com');
+    const alertId = await seedAlert(userId, { ticker: '^NDX', alertType: 'RSI', threshold: 70, direction: 'up', armed: 0 });
+    await seedMarketData('^NDX', 4500, null);
+
+    await evaluateAlerts(env);
+
+    expect((await getAlert(alertId)).armed).toBe(0);
+    expect(await triggerEventsFor(alertId)).toHaveLength(0);
+  });
 });
 
 describe('buildEmail', () => {
@@ -429,5 +513,82 @@ describe('buildEmail', () => {
     expect(text).not.toContain('Maksimum dnia:');
     expect(text).not.toContain('Minimum dnia:');
     expect(text).not.toContain('Zamknięcie:');
+  });
+
+  it('formats a deterministic, exact PRICE alert email with high and low both present', () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-01-05T12:00:00Z'));
+      const alert = { ...basePriceAlert, high: 26, low: 24 };
+      const { subject, text } = buildEmail(alert, 25);
+
+      expect(subject).toBe('MarketPulse: alert dla VIX został wyzwolony');
+      expect(text).toBe(
+        [
+          'Walor: VIX (^VIX)',
+          'Typ alertu: Próg cenowy',
+          'Próg: 20.00 USD',
+          'Maksimum dnia: 26.00 USD',
+          'Minimum dnia: 24.00 USD',
+          'Zamknięcie: 25.00 USD',
+          'Data wyzwolenia: 05.01.2026',
+        ].join('\n'),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('formats a deterministic, exact PRICE alert email with only the close line when high/low are unavailable', () => {
+    // With high/low both null, the array-building/filter step must drop
+    // both entries entirely — not leave blank lines in their place.
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-01-05T12:00:00Z'));
+      const { text } = buildEmail(basePriceAlert, 25);
+
+      expect(text).toBe(
+        [
+          'Walor: VIX (^VIX)',
+          'Typ alertu: Próg cenowy',
+          'Próg: 20.00 USD',
+          'Zamknięcie: 25.00 USD',
+          'Data wyzwolenia: 05.01.2026',
+        ].join('\n'),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('formats a deterministic, exact RSI alert email', () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-01-05T12:00:00Z'));
+      const alert = {
+        ...basePriceAlert,
+        alert_type: 'RSI' as const,
+        ticker: '^NDX',
+        instrumentName: 'NASDAQ-100',
+        threshold: 70,
+        rsi: 75,
+        high: null,
+        low: null,
+      };
+      const { subject, text } = buildEmail(alert, 75);
+
+      expect(subject).toBe('MarketPulse: alert dla NASDAQ-100 został wyzwolony');
+      expect(text).toBe(
+        [
+          'Walor: NASDAQ-100 (^NDX)',
+          'Typ alertu: Próg RSI',
+          'Próg: 70.00',
+          'Wartość w dniu wyzwolenia: 75.00',
+          'Data wyzwolenia: 05.01.2026',
+        ].join('\n'),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

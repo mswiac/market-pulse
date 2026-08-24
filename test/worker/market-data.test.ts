@@ -73,14 +73,55 @@ describe('fetchDailyCloses', () => {
   it('throws MarketDataFetchError on an HTTP error status', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(500, {})));
 
-    await expect(fetchDailyCloses('^VIX', FROM, TO)).rejects.toThrow(MarketDataFetchError);
+    await expect(fetchDailyCloses('^VIX', FROM, TO)).rejects.toThrow(/HTTP 500/);
   });
 
   it('throws MarketDataFetchError when chart.error is non-null', async () => {
     const body = { chart: { result: null, error: { code: 'Not Found', description: 'No data found' } } };
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, body)));
 
-    await expect(fetchDailyCloses('^BADSYMBOL', FROM, TO)).rejects.toThrow(MarketDataFetchError);
+    await expect(fetchDailyCloses('^BADSYMBOL', FROM, TO)).rejects.toThrow(/chart error/);
+  });
+
+  it('throws MarketDataFetchError when the response body is not valid JSON', async () => {
+    const response = new Response('<html>not json</html>', { status: 200 });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response));
+
+    await expect(fetchDailyCloses('^VIX', FROM, TO)).rejects.toThrow(/not valid JSON/);
+  });
+
+  it('sends a browser-like User-Agent header, since Yahoo blocks the default fetch UA', async () => {
+    const body = validChartBody([1767620200], [100.5]);
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, body));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await fetchDailyCloses('^VIX', FROM, TO);
+
+    const options = fetchMock.mock.calls[0][1] as RequestInit;
+    const headers = options.headers as Record<string, string>;
+    expect(headers['User-Agent']).toContain('Mozilla');
+  });
+
+  it.each([
+    ['the chart key is entirely missing', {}],
+    ['chart.result is entirely missing', { chart: { error: null } }],
+    ['chart.result is an empty array', { chart: { result: [], error: null } }],
+    ['a result entry has no indicators', { chart: { result: [{ timestamp: [1767620200] }], error: null } }],
+    [
+      'indicators is present but has no quote array',
+      { chart: { result: [{ timestamp: [1767620200], indicators: {} }], error: null } },
+    ],
+  ])('throws a clean MarketDataFetchError, not a raw crash, when %s', async (_label, body) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, body)));
+
+    await expect(fetchDailyCloses('^VIX', FROM, TO)).rejects.toThrow(/unexpected shape/);
+  });
+
+  it('throws a clean MarketDataFetchError when timestamps and closes are both present but different (nonzero) lengths', async () => {
+    const body = validChartBody([1767620200, 1767706600], [100.5]);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, body)));
+
+    await expect(fetchDailyCloses('^VIX', FROM, TO)).rejects.toThrow(/unexpected shape/);
   });
 
   it('filters out a trailing null close without throwing', async () => {
@@ -102,14 +143,21 @@ describe('fetchDailyCloses', () => {
     const body = validChartBody([1767620200], [null]);
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, body)));
 
-    await expect(fetchDailyCloses('^VIX', FROM, TO)).rejects.toThrow(MarketDataFetchError);
+    await expect(fetchDailyCloses('^VIX', FROM, TO)).rejects.toThrow(/no valid closes/);
   });
 
   it('throws MarketDataFetchError when timestamps are not strictly ascending', async () => {
     const body = validChartBody([1767706600, 1767620200], [101.25, 100.5]);
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, body)));
 
-    await expect(fetchDailyCloses('^VIX', FROM, TO)).rejects.toThrow(MarketDataFetchError);
+    await expect(fetchDailyCloses('^VIX', FROM, TO)).rejects.toThrow(/non-ascending/);
+  });
+
+  it('throws MarketDataFetchError when consecutive timestamps are equal, not just when reversed', async () => {
+    const body = validChartBody([1767620200, 1767620200], [100.5, 101.25]);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, body)));
+
+    await expect(fetchDailyCloses('^VIX', FROM, TO)).rejects.toThrow(/non-ascending/);
   });
 
   it('returns an empty closes array when the range has no trading days, instead of throwing', async () => {

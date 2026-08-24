@@ -1,5 +1,5 @@
 import { env, exports } from 'cloudflare:workers';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const BASE_URL = 'https://example.com';
 const PASSWORD = 'correct horse battery staple';
@@ -173,6 +173,23 @@ describe('alerts endpoints', () => {
     await expect(response.json()).resolves.toMatchObject({ error: 'invalid threshold', code: 'invalid_threshold' });
   });
 
+  it('rejects a threshold sent as a numeric-looking string, not a real number', async () => {
+    // '20' > 0 is true after JS's own coercion, so this only fails if the
+    // typeof check runs at all — a weaker check that just compared
+    // numerically would wrongly accept it.
+    const cookie = await registerAndLogIn('stringy-threshold@example.com');
+    const response = await createAlert(cookie, { threshold: '20' });
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: 'invalid threshold', code: 'invalid_threshold' });
+  });
+
+  it('rejects a non-string (object) ticker with a clean 400, not a crash', async () => {
+    const cookie = await registerAndLogIn('object-ticker@example.com');
+    const response = await createAlert(cookie, { ticker: { nested: true } });
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: 'invalid instrument', code: 'invalid_instrument' });
+  });
+
   it('rejects a negative RSI threshold', async () => {
     const cookie = await registerAndLogIn('negative-rsi@example.com');
     const response = await createAlert(cookie, { ticker: '^NDX', alertType: 'RSI', threshold: -0.01 });
@@ -288,6 +305,43 @@ describe('alerts endpoints', () => {
     await expect(response.json()).resolves.toMatchObject({ active: true });
   });
 
+  it('starts an "up" alert inactive when the price exactly equals the threshold (inclusive boundary)', async () => {
+    const cookie = await registerAndLogIn('armed-up-exact-boundary@example.com');
+    await env.DB.prepare('INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())')
+      .bind('^VIX', 20, null)
+      .run();
+
+    const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'up' });
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({ active: false });
+  });
+
+  it('starts a "down" alert inactive when the price exactly equals the threshold (inclusive boundary)', async () => {
+    const cookie = await registerAndLogIn('armed-down-exact-boundary@example.com');
+    await env.DB.prepare('INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())')
+      .bind('^VIX', 20, null)
+      .run();
+
+    const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'down' });
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({ active: false });
+  });
+
+  it('starts an RSI alert active by default when a market_data row exists but rsi is still null', async () => {
+    // Threshold 0 makes null's numeric coercion (0) a false-positive "already
+    // met" match if the null-guard were ever skipped — a higher threshold
+    // wouldn't tell the two cases apart, since 0 >= threshold would already
+    // be false either way.
+    const cookie = await registerAndLogIn('armed-rsi-null-row-exists@example.com');
+    await env.DB.prepare('INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())')
+      .bind('^NDX', 4500, null)
+      .run();
+
+    const response = await createAlert(cookie, { ticker: '^NDX', alertType: 'RSI', threshold: 0, direction: 'up' });
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({ active: true });
+  });
+
   it('rejects an exact duplicate alert with 409', async () => {
     const cookie = await registerAndLogIn('duplicate-alert@example.com');
     const first = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 22 });
@@ -306,6 +360,17 @@ describe('alerts endpoints', () => {
       body: '{not valid json',
     });
     expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: 'invalid request body', code: 'invalid_body' });
+  });
+
+  it('propagates a non-UNIQUE D1 failure on create instead of misreporting it as a duplicate', async () => {
+    const cookie = await registerAndLogIn('create-other-db-error@example.com');
+    const batchSpy = vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('boom'));
+
+    const response = await createAlert(cookie);
+
+    expect(response.status).not.toBe(409);
+    batchSpy.mockRestore();
   });
 
   it('rejects POST without a session cookie', async () => {
@@ -409,6 +474,30 @@ describe('alerts endpoints', () => {
     await expect(updateResponse.json()).resolves.toMatchObject({ active: true });
   });
 
+  it('rejects a PUT with a non-numeric alert id', async () => {
+    const cookie = await registerAndLogIn('update-nonnumeric-id@example.com');
+    const response = await exports.default.fetch(`${BASE_URL}/api/alerts/abc`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Cookie: cookie },
+      body: JSON.stringify(validAlertBody()),
+    });
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: 'invalid alert id', code: 'invalid_alert_id' });
+  });
+
+  it('rejects a PUT with a malformed JSON body', async () => {
+    const cookie = await registerAndLogIn('update-malformed-body@example.com');
+    const created = (await (await createAlert(cookie)).json()) as Record<string, unknown>;
+
+    const response = await exports.default.fetch(`${BASE_URL}/api/alerts/${created['id']}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Cookie: cookie },
+      body: '{not valid json',
+    });
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: 'invalid request body', code: 'invalid_body' });
+  });
+
   it('rejects an update with an invalid threshold, mirroring create validation', async () => {
     const cookie = await registerAndLogIn('update-bad-threshold@example.com');
     const created = (await (await createAlert(cookie)).json()) as Record<string, unknown>;
@@ -438,6 +527,17 @@ describe('alerts endpoints', () => {
     const response = await updateAlert(cookie, second['id'] as number, { ticker: '^VIX', alertType: 'PRICE', threshold: 20 });
     expect(response.status).toBe(409);
     await expect(response.json()).resolves.toMatchObject({ error: 'duplicate alert', code: 'duplicate_alert' });
+  });
+
+  it('propagates a non-UNIQUE D1 failure on update instead of misreporting it as a duplicate', async () => {
+    const cookie = await registerAndLogIn('update-other-db-error@example.com');
+    const created = (await (await createAlert(cookie)).json()) as Record<string, unknown>;
+    const batchSpy = vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('boom'));
+
+    const response = await updateAlert(cookie, created['id'] as number, { threshold: 25 });
+
+    expect(response.status).not.toBe(409);
+    batchSpy.mockRestore();
   });
 
   it('returns 404 updating a nonexistent alert id', async () => {
@@ -481,6 +581,16 @@ describe('alerts endpoints', () => {
     const response = await deleteAlert(cookie, 999999);
     expect(response.status).toBe(404);
     await expect(response.json()).resolves.toMatchObject({ error: 'alert not found', code: 'alert_not_found' });
+  });
+
+  it('rejects a DELETE with a non-numeric alert id', async () => {
+    const cookie = await registerAndLogIn('delete-nonnumeric-id@example.com');
+    const response = await exports.default.fetch(`${BASE_URL}/api/alerts/abc`, {
+      method: 'DELETE',
+      headers: { Cookie: cookie },
+    });
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: 'invalid alert id', code: 'invalid_alert_id' });
   });
 
   it('returns 404 deleting another user\'s alert (isolation)', async () => {
