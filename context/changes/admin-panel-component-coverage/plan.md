@@ -426,25 +426,25 @@ Not applicable — no data model or schema changes.
 
 #### Automated
 
-- [x] 1.1 `npm run test -- --watch=false` passes, including all new `admin-panel.spec.ts` assertions
-- [x] 1.2 `npm run typecheck` passes
-- [x] 1.3 `npm run lint` passes
+- [x] 1.1 `npm run test -- --watch=false` passes, including all new `admin-panel.spec.ts` assertions — bbab473
+- [x] 1.2 `npm run typecheck` passes — bbab473
+- [x] 1.3 `npm run lint` passes — bbab473
 
 #### Manual
 
-- [x] 1.4 None — component test coverage is fully verified by the automated suite
+- [x] 1.4 None — component test coverage is fully verified by the automated suite — bbab473
 
 ### Phase 2: add-instrument.ts component tests
 
 #### Automated
 
-- [ ] 2.1 `npm run test -- --watch=false` passes, including all new `add-instrument.spec.ts` assertions
-- [ ] 2.2 `npm run typecheck` passes
-- [ ] 2.3 `npm run lint` passes
+- [x] 2.1 `npm run test -- --watch=false` passes, including all new `add-instrument.spec.ts` assertions
+- [x] 2.2 `npm run typecheck` passes
+- [x] 2.3 `npm run lint` passes
 
 #### Manual
 
-- [ ] 2.4 None — component test coverage is fully verified by the automated suite
+- [x] 2.4 None — component test coverage is fully verified by the automated suite
 
 ### Phase 3: remove-instrument + remove-instrument-confirm component tests
 
