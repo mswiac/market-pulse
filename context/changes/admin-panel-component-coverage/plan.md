@@ -450,25 +450,25 @@ Not applicable — no data model or schema changes.
 
 #### Automated
 
-- [x] 3.1 `npm run test -- --watch=false` passes, including all new `remove-instrument.spec.ts` and `remove-instrument-confirm.spec.ts` assertions
-- [x] 3.2 `npm run typecheck` passes
-- [x] 3.3 `npm run lint` passes
+- [x] 3.1 `npm run test -- --watch=false` passes, including all new `remove-instrument.spec.ts` and `remove-instrument-confirm.spec.ts` assertions — b749f49
+- [x] 3.2 `npm run typecheck` passes — b749f49
+- [x] 3.3 `npm run lint` passes — b749f49
 
 #### Manual
 
-- [x] 3.4 None — component test coverage is fully verified by the automated suite
+- [x] 3.4 None — component test coverage is fully verified by the automated suite — b749f49
 
 ### Phase 4: remove-user + remove-user-confirm component tests
 
 #### Automated
 
-- [ ] 4.1 `npm run test -- --watch=false` passes, including all new `remove-user.spec.ts` and `remove-user-confirm.spec.ts` assertions
-- [ ] 4.2 `npm run typecheck` passes
-- [ ] 4.3 `npm run lint` passes
+- [x] 4.1 `npm run test -- --watch=false` passes, including all new `remove-user.spec.ts` and `remove-user-confirm.spec.ts` assertions
+- [x] 4.2 `npm run typecheck` passes
+- [x] 4.3 `npm run lint` passes
 
 #### Manual
 
-- [ ] 4.4 None — component test coverage is fully verified by the automated suite
+- [x] 4.4 None — component test coverage is fully verified by the automated suite
 
 ### Phase 5: §6.5 cookbook documentation update
 
