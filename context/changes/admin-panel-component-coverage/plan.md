@@ -474,9 +474,9 @@ Not applicable — no data model or schema changes.
 
 #### Automated
 
-- [x] 5.1 `npm run test -- --watch=false` passes
-- [x] 5.2 `npm run lint` passes
+- [x] 5.1 `npm run test -- --watch=false` passes — 1a6bcf8
+- [x] 5.2 `npm run lint` passes — 1a6bcf8
 
 #### Manual
 
-- [x] 5.3 §6.5 reads as one cohesive section covering both the `FormGroup` and signal-driven cases, with working links to the new spec files
+- [x] 5.3 §6.5 reads as one cohesive section covering both the `FormGroup` and signal-driven cases, with working links to the new spec files — 1a6bcf8

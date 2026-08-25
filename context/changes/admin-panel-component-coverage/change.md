@@ -1,7 +1,7 @@
 ---
 change_id: admin-panel-component-coverage
 title: Admin panel component test coverage (test-plan Phase 5)
-status: implementing
+status: implemented
 created: 2026-08-25
 updated: 2026-08-25
 archived_at: null
