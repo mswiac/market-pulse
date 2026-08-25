@@ -23,14 +23,14 @@ last_updated_by: Claude Code
 
 `context/foundation/test-plan.md` was last refreshed 2026-08-22 (3 days ago) and all four proposed rollout phases have since shipped. Two things have changed since then that the doc doesn't yet reflect:
 
-1. A full-repo Stryker mutation-testing triage (PR #91, commits `8a2884f`..`07bef80`, 2026-08-24/25) closed coverage gaps across all of `src/worker/**` — test-only, no production code changed, done directly with no `context/changes/`/`context/archive/` folder.
+1. A full-repo Stryker mutation-testing triage (PR #91, commits `8a2884f^`..`07bef80`, 2026-08-24/25) closed coverage gaps across all of `src/worker/**` — test-only, no production code changed, done directly with no `context/changes/`/`context/archive/` folder.
 2. A new risk surfaced in user interview: the admin panel (Angular, `src/app/features/admin/`) has **zero** component-test coverage despite handling destructive, irreversible actions (instrument/user removal) and non-trivial form logic (type→suffix mapping).
 
 This research grounds both: (a) exactly what PR #91 tested, to correctly document it in §4/§7/§8 without changing the risk map, and (b) exact file:line evidence for a new Risk #8 (admin panel), including DI points, dialog flow, and payload shapes — the concrete inputs a future rollout phase (§3 Phase 5) needs to write component tests.
 
 ## Summary
 
-**PR #91** is confirmed test-only: 6 commits (`8a2884f`..`07bef80`), ~823 lines added across 12 `test/worker/*.test.ts` files, zero `src/` production lines touched. It closed named mutation survivors in session/auth boundary logic, cron date-arithmetic, email normalization, malformed-response handling, down-direction alert firing, and several D1/error-propagation edge cases. `stryker.config.json`'s `mutate` glob (`src/worker/**/*.ts`) is unchanged — scope was already `src/worker/**`, this sweep just raised the score within that scope. No risk-map delta: this is coverage-hardening of already-identified risks (#1, #2, #6), not a new risk.
+**PR #91** is confirmed test-only: 6 commits (`8a2884f^`..`07bef80`), ~823 lines added across 14 `test/worker/*.test.ts` files, zero `src/` production lines touched. It closed named mutation survivors in session/auth boundary logic, cron date-arithmetic, email normalization, malformed-response handling, down-direction alert firing, and several D1/error-propagation edge cases. `stryker.config.json`'s `mutate` glob (`src/worker/**/*.ts`) is unchanged — scope was already `src/worker/**`, this sweep just raised the score within that scope. No risk-map delta: this is coverage-hardening of already-identified risks (#1, #2, #6), not a new risk.
 
 **Risk #8 (admin panel) is real and precisely as described in the change notes**, with two corrections from the notes' own framing:
 - The 6-component list from the change notes is exactly right (verified against `find src/app/features/admin -type f`): `admin-panel`, `add-instrument`, `remove-instrument`, `remove-instrument-confirm`, `remove-user`, `remove-user-confirm`. Zero `.spec.ts` files exist for any of them — confirmed via `find src/app -name "*.spec.ts"`, which returns only `alert-form.spec.ts` and `register.spec.ts`.
@@ -54,7 +54,7 @@ All 6 commits are test-only, tagged `Refs #91`/`(#91)`, dated 2026-08-24/25, no 
 | `9a3465a` test(alert-evaluation) | `test/worker/alert-evaluation.test.ts` | 161 | Down-direction firing/re-arm (previously only "up" tested), inclusive-threshold boundaries both directions, RSI-vs-price-fallback regression guard |
 | `07bef80` test(alerts-trigger-events-admin-resend-rsi) | `admin-lib.test.ts`, `admin.test.ts`, `alerts.test.ts`, `resend.test.ts`, `rsi.test.ts`, `trigger-events.test.ts` | 191 | Wrong-type guards + inclusive thresholds in `alerts.ts`, D1 non-UNIQUE error propagation, `limit=0` pagination, `isAdminEmail` trimming, Resend request-shape/retry-boundary assertions, RSI flat-series (`0/0→100`, not `NaN`) |
 
-**Totals**: 6 commits, 12 distinct `test/worker/*.test.ts` files (`admin.test.ts` touched twice), ~823 lines of test code added, 0 production lines changed.
+**Totals**: 6 commits, 14 distinct `test/worker/*.test.ts` files (`admin.test.ts` touched twice), ~823 lines of test code added, 0 production lines changed.
 
 `stryker.config.json` (repo root) — unchanged by this sweep, confirms scope:
 ```json

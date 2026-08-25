@@ -1,7 +1,7 @@
 ---
 change_id: test-plan-refresh-2026-08-25
 title: Refresh test-plan.md - mutation sweep + admin panel coverage gap
-status: implemented
+status: impl_reviewed
 created: 2026-08-25
 updated: 2026-08-25
 archived_at: null
@@ -13,7 +13,7 @@ Refresh of context/foundation/test-plan.md, triggered by explicit user request
 (not the 3-month staleness rule — last refresh was 2026-08-22, 3 days ago).
 
 Trigger signal: a full-repo Stryker mutation-testing triage (#91, commits
-8a2884f..07bef80, 2026-08-24/25) closed coverage gaps across all 13
+8a2884f..07bef80, 2026-08-24/25) closed coverage gaps across all 14
 src/worker/** modules (session.ts, auth.ts, scheduled.ts, admin.ts, index.ts,
 email.ts, market-data.ts, password.ts, alert-evaluation.ts, alerts.ts,
 trigger-events.ts, admin-lib.ts, resend.ts, rsi.ts) — test-only commits, no
