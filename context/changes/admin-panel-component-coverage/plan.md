@@ -462,21 +462,21 @@ Not applicable — no data model or schema changes.
 
 #### Automated
 
-- [x] 4.1 `npm run test -- --watch=false` passes, including all new `remove-user.spec.ts` and `remove-user-confirm.spec.ts` assertions
-- [x] 4.2 `npm run typecheck` passes
-- [x] 4.3 `npm run lint` passes
+- [x] 4.1 `npm run test -- --watch=false` passes, including all new `remove-user.spec.ts` and `remove-user-confirm.spec.ts` assertions — 0476cf5
+- [x] 4.2 `npm run typecheck` passes — 0476cf5
+- [x] 4.3 `npm run lint` passes — 0476cf5
 
 #### Manual
 
-- [x] 4.4 None — component test coverage is fully verified by the automated suite
+- [x] 4.4 None — component test coverage is fully verified by the automated suite — 0476cf5
 
 ### Phase 5: §6.5 cookbook documentation update
 
 #### Automated
 
-- [ ] 5.1 `npm run test -- --watch=false` passes
-- [ ] 5.2 `npm run lint` passes
+- [x] 5.1 `npm run test -- --watch=false` passes
+- [x] 5.2 `npm run lint` passes
 
 #### Manual
 
-- [ ] 5.3 §6.5 reads as one cohesive section covering both the `FormGroup` and signal-driven cases, with working links to the new spec files
+- [x] 5.3 §6.5 reads as one cohesive section covering both the `FormGroup` and signal-driven cases, with working links to the new spec files

@@ -244,6 +244,48 @@ validator + two reactive cascades) and
 `src/app/features/auth/register/register.spec.ts` (required/format/length
 validators + a server-error path) for full examples.
 
+For components with no `FormGroup` at all — signal-based state via
+`signal`/`computed`, e.g. all 6 admin panel components — drive
+Material-overlay widgets (`mat-select`, `MatDatepicker`) by casting the
+component instance to call its `protected` setter methods directly
+(`(fixture.componentInstance as unknown as { onTypeChange: (t: string) =>
+void }).onTypeChange('foo')`), followed by `fixture.detectChanges()`: a
+signal write from outside a real DOM event or an already-tracked context
+doesn't get picked up automatically. For plain native inputs, checkboxes,
+and buttons, prefer real `fireEvent.input`/`fireEvent.blur`/`fireEvent.click`
+over casting — it exercises the template's own event bindings, not just the
+underlying signal.
+
+Two distinct `MatDialog` DI shapes coexist: a component that *opens* a
+dialog injects `MatDialog` (often non-optional) and calls
+`.open(...).afterClosed()`; the dialog's own content component typically
+never injects `MatDialogRef` directly at all — confirm/cancel is delegated
+to the `mat-dialog-close` template directive, which injects `MatDialogRef`
+internally regardless, so its test still needs a `{ provide: MatDialogRef,
+useValue: { close: vi.fn() } }` stub even though the component class never
+references it. A bare `mat-dialog-close` (no value binding, e.g. a Cancel
+button) closes with `''`, not `undefined` — assert `close` was called with
+`''`, or the assertion silently fails to catch a broken cancel wiring.
+
+To drive both the confirm and cancel branches of an opener's dialog flow,
+stub `MatDialog.open()` to return `{ afterClosed: () => subject.asObservable()
+}` backed by a fresh `Subject<boolean | undefined>` per test —
+`subject.next(true)` exercises confirm, `subject.next(undefined)` exercises
+cancel. **Gotcha**: `MatDialogModule` redundantly re-provides the real
+`MatDialog` at module level (its own `providers: [MatDialog]`, despite
+`MatDialog` already being `providedIn: 'root'`) — if the component under
+test imports `MatDialogModule` itself, that module-level provider sits in a
+closer injector than a TestBed-root-level override and silently wins, so a
+`providers`-based `MatDialog` stub never actually gets used. Fix it with
+`render()`'s `importOverrides: [{ replace: MatDialogModule, with: [] }]`
+instead.
+
+See `src/app/features/admin/admin-panel.spec.ts` (signal-driven cascades,
+`MatDatepicker` casting, error-code map) and
+`src/app/features/admin/remove-instrument/remove-instrument.spec.ts` +
+`remove-instrument-confirm/remove-instrument-confirm.spec.ts` (the
+`MatDialog`/`MatDialogRef` patterns above) for full examples.
+
 `vitest.config.mts` (the `test:worker` config) scopes `test.include` to
 `test/worker/**/*.test.ts` specifically so it does NOT also pick up
 `src/app/**/*.spec.ts` — Vitest's default glob would otherwise match both,
