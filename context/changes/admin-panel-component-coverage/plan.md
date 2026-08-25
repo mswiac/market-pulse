@@ -438,25 +438,25 @@ Not applicable — no data model or schema changes.
 
 #### Automated
 
-- [x] 2.1 `npm run test -- --watch=false` passes, including all new `add-instrument.spec.ts` assertions
-- [x] 2.2 `npm run typecheck` passes
-- [x] 2.3 `npm run lint` passes
+- [x] 2.1 `npm run test -- --watch=false` passes, including all new `add-instrument.spec.ts` assertions — a597e28
+- [x] 2.2 `npm run typecheck` passes — a597e28
+- [x] 2.3 `npm run lint` passes — a597e28
 
 #### Manual
 
-- [x] 2.4 None — component test coverage is fully verified by the automated suite
+- [x] 2.4 None — component test coverage is fully verified by the automated suite — a597e28
 
 ### Phase 3: remove-instrument + remove-instrument-confirm component tests
 
 #### Automated
 
-- [ ] 3.1 `npm run test -- --watch=false` passes, including all new `remove-instrument.spec.ts` and `remove-instrument-confirm.spec.ts` assertions
-- [ ] 3.2 `npm run typecheck` passes
-- [ ] 3.3 `npm run lint` passes
+- [x] 3.1 `npm run test -- --watch=false` passes, including all new `remove-instrument.spec.ts` and `remove-instrument-confirm.spec.ts` assertions
+- [x] 3.2 `npm run typecheck` passes
+- [x] 3.3 `npm run lint` passes
 
 #### Manual
 
-- [ ] 3.4 None — component test coverage is fully verified by the automated suite
+- [x] 3.4 None — component test coverage is fully verified by the automated suite
 
 ### Phase 4: remove-user + remove-user-confirm component tests
 
