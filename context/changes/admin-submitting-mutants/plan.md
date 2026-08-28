@@ -368,9 +368,9 @@ None — test-only.
 
 #### Automated
 
-- [x] 1.1 Type checking passes: `npm run build`
-- [x] 1.2 Full unit suite passes: `npm run test:ci`
-- [x] 1.3 Prettier clean on the two changed spec files
+- [x] 1.1 Type checking passes: `npm run build` — 89e8822
+- [x] 1.2 Full unit suite passes: `npm run test:ci` — 89e8822
+- [x] 1.3 Prettier clean on the two changed spec files — 89e8822
 
 #### Manual
 
@@ -381,9 +381,9 @@ None — test-only.
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npm run build`
-- [ ] 2.2 Full unit suite passes: `npm run test:ci`
-- [ ] 2.3 Prettier clean on the changed spec files
+- [x] 2.1 Type checking passes: `npm run build`
+- [x] 2.2 Full unit suite passes: `npm run test:ci`
+- [x] 2.3 Prettier clean on the changed spec files
 
 #### Manual
 

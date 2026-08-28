@@ -18,17 +18,32 @@ async function renderRemoveUser(options?: {
   const dialogSubject = new Subject<boolean | undefined>();
   const dialogOpen = vi.fn(() => ({ afterClosed: () => dialogSubject.asObservable() }));
   const listUsers = vi.fn(options?.listUsers ?? (() => of(USERS)));
-  const removeUser = options?.removeUser ?? vi.fn(() => of<RemovedUser>({ id: 1, email: 'admin@example.com', alertsDeleted: 1, triggerEventsDeleted: 2 }));
+  const getUserImpact = vi.fn(
+    options?.getUserImpact ??
+      (() =>
+        of<UserImpact>({
+          id: 1,
+          email: 'admin@example.com',
+          alertsCount: 1,
+          triggerEventsCount: 2,
+        })),
+  );
+  const removeUser =
+    options?.removeUser ??
+    vi.fn(() =>
+      of<RemovedUser>({
+        id: 1,
+        email: 'admin@example.com',
+        alertsDeleted: 1,
+        triggerEventsDeleted: 2,
+      }),
+    );
 
   const result = await render(RemoveUser, {
     providers: [
       {
         provide: AdminService,
-        useValue: {
-          listUsers,
-          getUserImpact: options?.getUserImpact ?? (() => of<UserImpact>({ id: 1, email: 'admin@example.com', alertsCount: 1, triggerEventsCount: 2 })),
-          removeUser,
-        },
+        useValue: { listUsers, getUserImpact, removeUser },
       },
       { provide: MatDialog, useValue: { open: dialogOpen } },
     ],
@@ -39,20 +54,28 @@ async function renderRemoveUser(options?: {
   const component = result.fixture.componentInstance as unknown as {
     users: () => AdminUser[];
     selectedUserId: () => number | null;
+    onUserChange: (id: number | null) => void;
+    onSubmit: () => void;
+    submitting: () => boolean;
   };
-  return { ...result, component, dialogOpen, dialogSubject, listUsers, removeUser };
+  return { ...result, component, dialogOpen, dialogSubject, listUsers, getUserImpact, removeUser };
 }
 
 describe('RemoveUser', () => {
   it('shows the load-error message when the user list fails to load', async () => {
-    await renderRemoveUser({ listUsers: () => throwError(() => new HttpErrorResponse({ status: 500 })) });
+    await renderRemoveUser({
+      listUsers: () => throwError(() => new HttpErrorResponse({ status: 500 })),
+    });
 
-    expect(await screen.findByText('Failed to load users. Please refresh the page and try again.')).toBeTruthy();
+    expect(
+      await screen.findByText('Failed to load users. Please refresh the page and try again.'),
+    ).toBeTruthy();
   });
 
   it('previews impact, opens the confirm dialog with that data, removes the user, and re-fetches the list', async () => {
     const { fixture, dialogOpen, dialogSubject, removeUser, listUsers } = await renderRemoveUser();
-    const submitButton = () => screen.getByRole('button', { name: 'Remove user' }) as HTMLButtonElement;
+    const submitButton = () =>
+      screen.getByRole('button', { name: 'Remove user' }) as HTMLButtonElement;
 
     expect(await screen.findByText('admin@example.com')).toBeTruthy();
     fireEvent.click(submitButton());
@@ -68,14 +91,20 @@ describe('RemoveUser', () => {
 
     expect(removeUser).toHaveBeenCalledWith(1);
     expect(listUsers).toHaveBeenCalledTimes(2);
-    expect(await screen.findByText('Removed admin@example.com (1 alert(s), 2 trigger event(s) deleted).')).toBeTruthy();
+    expect(
+      await screen.findByText(
+        'Removed admin@example.com (1 alert(s), 2 trigger event(s) deleted).',
+      ),
+    ).toBeTruthy();
   });
 
   it('shows the error message and never opens the dialog when the impact preview fails', async () => {
     const { fixture, dialogOpen } = await renderRemoveUser({
-      getUserImpact: () => throwError(() => new HttpErrorResponse({ status: 404, error: { code: 'unknown_user' } })),
+      getUserImpact: () =>
+        throwError(() => new HttpErrorResponse({ status: 404, error: { code: 'unknown_user' } })),
     });
-    const submitButton = () => screen.getByRole('button', { name: 'Remove user' }) as HTMLButtonElement;
+    const submitButton = () =>
+      screen.getByRole('button', { name: 'Remove user' }) as HTMLButtonElement;
 
     fireEvent.click(submitButton());
     fixture.detectChanges();
@@ -87,7 +116,8 @@ describe('RemoveUser', () => {
 
   it('does not remove the user when the confirm dialog is cancelled', async () => {
     const { fixture, dialogSubject, removeUser } = await renderRemoveUser();
-    const submitButton = () => screen.getByRole('button', { name: 'Remove user' }) as HTMLButtonElement;
+    const submitButton = () =>
+      screen.getByRole('button', { name: 'Remove user' }) as HTMLButtonElement;
 
     fireEvent.click(submitButton());
     fixture.detectChanges();
@@ -112,9 +142,14 @@ describe('RemoveUser', () => {
   });
 
   it('shows the mapped message for a known error code (cannot_delete_self)', async () => {
-    const removeUser = vi.fn(() => throwError(() => new HttpErrorResponse({ status: 403, error: { code: 'cannot_delete_self' } })));
+    const removeUser = vi.fn(() =>
+      throwError(
+        () => new HttpErrorResponse({ status: 403, error: { code: 'cannot_delete_self' } }),
+      ),
+    );
     const { fixture, dialogSubject } = await renderRemoveUser({ removeUser });
-    const submitButton = () => screen.getByRole('button', { name: 'Remove user' }) as HTMLButtonElement;
+    const submitButton = () =>
+      screen.getByRole('button', { name: 'Remove user' }) as HTMLButtonElement;
 
     fireEvent.click(submitButton());
     fixture.detectChanges();
@@ -125,9 +160,12 @@ describe('RemoveUser', () => {
   });
 
   it('falls back to the generic message for an unrecognized error code', async () => {
-    const removeUser = vi.fn(() => throwError(() => new HttpErrorResponse({ status: 500, error: { code: 'totally_unknown' } })));
+    const removeUser = vi.fn(() =>
+      throwError(() => new HttpErrorResponse({ status: 500, error: { code: 'totally_unknown' } })),
+    );
     const { fixture, dialogSubject } = await renderRemoveUser({ removeUser });
-    const submitButton = () => screen.getByRole('button', { name: 'Remove user' }) as HTMLButtonElement;
+    const submitButton = () =>
+      screen.getByRole('button', { name: 'Remove user' }) as HTMLButtonElement;
 
     fireEvent.click(submitButton());
     fixture.detectChanges();
@@ -135,5 +173,93 @@ describe('RemoveUser', () => {
     fixture.detectChanges();
 
     expect(await screen.findByText('Something went wrong. Please try again.')).toBeTruthy();
+  });
+
+  it('keeps submit disabled across the impact→confirm→delete flow and ignores repeat submits', async () => {
+    const impactSubject = new Subject<UserImpact>();
+    const deleteSubject = new Subject<RemovedUser>();
+    const getUserImpact = vi.fn(() => impactSubject);
+    const removeUser = vi.fn(() => deleteSubject);
+    const { fixture, component, dialogSubject } = await renderRemoveUser({
+      getUserImpact,
+      removeUser,
+    });
+    const submitButton = () =>
+      screen.getByRole('button', { name: 'Remove user' }) as HTMLButtonElement;
+
+    // Window 1 — impact preview in flight.
+    fireEvent.click(submitButton());
+    fixture.detectChanges();
+    expect(submitButton().disabled).toBe(true);
+    expect(component.submitting()).toBe(true);
+    component.onSubmit();
+    expect(getUserImpact).toHaveBeenCalledTimes(1);
+
+    // Window 2 — confirm dialog open, awaiting the user.
+    impactSubject.next({
+      id: 1,
+      email: 'admin@example.com',
+      alertsCount: 1,
+      triggerEventsCount: 2,
+    });
+    fixture.detectChanges();
+    expect(submitButton().disabled).toBe(true);
+    expect(component.submitting()).toBe(true);
+
+    // Window 3 — delete request in flight.
+    dialogSubject.next(true);
+    fixture.detectChanges();
+    expect(submitButton().disabled).toBe(true);
+    expect(component.submitting()).toBe(true);
+    expect(removeUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-enables submit after the delete request fails', async () => {
+    const deleteSubject = new Subject<RemovedUser>();
+    const removeUser = vi.fn(() => deleteSubject);
+    const { fixture, component, dialogSubject } = await renderRemoveUser({ removeUser });
+    const submitButton = () =>
+      screen.getByRole('button', { name: 'Remove user' }) as HTMLButtonElement;
+
+    fireEvent.click(submitButton());
+    fixture.detectChanges();
+    dialogSubject.next(true);
+    fixture.detectChanges();
+
+    deleteSubject.error(new HttpErrorResponse({ status: 500 }));
+    fixture.detectChanges();
+
+    expect(submitButton().disabled).toBe(false);
+    expect(component.submitting()).toBe(false);
+  });
+
+  it('re-enables submit after a successful delete', async () => {
+    const { fixture, component, dialogSubject } = await renderRemoveUser();
+    const submitButton = () =>
+      screen.getByRole('button', { name: 'Remove user' }) as HTMLButtonElement;
+
+    fireEvent.click(submitButton());
+    fixture.detectChanges();
+    dialogSubject.next(true);
+    fixture.detectChanges();
+
+    expect(submitButton().disabled).toBe(false);
+    expect(component.submitting()).toBe(false);
+  });
+
+  it('keeps submit disabled and onSubmit inert when no user is selected', async () => {
+    const getUserImpact = vi.fn(() =>
+      of<UserImpact>({ id: 1, email: 'admin@example.com', alertsCount: 1, triggerEventsCount: 2 }),
+    );
+    const { fixture, component } = await renderRemoveUser({ getUserImpact });
+    const submitButton = () =>
+      screen.getByRole('button', { name: 'Remove user' }) as HTMLButtonElement;
+
+    component.onUserChange(null);
+    fixture.detectChanges();
+
+    expect(submitButton().disabled).toBe(true);
+    component.onSubmit();
+    expect(getUserImpact).not.toHaveBeenCalled();
   });
 });
