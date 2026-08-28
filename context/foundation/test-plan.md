@@ -20,6 +20,13 @@
 > mutation-testing sweep in §4/§8 (test-only, no risk-map change of its
 > own — Risk #8 is a separate, interview-sourced addition). See
 > `context/archive/2026-08-25-test-plan-refresh-2026-08-25/`.
+>
+> 2026-08-28 — added §3 Phase 6 (browser-level E2E smoke), §6.6, and an
+> §8 ledger entry; §4 e2e row changed from "none planned for MVP" to
+> Playwright. No risk-map change — the two scenarios cover the
+> browser-only facets of existing risks #4 and #6, not new risks. Added
+> as a 10xDevs Module 3 Lesson 4 practical exercise, not a
+> `/10x-test-plan --refresh`.
 
 ## 1. Strategy
 
@@ -94,6 +101,7 @@ orchestrator updates Status as artifacts appear on disk.
 | 3 | Frontend test bootstrap | First Angular component tests (Alert Form validators, admin panel forms) via Vitest, addressing risk #4 | #4 | component (Vitest) | shipped | `context/archive/2026-08-23-frontend-test-bootstrap/` |
 | 4 | Abuse-lens closure + local quality-gate hook | Close risks #6 and #7's narrow remaining gaps; add the still-open local post-edit hook | #6, #7 | integration + local tooling | shipped | `context/archive/2026-08-24-abuse-lens-closure/` |
 | 5 | Admin panel component coverage | Component tests (Vitest) for all 6 admin-panel components, closing risk #8 | #8 | component (Vitest) | not started | — |
+| 6 | Browser-level E2E smoke | Four Playwright specs for the risk facets only a rendered browser exercises — alert create→reload, auth-gate redirect, admin-gate redirect, alert delete confirm/cancel | #4 (browser facet), #6 (client-side auth facet, ×2) | e2e (Playwright, local dev server) | specs written + break-verified | — (10xDevs M3L4 exercise) |
 
 **Scope notes** (grounded in this refresh's planning decisions — see `context/archive/2026-08-22-test-plan-refresh-2026-08-22/plan.md`'s Key Discoveries):
 
@@ -102,6 +110,68 @@ orchestrator updates Status as artifacts appear on disk.
 - **Phase 3**: covers risk #4. Uses Vitest for Angular component tests, not Karma — `tsconfig.spec.json` already declares `vitest/globals` and no Karma package exists in the repo.
 - **Phase 4**: covers risks #6 and #7. The local post-edit hook (§5) shipped separately in PR #90 before this phase's change folder was even opened, so `abuse-lens-closure` covered only risk #6/#7's two narrow test gaps (admin-session-vs-non-admin-route isolation, two-admin scenario, near-730-day backfill batch-size observation) — see `context/archive/2026-08-24-abuse-lens-closure/plan.md`. Drops the "wire `npm run ci` as an actually-enforced gate" item from the original proposal — research confirmed it's already enforced via Cloudflare Workers Builds (see §5).
 - **Phase 5**: covers risk #8. Scope includes all 6 admin components named in Risk #8, including `admin-panel.ts`'s manual backfill form (Key Discovery #2) — not just the destructive-action components. §6.5's cookbook stays `TBD` for this phase's signal-driven (no-`FormGroup`) testing pattern until it actually ships (Key Discovery #3); `research.md` (`context/changes/test-plan-refresh-2026-08-25/research.md`) already documents the DI/dialog specifics per component for whoever picks this phase up. The `submitting`-flag / double-submit mutant class deferred by the Phase 5 Stryker pass (PR #112) was closed as a follow-up in issue #113 — see `context/archive/` once that change is archived; one equivalent mutant (`remove-user.ts` `id === null` guard, redundant with `canSubmit`) is documented and left alive.
+
+- **Phase 6**: covers the browser-only facets of risks #4 and #6. The risk
+  map has no dedicated E2E risk — §1 principle #1 (cost × signal) keeps
+  logic at the cheapest layer, and every prioritized risk already sits at
+  unit/integration/component. These two scenarios exist because a rendered
+  browser is the only place their specific failure shows:
+  - **Auth-gate redirect** — an unauthenticated browser hitting a protected
+    route (`/`, `/history`, `/admin`) is redirected to `/login` by
+    `authGuard`, and a mid-session 401 (expired D1 session) routes through
+    `session-expired.interceptor` to `/login` without a crash. Crosses
+    browser cookie handling ↔ `authGuard` ↔ Angular Router ↔ Worker session
+    validation. Worker integration tests have no router or redirect; the
+    guard/interceptor are only unit-testable in isolation. This is the
+    client-side half of risk #6's authorization boundary.
+  - **Alert create→reload round trip** — a logged-in user creates a price
+    alert through the Alert Form dialog; after `POST /api/alerts` and a full
+    page reload the alert is still listed with the exact threshold entered.
+    Crosses `storageState` cookie ↔ `authGuard` ↔ reactive form ↔
+    `POST /api/alerts` ↔ Hono ↔ D1 ↔ reload GET ↔ `AlertList` render.
+    Component tests (Phase 3, §6.5) mock `AlertsService`/HTTP; worker tests
+    don't render Angular — nothing today proves the data survives the full
+    round trip. This is the browser facet of risk #4's frontend surface.
+  - **Admin-gate redirect** — a logged-in *non-admin* navigating to any
+    `/admin*` route is redirected to `/` by `adminGuard`, and the shell's
+    "Administrator" nav group is not rendered. Crosses `storageState` ↔
+    `GET /api/me` (server-derived `isAdmin`) ↔ `adminGuard` ↔ Router ↔ shell.
+    A second client-side facet of risk #6, distinct from auth-gate (which is
+    the *unauthenticated* case).
+  - **Alert delete confirm/cancel** — from the alert list, confirming the
+    delete dialog removes the alert and it stays gone after a full reload;
+    cancelling leaves it intact. Crosses the MatDialog confirm/cancel branch ↔
+    `DELETE /api/alerts/:id` ↔ D1 ↔ reload GET. The dialog-guard branching and
+    the delete's persistence only exist in the rendered flow; loosely in the
+    risk #4 / risk #8 area.
+
+  Generation goes through `/10x-e2e` (seed + anti-pattern review +
+  deliberate-break VERIFY), never hand-written from scratch. E2E stays the
+  slowest and most brittle layer — these four are smoke coverage of the
+  highest-value browser-only failure modes, not a sweep. Not run against the
+  deployed Cloudflare shape (§7).
+
+  **Enforcement:** a Husky `pre-push` hook (Variant B) always runs
+  `test:worker` + `test:ci`, and runs the E2E suite only when the push touches
+  `e2e/` or `src/app/` *and* the local E2E setup exists (else it skips with a
+  warning — never blocks). `playwright.config.ts` has a `webServer` block so
+  the suite self-boots the dev servers. True CI enforcement (a GitHub Actions
+  job) is still deferred — the current pipeline is Cloudflare Workers Builds
+  (§5), which has no natural place for a browser job.
+
+  **State (2026-08-28):** four specs exist and pass —
+  `e2e/seed.spec.ts` (alert create→reload; doubles as the seed exemplar),
+  `e2e/auth-gate-redirect.spec.ts` (4 tests), `e2e/admin-gate-redirect.spec.ts`
+  (4 tests), `e2e/delete-alert.spec.ts` (2 tests); prompts under
+  `e2e/prompts/`. All reviewed against the five anti-patterns and confirmed to
+  go red under a deliberate break of the protected behavior (`authGuard`,
+  `adminGuard`, the alert `POST`/`DELETE` persistence, the confirm-dialog
+  guard, `session-expired.interceptor`). The delete-alert spec's first cut had
+  a naive-assertion bug — `toBeHidden()` after `reload()` passed before the
+  list had loaded — fixed by adding an anchor alert that must re-render first.
+  Full suite (12 incl. setup) runs clean three times in a row (data isolation
+  via unique thresholds + an API-sweep `afterEach`). Committed on branch
+  `test/e2e-playwright-smoke` / PR #119. No CI wiring yet.
 
 If phases must be sequenced under time pressure, Phase 1 is the top priority — it covers both the user's top-stated concern (risk #2) and the one confirmed real code gap.
 
@@ -116,7 +186,7 @@ signal at a fraction of the cost.
 | unit + integration (Worker) | Vitest + `@cloudflare/vitest-pool-workers` | latest | Workers runtime emulation; D1 binding available in test context; hardened by Stryker mutation testing (`npx stryker run`, scope `src/worker/**/*.ts` per `stryker.config.json`) — most recently PR #91 (2026-08-24/25) closed survivor gaps across all `src/worker/**` modules |
 | HTTP edge mocking (Stooq / Resend) | Vitest built-in mocks or MSW | latest | Mock only at the HTTP edge; never mock internal Worker modules |
 | Angular component tests | Vitest (not Karma — see §3 Phase 3 scope notes) | latest | `tsconfig.spec.json` already declares `vitest/globals`; no separate Angular-specific test runner (Karma) was introduced. Two component test files shipped in §3 Phase 3 (`alert-form.spec.ts`, `register.spec.ts`); admin panel components remain uncovered — see §3 Phase 5 (risk #8) |
-| e2e | none planned for MVP | — | No critical flow requires the full deployed Workers shape at this scale |
+| e2e | Playwright (local dev server, `development-pl` build) | latest | Two browser-level smoke scenarios only — auth-gate redirect and alert create→reload round trip (§3 Phase 6). Runs against `npm start` (or a `webServer` block), never the deployed Cloudflare shape (§7). `storageState` auth via a `setup` project. Seed exemplar + rules: `e2e/seed.spec.ts` and the `/10x-e2e` skill |
 
 **Stack grounding tools (current session):**
 - Docs: none — not available in current session; stack evidence from local manifests only; checked: 2026-08-22
@@ -286,6 +356,42 @@ See `src/app/features/admin/admin-panel.spec.ts` (signal-driven cascades,
 `remove-instrument-confirm/remove-instrument-confirm.spec.ts` (the
 `MatDialog`/`MatDialogRef` patterns above) for full examples.
 
+### 6.6 Adding a browser-level E2E test
+
+Playwright specs live in `e2e/<feature>.spec.ts`, one scenario per file.
+`e2e/seed.spec.ts` is the exemplar every generated test is modeled on —
+read it first. Non-negotiables (also loaded into the `/10x-e2e` skill as
+its rules file):
+
+- Locators: `getByRole` / `getByLabel` / `getByText` first; `getByTestId`
+  only when accessibility attributes are ambiguous. Never CSS selectors,
+  XPath, or DOM structure.
+- Never `page.waitForTimeout()`. Wait for state: `toBeVisible()`,
+  `waitForURL()`, `waitForResponse()`.
+- Each test is independently runnable — its own setup, action, assertion,
+  cleanup. Unique ids (timestamp suffix) in test data so parallel runs and
+  re-runs don't collide (the `alerts` table has a
+  `UNIQUE (user_id, ticker, alert_type, threshold)` constraint).
+- Auth via `storageState` (a `setup` project logs in once) — never log in
+  through the UI inside a scenario. The one exception is the auth-gate
+  scenario itself, which asserts on the logged-out redirect.
+- Name the test after the risk facet it protects, not `test('test 1')`.
+- The dev server runs the `development-pl` build, so accessible names in
+  locators are the Polish UI strings (`Nowy alert`, `Próg`, `Utwórz alert`,
+  …) — source-locale English text won't match.
+- Internal boundaries (auth, routing, D1) stay real. Only the daily-cron
+  external calls (Yahoo, Resend) would ever be network-mocked, and neither
+  smoke scenario touches them.
+
+Generation workflow: `/10x-e2e` (PLAN → GENERATE from seed + rules → REVIEW
+against the five anti-patterns → VERIFY by deliberately breaking the
+protected behavior and confirming the test goes red). Don't hand-write
+scenarios from scratch.
+
+Playwright config (`playwright.config.ts` with `baseURL`, a `webServer`
+block, and the `setup`/`storageState` projects) and the
+`playwright/.auth/` gitignore entry are set up once as part of Phase 6.
+
 `vitest.config.mts` (the `test:worker` config) scopes `test.include` to
 `test/worker/**/*.test.ts` specifically so it does NOT also pick up
 `src/app/**/*.spec.ts` — Vitest's default glob would otherwise match both,
@@ -311,7 +417,9 @@ new Worker test files under `test/worker/` (matched only by
 - **E2e against the live Cloudflare deployment** — Workers runtime emulation
   in Phase 1 gives sufficient signal at MVP scale with a single user.
   Re-evaluate when multi-user concurrency or Cloudflare-specific routing
-  becomes a documented risk.
+  becomes a documented risk. Local browser-level E2E via Playwright against
+  the dev server is now in scope for the two smoke scenarios in §3 Phase 6;
+  this exclusion remains specifically about the deployed Cloudflare shape.
 - **D1 migration SQL correctness** — migrations are forward-only SQL with
   manual verification steps baked into each slice plan (local + remote
   `PRAGMA table_info` checks). Automated migration tests add complexity
@@ -323,6 +431,7 @@ new Worker test files under `test/worker/` (matched only by
 - Stack versions last verified: 2026-08-22
 - AI-native tool references last verified: n/a (no AI-native layer)
 - 2026-08-25 — PR #91 mutation-testing triage (commits `8a2884f^`..`07bef80`, 6 commits): test-only sweep closing Stryker survivor gaps across `src/worker/**` (session/auth, scheduled/admin routes, index/email, market-data/password, alert-evaluation, alerts/trigger-events/admin/resend/rsi). ~823 lines added across 14 `test/worker/*.test.ts` files. No production code changed, no risk-map delta from this sweep itself (Risk #8 is a separate, interview-sourced addition — see §2).
+- 2026-08-28 — added the browser-level E2E layer (§3 Phase 6, §4 stack row, §6.6): Playwright `e2e/seed.spec.ts` exemplar plus four smoke specs — alert create→reload, auth-gate redirect, admin-gate redirect, alert delete confirm/cancel. 10xDevs M3L4 practical exercise. No risk-map delta — all cover browser-only facets of existing risks #4 and #6. Every spec anti-pattern-reviewed and deliberate-break-verified; `auth-gate-redirect`, `admin-gate-redirect`, `delete-alert` generated via standalone `/10x-e2e` runs. Branch `test/e2e-playwright-smoke` / PR #119.
 
 Refresh (`/10x-test-plan --refresh`) when:
 

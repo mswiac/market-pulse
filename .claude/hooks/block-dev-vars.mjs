@@ -1,15 +1,20 @@
 #!/usr/bin/env node
-// PreToolUse hook: blocks any tool call that would surface the contents of
-// .dev.vars (local secrets: API keys, password pepper) into the
-// conversation — e.g. `Read` on the file, a `Bash` command that cats/greps
-// it, or a `Grep` search targeting it. Being gitignored does not make the
-// file safe to dump in full; only a single named key should ever be
-// extracted (via a targeted grep run by the user, or a direct question to
-// the user), never the whole file.
+// PreToolUse hook: blocks any tool call that would surface the contents of a
+// local secrets / credential file into the conversation — e.g. `Read` on the
+// file, a `Bash` command that cats/greps it, or a `Grep` search targeting it.
+// Being gitignored does not make a file safe to dump in full; only a single
+// named key should ever be extracted (via a targeted grep run by the user, or
+// a direct question to the user), never the whole file.
+//
+// Guarded paths:
+//   - .dev.vars                    Worker local secrets (API keys, password pepper)
+//   - e2e/.env                     E2E test-account credentials
+//   - playwright/.auth/            saved Playwright session tokens (user.json)
 //
 // Registered in .claude/settings.json under PreToolUse for Read/Grep/Glob/Bash.
+// (Filename kept for history — it now covers more than .dev.vars.)
 
-const TARGET = '.dev.vars';
+const TARGETS = ['.dev.vars', 'e2e/.env', 'playwright/.auth'];
 
 function readStdin() {
   return new Promise((resolve) => {
@@ -21,7 +26,7 @@ function readStdin() {
 }
 
 function mentionsTarget(value) {
-  return typeof value === 'string' && value.includes(TARGET);
+  return typeof value === 'string' && TARGETS.some((target) => value.includes(target));
 }
 
 const raw = await readStdin();
@@ -45,9 +50,9 @@ const hit =
 
 if (hit) {
   process.stderr.write(
-    'Blocked by block-dev-vars hook: this tool call references .dev.vars, a local secrets file ' +
-      '(API keys, password pepper). Do not read or print its contents. If a single value is ' +
-      'needed, ask the user directly instead.',
+    'Blocked by block-dev-vars hook: this tool call references a guarded local secrets / ' +
+      'credential file (.dev.vars, e2e/.env, or playwright/.auth/). Do not read or print its ' +
+      'contents. If a single value is needed, ask the user directly instead.',
   );
   process.exit(2);
 }

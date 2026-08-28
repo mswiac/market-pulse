@@ -47,12 +47,61 @@ npm start             # ng serve --configuration development-pl — Angular SPA,
 
 ### Checks before pushing
 
+A Husky **pre-push** hook runs automatically:
+
+- always: `npm run test:worker` + `npm run test:ci` (worker + Angular component
+  suites, ~20s, no servers needed);
+- E2E (`npx playwright test`): **only** when the push touches `e2e/` or
+  `src/app/`, and only if the local E2E setup exists (`e2e/.env` + installed
+  browsers) — otherwise it is skipped with a warning, never blocking.
+
+Bypass with `git push --no-verify`. To run the checks by hand:
+
 ```bash
 npm run typecheck     # tsc --noEmit for both the Angular app and the Worker
-npm run test:worker   # Vitest + @cloudflare/vitest-pool-workers — backend test suite
+npm run test:worker   # Vitest + @cloudflare/vitest-pool-workers — backend suite
+npm run test:ci       # Angular component tests (Vitest via @angular/build:unit-test, no watch)
 ```
 
-`npm test` (`ng test`) is currently **not functional** — the repo has no configured Angular test runner yet (no Karma, no Vitest-for-Angular wiring). There are no frontend tests to run today.
+Run those directly rather than `npm run ci` on your machine — `npm run ci`
+chains `npm run test` (`ng test`) in **watch mode** and never exits locally. It
+only works in real CI, where `CI=true` makes the Angular test builder disable
+watch.
+
+### End-to-end tests (Playwright)
+
+Browser-level smoke tests live in `e2e/` — `seed.spec.ts` is the exemplar every
+other spec is modeled on. They drive the **real running app**. One-time setup:
+
+- **Browsers**: `npx playwright install chromium` (on Linux/WSL also
+  `sudo npx playwright install-deps chromium` for the system libraries).
+- **A test account**: register one at `http://localhost:4200/register`, then put
+  its credentials in `e2e/.env` (gitignored):
+
+  ```
+  E2E_EMAIL=you@example.test
+  E2E_PASSWORD=your-password
+  ```
+
+  The Playwright `setup` project logs in once with these and saves the session
+  to `playwright/.auth/user.json` (gitignored, ~7-day sliding TTL); every other
+  spec starts already authenticated via `storageState`. If specs suddenly
+  redirect to `/login`, the saved session expired — delete the file and re-run.
+
+`playwright.config.ts` has a `webServer` block, so you don't need to start the
+dev servers yourself — if `:8787` / `:4200` aren't already up, Playwright boots
+them (`reuseExistingServer: true` means it reuses yours when they are).
+
+```bash
+npx playwright test            # all specs (boots servers + login setup as needed)
+npx playwright test seed       # a single spec
+npx playwright test --ui       # watch / debug
+npx playwright show-report     # HTML report from the last run
+```
+
+Not wired into CI yet, and never run against the deployed Cloudflare shape —
+only the local dev servers. Rationale and the risk each spec protects:
+`context/foundation/test-plan.md` §3 Phase 6 and §6.6.
 
 ## Deployment
 
@@ -102,3 +151,5 @@ See `CLAUDE.md`'s "Mutation testing" section for how to scope a run, the Angular
 
 - `context/` — the 10x-\* change-tracking structure: `context/changes/` holds in-flight work (research, plans, reviews), `context/archive/` holds completed work, and `context/foundation/` holds living project documents (roadmap, test plan, lessons learned).
 - `test/worker/` — the backend test suite (Vitest + `@cloudflare/vitest-pool-workers`), run via `npm run test:worker`.
+- `src/app/**/*.spec.ts` — Angular component tests (Vitest via `@angular/build:unit-test`), colocated with each component, run via `npm run test:ci`.
+- `e2e/` — Playwright browser-level tests (see "End-to-end tests" above); one scenario per file, `seed.spec.ts` is the exemplar the others follow.
