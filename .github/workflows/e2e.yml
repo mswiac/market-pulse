@@ -84,19 +84,38 @@ jobs:
       - name: Apply D1 migrations (local / Miniflare)
         run: npm run migrate:local
 
+      - name: Stub the Worker assets directory
+        # wrangler dev --local refuses to start if wrangler.toml's
+        # assets.directory is missing. E2E never touches the Worker's static
+        # assets or SPA fallback — every page is served by `ng serve` (:4200),
+        # the Worker only answers /api/* via proxy.conf.json — so a placeholder
+        # is enough and avoids a redundant production build here.
+        run: |
+          mkdir -p dist/market-pulse/browser/pl
+          echo '<!doctype html><title>e2e stub</title>' > dist/market-pulse/browser/pl/index.html
+
       - name: Start dev servers
         # Started here (not left to Playwright's webServer block) so the E2E
         # account can be seeded before the `setup` project logs in. Playwright
         # reuses these via reuseExistingServer: true.
         run: |
-          npm run worker:dev > "$RUNNER_TEMP/worker.log" 2>&1 &
-          npm start          > "$RUNNER_TEMP/web.log"    2>&1 &
-          for _ in $(seq 1 60);  do curl -sf http://localhost:8787/api/health >/dev/null && break; sleep 2; done
-          for _ in $(seq 1 120); do curl -sf http://localhost:4200            >/dev/null && break; sleep 2; done
-          curl -sf http://localhost:8787/api/health >/dev/null \
-            || { echo '::error::Worker did not come up'; cat "$RUNNER_TEMP/worker.log"; exit 1; }
-          curl -sf http://localhost:4200 >/dev/null \
-            || { echo '::error::Angular dev server did not come up'; cat "$RUNNER_TEMP/web.log"; exit 1; }
+          npm run worker:dev > "$RUNNER_TEMP/worker.log" 2>&1 & worker_pid=$!
+          npm start          > "$RUNNER_TEMP/web.log"    2>&1 & web_pid=$!
+
+          wait_up() { # name pid url attempts
+            for _ in $(seq 1 "$3"); do
+              curl -sf "$4" >/dev/null && return 0
+              kill -0 "$2" 2>/dev/null || { echo "::error::$1 process exited before becoming reachable"; return 1; }
+              sleep 2
+            done
+            echo "::error::$1 did not become reachable at $4"
+            return 1
+          }
+
+          wait_up Worker "$worker_pid" http://localhost:8787/api/health 60 \
+            || { cat "$RUNNER_TEMP/worker.log"; exit 1; }
+          wait_up "Angular dev server" "$web_pid" http://localhost:4200 120 \
+            || { cat "$RUNNER_TEMP/web.log"; exit 1; }
 
       - name: Seed E2E test account
         run: |
