@@ -47,29 +47,16 @@ See `@.prettierrc`.
 
 ## Mutation testing
 
-Repo uses Stryker (`stryker.config.json`) for selective mutation testing —
-currently scoped to `src/worker/**` only, since `src/app/**` (Angular) has no
-test coverage yet (see `test-plan.md` §3 Phase 3). Treat this as an
-**additional** quality gate, not a stand-in for code coverage. Run it only
-for code touched by the current change, or a risk named in
-`context/foundation/test-plan.md` — prefer a narrowed `--mutate
-"path/to/file.ts"` scope over a full-repo run, and do not chase a 100%
-mutation score (`thresholds.break` is `null` on purpose: a low score never
-fails CI by itself). Review survived mutants one by one; add an assertion
-only when the mutant represents a user-visible or business-relevant bug, not
-just to move the score.
+Stryker is an **additional** quality gate, not a coverage substitute. Two
+profiles (worker + Angular need different runners). Scope every run to the
+files under change — never full-repo — and don't chase 100%. Full rationale,
+the deliberate `vitest.related: false` gotcha, and why the Angular profile
+uses the `command` runner: **`context/foundation/stryker-notes.md`**.
 
-**Known gotcha**: `stryker.config.json` sets `vitest.related: false`
-deliberately. The runner's default (`related: true`) uses Vitest's static
-import-graph analysis to narrow which tests run per mutant — but this
-repo's worker tests dispatch through `exports.default.fetch()` from the
-`cloudflare:workers` virtual module (see `test/worker/*.test.ts`), not a
-direct ES import of the route/handler under test. With `related: true`,
-every mutant in `src/worker/routes/**` and several `lib/` files
-(`admin.ts`, `email.ts`, `session.ts`) silently reports "no coverage" —
-looking untested even though real tests exist and pass. Keep `related:
-false` (full suite per mutant, slower but correct) unless this test style
-changes.
+```
+npx stryker run --mutate "src/worker/lib/some-file.ts"                                    # worker
+npx stryker run --configFile stryker.config.app.json --mutate "src/app/.../component.ts"  # Angular
+```
 
 <!-- BEGIN @przeprogramowani/10x-cli -->
 

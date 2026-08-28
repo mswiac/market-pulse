@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "command",
+  "commandRunner": { "command": "npm run test:ci" },
+  "coverageAnalysis": "off",
+  "mutate": ["src/app/**/*.ts", "!src/app/**/*.spec.ts"],
+  "ignorePatterns": [".claude", ".agents", ".idea", ".vscode", "context", "dist"],
+  "reporters": ["progress", "clear-text", "html"],
+  "concurrency": 2,
+  "thresholds": { "high": 80, "low": 60, "break": null }
+}
