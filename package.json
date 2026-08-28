@@ -7,6 +7,7 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "test:ci": "ng test --watch=false --progress=false",
     "deploy": "ng build && wrangler deploy",
     "worker:dev": "wrangler dev --local",
     "migrate:local": "wrangler d1 migrations apply marketpulse-db --local",
