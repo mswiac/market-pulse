@@ -1,0 +1,53 @@
+# Pre-push gate (Variant B — see test-plan.md §3 Phase 6 / README):
+#   - always: worker + Angular component tests (fast, no servers)
+#   - E2E: only when *this push* touches e2e/ or src/app/, and only if the local
+#     E2E setup exists — otherwise skipped with a warning, never blocking.
+# Skip everything with `git push --no-verify` when you know what you're doing.
+
+set -e
+
+echo "pre-push › worker tests"
+npm run test:worker
+
+echo "pre-push › Angular component tests"
+npm run test:ci
+
+# What is being pushed? stdin lines: <local_ref> <local_sha> <remote_ref> <remote_sha>
+ZERO=0000000000000000000000000000000000000000
+CHANGED=""
+while read -r _ local_sha _ remote_sha; do
+  [ "$local_sha" = "$ZERO" ] && continue
+  if [ "$remote_sha" = "$ZERO" ]; then
+    base=$(git merge-base "$local_sha" origin/main 2>/dev/null || echo "$local_sha")
+  else
+    base="$remote_sha"
+  fi
+  CHANGED="$CHANGED
+$(git diff --name-only "$base" "$local_sha" 2>/dev/null || true)"
+done
+
+# Manual invocation (no stdin): fall back to the whole-branch diff against main.
+if [ -z "$(printf '%s' "$CHANGED" | tr -d '[:space:]')" ]; then
+  base=$(git merge-base HEAD origin/main 2>/dev/null || echo "HEAD~1")
+  CHANGED=$(git diff --name-only "$base"..HEAD)
+fi
+
+if ! printf '%s\n' "$CHANGED" | grep -qE '^(e2e/|src/app/)'; then
+  echo "pre-push › push does not touch e2e/ or src/app/ — skipping E2E"
+  exit 0
+fi
+
+if [ ! -f e2e/.env ]; then
+  echo "pre-push › E2E-relevant changes, but e2e/.env is missing — SKIPPING E2E."
+  echo "          Create e2e/.env with E2E_EMAIL / E2E_PASSWORD to enable (see README)."
+  exit 0
+fi
+
+if [ ! -d "$HOME/.cache/ms-playwright" ]; then
+  echo "pre-push › E2E-relevant changes, but Playwright browsers aren't installed — SKIPPING E2E."
+  echo "          Run: npx playwright install chromium"
+  exit 0
+fi
+
+echo "pre-push › this push touches e2e/ or src/app/ — running Playwright (self-boots dev servers if needed)"
+npx playwright test

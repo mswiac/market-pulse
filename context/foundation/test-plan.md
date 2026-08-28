@@ -148,9 +148,16 @@ orchestrator updates Status as artifacts appear on disk.
   Generation goes through `/10x-e2e` (seed + anti-pattern review +
   deliberate-break VERIFY), never hand-written from scratch. E2E stays the
   slowest and most brittle layer — these four are smoke coverage of the
-  highest-value browser-only failure modes, not a sweep. Runs locally and,
-  once stable, wires into the existing CI pipeline (§5). Not run against the
+  highest-value browser-only failure modes, not a sweep. Not run against the
   deployed Cloudflare shape (§7).
+
+  **Enforcement:** a Husky `pre-push` hook (Variant B) always runs
+  `test:worker` + `test:ci`, and runs the E2E suite only when the push touches
+  `e2e/` or `src/app/` *and* the local E2E setup exists (else it skips with a
+  warning — never blocks). `playwright.config.ts` has a `webServer` block so
+  the suite self-boots the dev servers. True CI enforcement (a GitHub Actions
+  job) is still deferred — the current pipeline is Cloudflare Workers Builds
+  (§5), which has no natural place for a browser job.
 
   **State (2026-08-28):** four specs exist and pass —
   `e2e/seed.spec.ts` (alert create→reload; doubles as the seed exemplar),

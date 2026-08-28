@@ -47,13 +47,23 @@ npm start             # ng serve --configuration development-pl — Angular SPA,
 
 ### Checks before pushing
 
+A Husky **pre-push** hook runs automatically:
+
+- always: `npm run test:worker` + `npm run test:ci` (worker + Angular component
+  suites, ~20s, no servers needed);
+- E2E (`npx playwright test`): **only** when the push touches `e2e/` or
+  `src/app/`, and only if the local E2E setup exists (`e2e/.env` + installed
+  browsers) — otherwise it is skipped with a warning, never blocking.
+
+Bypass with `git push --no-verify`. To run the checks by hand:
+
 ```bash
 npm run typecheck     # tsc --noEmit for both the Angular app and the Worker
 npm run test:worker   # Vitest + @cloudflare/vitest-pool-workers — backend suite
 npm run test:ci       # Angular component tests (Vitest via @angular/build:unit-test, no watch)
 ```
 
-Run those three directly rather than `npm run ci` on your machine — `npm run ci`
+Run those directly rather than `npm run ci` on your machine — `npm run ci`
 chains `npm run test` (`ng test`) in **watch mode** and never exits locally. It
 only works in real CI, where `CI=true` makes the Angular test builder disable
 watch.
@@ -61,8 +71,7 @@ watch.
 ### End-to-end tests (Playwright)
 
 Browser-level smoke tests live in `e2e/` — `seed.spec.ts` is the exemplar every
-other spec is modeled on. They drive the **real running app**, so both dev
-servers must be up (`npm run worker:dev` + `npm start`), plus a one-time setup:
+other spec is modeled on. They drive the **real running app**. One-time setup:
 
 - **Browsers**: `npx playwright install chromium` (on Linux/WSL also
   `sudo npx playwright install-deps chromium` for the system libraries).
@@ -79,8 +88,12 @@ servers must be up (`npm run worker:dev` + `npm start`), plus a one-time setup:
   spec starts already authenticated via `storageState`. If specs suddenly
   redirect to `/login`, the saved session expired — delete the file and re-run.
 
+`playwright.config.ts` has a `webServer` block, so you don't need to start the
+dev servers yourself — if `:8787` / `:4200` aren't already up, Playwright boots
+them (`reuseExistingServer: true` means it reuses yours when they are).
+
 ```bash
-npx playwright test            # all specs (runs the login setup first)
+npx playwright test            # all specs (boots servers + login setup as needed)
 npx playwright test seed       # a single spec
 npx playwright test --ui       # watch / debug
 npx playwright show-report     # HTML report from the last run

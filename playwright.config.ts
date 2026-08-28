@@ -23,6 +23,23 @@ export default defineConfig({
     baseURL: 'http://localhost:4200',
     trace: 'on-first-retry',
   },
+  // Boot both dev servers only if they aren't already up (reuseExistingServer),
+  // so `npx playwright test` is one command locally, in the pre-push hook, and
+  // in CI. Health URLs: the Worker's /api/health and the Angular index.
+  webServer: [
+    {
+      command: 'npm run worker:dev',
+      url: 'http://localhost:8787/api/health',
+      reuseExistingServer: true,
+      timeout: 60_000,
+    },
+    {
+      command: 'npm start',
+      url: 'http://localhost:4200',
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+  ],
   projects: [
     // Logs in once per `playwright test` run using E2E_EMAIL / E2E_PASSWORD
     // (from e2e/.env) and refreshes playwright/.auth/user.json.
