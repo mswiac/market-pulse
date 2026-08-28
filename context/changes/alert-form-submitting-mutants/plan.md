@@ -473,9 +473,9 @@ None — test-only.
 
 #### Automated
 
-- [x] 1.1 Type checking passes: `npm run build`
-- [x] 1.2 Full unit suite passes: `npm run test:ci`
-- [x] 1.3 Prettier clean: `npx prettier --check "src/app/features/alerts/alert-form/alert-form.spec.ts"`
+- [x] 1.1 Type checking passes: `npm run build` — e1ae279
+- [x] 1.2 Full unit suite passes: `npm run test:ci` — e1ae279
+- [x] 1.3 Prettier clean: `npx prettier --check "src/app/features/alerts/alert-form/alert-form.spec.ts"` — e1ae279
 
 #### Manual
 
@@ -487,9 +487,9 @@ None — test-only.
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npm run build`
-- [ ] 2.2 Full unit suite passes: `npm run test:ci`
-- [ ] 2.3 Prettier clean: `npx prettier --check "src/app/features/alerts/alert-form/alert-form.spec.ts"`
+- [x] 2.1 Type checking passes: `npm run build`
+- [x] 2.2 Full unit suite passes: `npm run test:ci`
+- [x] 2.3 Prettier clean: `npx prettier --check "src/app/features/alerts/alert-form/alert-form.spec.ts"`
 
 #### Manual
 

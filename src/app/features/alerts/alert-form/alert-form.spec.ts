@@ -237,4 +237,40 @@ describe('AlertForm', () => {
     expect(update).toHaveBeenCalledTimes(1);
     expect(create).not.toHaveBeenCalled();
   });
+
+  // --- messageFor error-message map (issue #114, "cheap hits") ---
+  // Nothing exercised onSubmit's error path before the blocks above, so every
+  // branch of messageFor() was an uncovered mutant. One assertion per branch,
+  // against the rendered <p class="form-error"> text.
+
+  async function submitValidCreate(errorResponse: HttpErrorResponse) {
+    const rendered = await renderAlertForm({ serviceImpl: () => throwError(() => errorResponse) });
+    rendered.form.controls.threshold.setValue(100);
+    rendered.fixture.detectChanges();
+    fireEvent.click(createSubmitButton());
+    rendered.fixture.detectChanges();
+    return rendered;
+  }
+
+  it('shows the duplicate-alert message on a 409', async () => {
+    await submitValidCreate(new HttpErrorResponse({ status: 409 }));
+    expect(await screen.findByText('An alert like this already exists.')).toBeTruthy();
+  });
+
+  it('shows the not-found message on a 404', async () => {
+    await submitValidCreate(new HttpErrorResponse({ status: 404 }));
+    expect(await screen.findByText('This alert no longer exists.')).toBeTruthy();
+  });
+
+  it('shows the RSI-unavailable message on a 400 with code rsi_not_eligible', async () => {
+    await submitValidCreate(
+      new HttpErrorResponse({ status: 400, error: { code: 'rsi_not_eligible' } }),
+    );
+    expect(await screen.findByText('RSI is not available for VIX.')).toBeTruthy();
+  });
+
+  it('falls back to the generic message for an unmapped error', async () => {
+    await submitValidCreate(new HttpErrorResponse({ status: 500 }));
+    expect(await screen.findByText('Something went wrong. Please try again.')).toBeTruthy();
+  });
 });
