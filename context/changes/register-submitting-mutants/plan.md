@@ -501,28 +501,28 @@ None — test-only.
 
 #### Automated
 
-- [x] 1.1 Type checking passes: `npm run build`
-- [x] 1.2 Full unit suite passes: `npm run test:ci`
-- [x] 1.3 Prettier clean: `npx prettier --check "src/app/features/auth/register/register.spec.ts"`
+- [x] 1.1 Type checking passes: `npm run build` — 4d006cc
+- [x] 1.2 Full unit suite passes: `npm run test:ci` — 4d006cc
+- [x] 1.3 Prettier clean: `npx prettier --check "src/app/features/auth/register/register.spec.ts"` — 4d006cc
 
 #### Manual
 
-- [x] 1.4 New `it` block names read as behavior statements, each mapping to a mutant row
-- [x] 1.5 The two existing validator tests unchanged; the 409 test changed only its button lookup
-- [x] 1.6 Baseline Stryker survivor counts + whole-file-scope result recorded for Phase 3
+- [x] 1.4 New `it` block names read as behavior statements, each mapping to a mutant row — 4d006cc
+- [x] 1.5 The two existing validator tests unchanged; the 409 test changed only its button lookup — 4d006cc
+- [x] 1.6 Baseline Stryker survivor counts + whole-file-scope result recorded for Phase 3 — 4d006cc
 
 ### Phase 2: Inline error-handler — cheap hits
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npm run build`
-- [ ] 2.2 Full unit suite passes: `npm run test:ci`
-- [ ] 2.3 Prettier clean: `npx prettier --check "src/app/features/auth/register/register.spec.ts"`
+- [x] 2.1 Type checking passes: `npm run build`
+- [x] 2.2 Full unit suite passes: `npm run test:ci`
+- [x] 2.3 Prettier clean: `npx prettier --check "src/app/features/auth/register/register.spec.ts"`
 
 #### Manual
 
-- [ ] 2.4 Each new `it` asserts a distinct user-visible message, not an internal branch
-- [ ] 2.5 The three error-shape tests map one-to-one to the `:41` compound-condition mutants
+- [x] 2.4 Each new `it` asserts a distinct user-visible message, not an internal branch
+- [x] 2.5 The three error-shape tests map one-to-one to the `:41` compound-condition mutants
 
 ### Phase 3: Verification & close-out
 
