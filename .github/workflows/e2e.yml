@@ -46,15 +46,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Use the npm version pinned in package.json ("packageManager": "npm@…").
-      # The npm bundled with .nvmrc's Node is older and mis-validates a
-      # transitive optional peer dep (@cloudflare/workers-types) during `npm ci`.
-      - run: corepack enable
-
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: npm
+
+      # The npm bundled with .nvmrc's Node (10.9.x) mis-reconciles wrangler's
+      # optional @cloudflare/workers-types peer during `npm ci` and fails on a
+      # lock file that is actually in sync. Match the version pinned in
+      # package.json ("packageManager"), which is what Cloudflare Workers Builds
+      # uses on main.
+      - run: npm install -g npm@11.13.0
 
       - run: npm ci
 
@@ -118,6 +120,7 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+          if-no-files-found: ignore
 
       - name: Dump server logs on failure
         if: ${{ failure() }}
