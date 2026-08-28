@@ -36,7 +36,11 @@ async function renderRemoveUser(options?: {
     // the real MatDialog at module level, shadowing a root-level TestBed override.
     importOverrides: [{ replace: MatDialogModule, with: [] }],
   });
-  return { ...result, dialogOpen, dialogSubject, listUsers, removeUser };
+  const component = result.fixture.componentInstance as unknown as {
+    users: () => AdminUser[];
+    selectedUserId: () => number | null;
+  };
+  return { ...result, component, dialogOpen, dialogSubject, listUsers, removeUser };
 }
 
 describe('RemoveUser', () => {
@@ -93,6 +97,18 @@ describe('RemoveUser', () => {
 
     expect(removeUser).not.toHaveBeenCalled();
     expect(submitButton().disabled).toBe(false);
+  });
+
+  it('sorts the fetched users alphabetically by email and selects the first', async () => {
+    const unsorted: AdminUser[] = [
+      { id: 2, email: 'zoe@example.com' },
+      { id: 1, email: 'alice@example.com' },
+    ];
+    const { fixture, component } = await renderRemoveUser({ listUsers: () => of(unsorted) });
+    fixture.detectChanges();
+
+    expect(component.users().map((u) => u.email)).toEqual(['alice@example.com', 'zoe@example.com']);
+    expect(component.selectedUserId()).toBe(1);
   });
 
   it('shows the mapped message for a known error code (cannot_delete_self)', async () => {

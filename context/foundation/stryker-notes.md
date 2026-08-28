@@ -46,8 +46,13 @@ runner (`testRunner: "command"`, `commandRunner.command: "npm run test:ci"`,
 `coverageAnalysis: "off"`) instead of `@stryker-mutator/vitest-runner`.
 
 ```
-npx stryker run --configFile stryker.config.app.json --mutate "src/app/features/some/component.ts"
+npx stryker run stryker.config.app.json --mutate "src/app/features/some/component.ts"
 ```
+
+The config file is a positional argument in Stryker 10's CLI — there is no
+`--configFile` flag. Pass a comma-separated negative glob to keep the `.spec.ts`
+exclusion when overriding `--mutate` with a directory:
+`--mutate "src/app/features/admin/**/*.ts,!src/app/features/admin/**/*.spec.ts"`.
 
 **Why a different runner.** `ng test` runs through Angular's native
 `@angular/build:unit-test` builder (config lives in `angular.json` /

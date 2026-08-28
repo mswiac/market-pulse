@@ -17,9 +17,10 @@ const CREATED: CreatedInstrument = {
 };
 
 async function renderAddInstrument(
-  addInstrument: () => ReturnType<AdminService['addInstrument']> = () => of(CREATED),
+  impl: () => ReturnType<AdminService['addInstrument']> = () => of(CREATED),
   reload = vi.fn(() => of([])),
 ) {
+  const addInstrument = vi.fn(impl);
   const result = await render(AddInstrument, {
     providers: [
       { provide: InstrumentsService, useValue: { reload } },
@@ -33,7 +34,7 @@ async function renderAddInstrument(
     currency: () => string;
     rsiEligible: () => boolean;
   };
-  return { ...result, component, reload };
+  return { ...result, component, addInstrument, reload };
 }
 
 describe('AddInstrument', () => {
@@ -93,6 +94,21 @@ describe('AddInstrument', () => {
     expect(component.currency()).toBe('EUR');
     expect(component.rsiEligible()).toBe(true);
     expect(reload).toHaveBeenCalled();
+  });
+
+  it('submits the current form values as a trimmed payload, with the default type/currency/RSI flag', async () => {
+    const { fixture, addInstrument } = await renderAddInstrument();
+    const tickerInput = () => screen.getByLabelText('Ticker') as HTMLInputElement;
+    const nameInput = () => screen.getByLabelText('Company name') as HTMLInputElement;
+    const submitButton = () => screen.getByRole('button', { name: 'Add instrument' }) as HTMLButtonElement;
+
+    fireEvent.input(tickerInput(), { target: { value: '  ABC  ' } });
+    fireEvent.input(nameInput(), { target: { value: '  Foo Corp  ' } });
+    fixture.detectChanges();
+    fireEvent.click(submitButton());
+    fixture.detectChanges();
+
+    expect(addInstrument).toHaveBeenCalledWith(CREATABLE_INSTRUMENT_TYPES[0], 'ABC', 'Foo Corp', 'EUR', true, '');
   });
 
   it('shows the mapped message for a known error code', async () => {
