@@ -395,12 +395,12 @@ None — test-only.
 
 #### Automated
 
-- [x] 3.1 `npm run test:ci` green on the final branch
-- [x] 3.2 `git diff --stat main` shows only `*.spec.ts` + `test-plan.md` — no production `.ts`
-- [x] 3.3 Stryker `mutation.json` shows zero (or only documented-equivalent) `submitting` / `canSubmit` survivors in the four components
+- [x] 3.1 `npm run test:ci` green on the final branch — 1bdfaba
+- [x] 3.2 `git diff --stat main` shows only `*.spec.ts` + `test-plan.md` — no production `.ts` — 1bdfaba
+- [x] 3.3 Stryker `mutation.json` shows zero (or only documented-equivalent) `submitting` / `canSubmit` survivors in the four components — 1bdfaba
 
 #### Manual
 
-- [ ] 3.4 Before/after comment numbers match the Stryker report
-- [ ] 3.5 PR description accurate; PR left unmerged pending confirmation
-- [x] 3.6 `test-plan.md` §3 Phase 5 note reads cleanly in context
+- [x] 3.4 Before/after comment numbers match the Stryker report — issue #113 comment 5452701894
+- [x] 3.5 PR description accurate; PR left unmerged pending confirmation — PR #117
+- [x] 3.6 `test-plan.md` §3 Phase 5 note reads cleanly in context — 1bdfaba
