@@ -101,7 +101,7 @@ orchestrator updates Status as artifacts appear on disk.
 | 3 | Frontend test bootstrap | First Angular component tests (Alert Form validators, admin panel forms) via Vitest, addressing risk #4 | #4 | component (Vitest) | shipped | `context/archive/2026-08-23-frontend-test-bootstrap/` |
 | 4 | Abuse-lens closure + local quality-gate hook | Close risks #6 and #7's narrow remaining gaps; add the still-open local post-edit hook | #6, #7 | integration + local tooling | shipped | `context/archive/2026-08-24-abuse-lens-closure/` |
 | 5 | Admin panel component coverage | Component tests (Vitest) for all 6 admin-panel components, closing risk #8 | #8 | component (Vitest) | not started | — |
-| 6 | Browser-level E2E smoke | Two Playwright scenarios for the risk facets only a rendered browser exercises — auth-gate redirect and alert create→reload persistence | #4 (browser facet), #6 (client-side auth facet) | e2e (Playwright, local dev server) | specs written + break-verified (uncommitted) | — (10xDevs M3L4 exercise) |
+| 6 | Browser-level E2E smoke | Four Playwright specs for the risk facets only a rendered browser exercises — alert create→reload, auth-gate redirect, admin-gate redirect, alert delete confirm/cancel | #4 (browser facet), #6 (client-side auth facet, ×2) | e2e (Playwright, local dev server) | specs written + break-verified | — (10xDevs M3L4 exercise) |
 
 **Scope notes** (grounded in this refresh's planning decisions — see `context/archive/2026-08-22-test-plan-refresh-2026-08-22/plan.md`'s Key Discoveries):
 
@@ -132,22 +132,39 @@ orchestrator updates Status as artifacts appear on disk.
     Component tests (Phase 3, §6.5) mock `AlertsService`/HTTP; worker tests
     don't render Angular — nothing today proves the data survives the full
     round trip. This is the browser facet of risk #4's frontend surface.
+  - **Admin-gate redirect** — a logged-in *non-admin* navigating to any
+    `/admin*` route is redirected to `/` by `adminGuard`, and the shell's
+    "Administrator" nav group is not rendered. Crosses `storageState` ↔
+    `GET /api/me` (server-derived `isAdmin`) ↔ `adminGuard` ↔ Router ↔ shell.
+    A second client-side facet of risk #6, distinct from auth-gate (which is
+    the *unauthenticated* case).
+  - **Alert delete confirm/cancel** — from the alert list, confirming the
+    delete dialog removes the alert and it stays gone after a full reload;
+    cancelling leaves it intact. Crosses the MatDialog confirm/cancel branch ↔
+    `DELETE /api/alerts/:id` ↔ D1 ↔ reload GET. The dialog-guard branching and
+    the delete's persistence only exist in the rendered flow; loosely in the
+    risk #4 / risk #8 area.
 
-  Deliberately conservative: two scenarios, no more — E2E is the slowest and
-  most brittle layer. Generation goes through `/10x-e2e` (seed +
-  anti-pattern review + deliberate-break VERIFY), never hand-written from
-  scratch. Runs locally and, once stable, wires into the existing CI
-  pipeline (§5). Not run against the deployed Cloudflare shape (§7).
+  Generation goes through `/10x-e2e` (seed + anti-pattern review +
+  deliberate-break VERIFY), never hand-written from scratch. E2E stays the
+  slowest and most brittle layer — these four are smoke coverage of the
+  highest-value browser-only failure modes, not a sweep. Runs locally and,
+  once stable, wires into the existing CI pipeline (§5). Not run against the
+  deployed Cloudflare shape (§7).
 
-  **State (2026-08-28):** both specs exist and pass — `e2e/seed.spec.ts`
-  (alert create→reload; doubles as the seed exemplar) and
-  `e2e/auth-gate-redirect.spec.ts` (4 tests: logged-out redirect on `/`,
-  `/history`, `/admin` + mid-session-401 redirect; prompt at
-  `e2e/prompts/auth-gate-redirect.prompt.md`). Both reviewed against the five
-  anti-patterns and confirmed to go red under a deliberate break of
-  `authGuard` / the alert POST persistence / `session-expired.interceptor`.
-  Suite runs clean three times in a row (data isolation). Not yet committed;
-  no CI wiring yet.
+  **State (2026-08-28):** four specs exist and pass —
+  `e2e/seed.spec.ts` (alert create→reload; doubles as the seed exemplar),
+  `e2e/auth-gate-redirect.spec.ts` (4 tests), `e2e/admin-gate-redirect.spec.ts`
+  (4 tests), `e2e/delete-alert.spec.ts` (2 tests); prompts under
+  `e2e/prompts/`. All reviewed against the five anti-patterns and confirmed to
+  go red under a deliberate break of the protected behavior (`authGuard`,
+  `adminGuard`, the alert `POST`/`DELETE` persistence, the confirm-dialog
+  guard, `session-expired.interceptor`). The delete-alert spec's first cut had
+  a naive-assertion bug — `toBeHidden()` after `reload()` passed before the
+  list had loaded — fixed by adding an anchor alert that must re-render first.
+  Full suite (12 incl. setup) runs clean three times in a row (data isolation
+  via unique thresholds + an API-sweep `afterEach`). Committed on branch
+  `test/e2e-playwright-smoke` / PR #119. No CI wiring yet.
 
 If phases must be sequenced under time pressure, Phase 1 is the top priority — it covers both the user's top-stated concern (risk #2) and the one confirmed real code gap.
 
@@ -407,7 +424,7 @@ new Worker test files under `test/worker/` (matched only by
 - Stack versions last verified: 2026-08-22
 - AI-native tool references last verified: n/a (no AI-native layer)
 - 2026-08-25 — PR #91 mutation-testing triage (commits `8a2884f^`..`07bef80`, 6 commits): test-only sweep closing Stryker survivor gaps across `src/worker/**` (session/auth, scheduled/admin routes, index/email, market-data/password, alert-evaluation, alerts/trigger-events/admin/resend/rsi). ~823 lines added across 14 `test/worker/*.test.ts` files. No production code changed, no risk-map delta from this sweep itself (Risk #8 is a separate, interview-sourced addition — see §2).
-- 2026-08-28 — added the browser-level E2E layer (§3 Phase 6, §4 stack row, §6.6): Playwright `e2e/seed.spec.ts` exemplar plus two smoke scenarios — auth-gate redirect and alert create→reload round trip. 10xDevs M3L4 practical exercise. No risk-map delta — both cover browser-only facets of existing risks #4 and #6. Both specs written, anti-pattern-reviewed, and deliberate-break-verified; `auth-gate-redirect.spec.ts` generated via a standalone `/10x-e2e` run. Uncommitted as of this entry.
+- 2026-08-28 — added the browser-level E2E layer (§3 Phase 6, §4 stack row, §6.6): Playwright `e2e/seed.spec.ts` exemplar plus four smoke specs — alert create→reload, auth-gate redirect, admin-gate redirect, alert delete confirm/cancel. 10xDevs M3L4 practical exercise. No risk-map delta — all cover browser-only facets of existing risks #4 and #6. Every spec anti-pattern-reviewed and deliberate-break-verified; `auth-gate-redirect`, `admin-gate-redirect`, `delete-alert` generated via standalone `/10x-e2e` runs. Branch `test/e2e-playwright-smoke` / PR #119.
 
 Refresh (`/10x-test-plan --refresh`) when:
 
