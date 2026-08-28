@@ -479,9 +479,9 @@ None — test-only.
 
 #### Manual
 
-- [ ] 1.4 New `it` block names read as behavior statements, each mapping to a mutant row
-- [ ] 1.5 Existing 5 `alert-form.spec.ts` tests unchanged (diff only adds blocks + widens the helper)
-- [ ] 1.6 Baseline Stryker survivor counts recorded for Phase 3
+- [x] 1.4 New `it` block names read as behavior statements, each mapping to a mutant row — b46a863
+- [x] 1.5 Existing 5 `alert-form.spec.ts` tests unchanged (diff only adds blocks + widens the helper) — b46a863
+- [x] 1.6 Baseline Stryker survivor counts recorded for Phase 3 — b46a863
 
 ### Phase 2: messageFor error-message map
 
@@ -493,19 +493,19 @@ None — test-only.
 
 #### Manual
 
-- [ ] 2.4 Each `it` asserts a distinct user-visible message, not an internal branch
-- [ ] 2.5 The four blocks map one-to-one to the `messageFor` branches
+- [x] 2.4 Each `it` asserts a distinct user-visible message, not an internal branch — b46a863
+- [x] 2.5 The four blocks map one-to-one to the `messageFor` branches — b46a863
 
 ### Phase 3: Verification & close-out
 
 #### Automated
 
-- [x] 3.1 `npm run test:ci` green on the final branch
-- [x] 3.2 `git diff --stat main` shows only `alert-form.spec.ts` + `test-plan.md` — no production `.ts` / `.html`
-- [x] 3.3 Stryker `mutation.json` shows zero (or only documented-equivalent) `submitting` / guard / `messageFor` survivors in `alert-form.ts`
+- [x] 3.1 `npm run test:ci` green on the final branch — b46a863
+- [x] 3.2 `git diff --stat main` shows only `alert-form.spec.ts` + `test-plan.md` — no production `.ts` / `.html` — b46a863
+- [x] 3.3 Stryker `mutation.json` shows zero (or only documented-equivalent) `submitting` / guard / `messageFor` survivors in `alert-form.ts` — b46a863
 
 #### Manual
 
-- [ ] 3.4 Before/after comment numbers match the Stryker report
-- [ ] 3.5 PR description accurate; PR left unmerged pending confirmation
-- [ ] 3.6 `test-plan.md` §3 Phase 3 note reads cleanly in context
+- [x] 3.4 Before/after comment numbers match the Stryker report — b46a863
+- [x] 3.5 PR description accurate; PR left unmerged pending confirmation — b46a863
+- [x] 3.6 `test-plan.md` §3 Phase 3 note reads cleanly in context — b46a863
