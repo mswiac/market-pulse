@@ -528,12 +528,12 @@ None — test-only.
 
 #### Automated
 
-- [x] 3.1 `npm run test:ci` green on the final branch
-- [x] 3.2 `git diff --stat main` shows only `register.spec.ts` + `test-plan.md` — no production `.ts` / `.html`
-- [x] 3.3 Stryker `mutation.json` shows zero (or only documented-equivalent) `submitting` / guard / error-handler survivors in `register.ts`
+- [x] 3.1 `npm run test:ci` green on the final branch — b3b0303
+- [x] 3.2 `git diff --stat main` shows only `register.spec.ts` + `test-plan.md` — no production `.ts` / `.html` — b3b0303
+- [x] 3.3 Stryker `mutation.json` shows zero (or only documented-equivalent) `submitting` / guard / error-handler survivors in `register.ts` — b3b0303
 
 #### Manual
 
-- [x] 3.4 Before/after comment numbers match the Stryker report
-- [x] 3.5 PR description accurate; PR left unmerged pending confirmation
-- [x] 3.6 `test-plan.md` §3 Phase 3 note reads cleanly in context
+- [x] 3.4 Before/after comment numbers match the Stryker report — b3b0303
+- [x] 3.5 PR description accurate; PR left unmerged pending confirmation — b3b0303
+- [x] 3.6 `test-plan.md` §3 Phase 3 note reads cleanly in context — b3b0303
