@@ -13,7 +13,8 @@ const INSTRUMENTS: Instrument[] = [
 
 const RESULT: MarketDataFetchResult = { ticker: '^NDX', from: '2026-01-01', to: '2026-01-31', daysWritten: 21 };
 
-async function renderAdminPanel(fetchMarketData: () => ReturnType<AdminService['fetchMarketData']> = () => of(RESULT)) {
+async function renderAdminPanel(impl: () => ReturnType<AdminService['fetchMarketData']> = () => of(RESULT)) {
+  const fetchMarketData = vi.fn(impl);
   const result = await render(AdminPanel, {
     providers: [
       provideNativeDateAdapter(),
@@ -34,7 +35,7 @@ async function renderAdminPanel(fetchMarketData: () => ReturnType<AdminService['
     onToDateChange: (date: Date | null) => void;
     onSubmit: () => void;
   };
-  return { ...result, component };
+  return { ...result, component, fetchMarketData };
 }
 
 describe('AdminPanel', () => {
@@ -72,6 +73,18 @@ describe('AdminPanel', () => {
     fixture.detectChanges();
 
     expect(await screen.findByText('Saved 21 day(s) for ^NDX (2026-01-01 – 2026-01-31).')).toBeTruthy();
+  });
+
+  it('sends the selected ticker and the datepicker dates formatted as zero-padded ISO strings', async () => {
+    const { fixture, component, fetchMarketData } = await renderAdminPanel(() => of(RESULT));
+
+    component.onFromDateChange(new Date(2026, 2, 5));
+    component.onToDateChange(new Date(2026, 10, 9));
+    fixture.detectChanges();
+    component.onSubmit();
+    fixture.detectChanges();
+
+    expect(fetchMarketData).toHaveBeenCalledWith('^NDX', '2026-03-05', '2026-11-09');
   });
 
   it('shows the mapped message for a known error code', async () => {

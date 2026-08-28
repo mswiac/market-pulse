@@ -54,8 +54,8 @@ the deliberate `vitest.related: false` gotcha, and why the Angular profile
 uses the `command` runner: **`context/foundation/stryker-notes.md`**.
 
 ```
-npx stryker run --mutate "src/worker/lib/some-file.ts"                                    # worker
-npx stryker run --configFile stryker.config.app.json --mutate "src/app/.../component.ts"  # Angular
+npx stryker run --mutate "src/worker/lib/some-file.ts"                            # worker
+npx stryker run stryker.config.app.json --mutate "src/app/.../component.ts"       # Angular
 ```
 
 <!-- BEGIN @przeprogramowani/10x-cli -->
