@@ -273,4 +273,18 @@ describe('AlertForm', () => {
     await submitValidCreate(new HttpErrorResponse({ status: 500 }));
     expect(await screen.findByText('Something went wrong. Please try again.')).toBeTruthy();
   });
+
+  it('needs BOTH a 400 and the rsi_not_eligible code for the RSI message — 400 alone is generic', async () => {
+    await submitValidCreate(
+      new HttpErrorResponse({ status: 400, error: { code: 'something_else' } }),
+    );
+    expect(await screen.findByText('Something went wrong. Please try again.')).toBeTruthy();
+  });
+
+  it('needs BOTH a 400 and the rsi_not_eligible code for the RSI message — the code alone is generic', async () => {
+    await submitValidCreate(
+      new HttpErrorResponse({ status: 500, error: { code: 'rsi_not_eligible' } }),
+    );
+    expect(await screen.findByText('Something went wrong. Please try again.')).toBeTruthy();
+  });
 });

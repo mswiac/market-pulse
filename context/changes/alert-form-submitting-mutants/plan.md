@@ -487,9 +487,9 @@ None — test-only.
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npm run build`
-- [x] 2.2 Full unit suite passes: `npm run test:ci`
-- [x] 2.3 Prettier clean: `npx prettier --check "src/app/features/alerts/alert-form/alert-form.spec.ts"`
+- [x] 2.1 Type checking passes: `npm run build` — bb97653
+- [x] 2.2 Full unit suite passes: `npm run test:ci` — bb97653
+- [x] 2.3 Prettier clean: `npx prettier --check "src/app/features/alerts/alert-form/alert-form.spec.ts"` — bb97653
 
 #### Manual
 
@@ -500,9 +500,9 @@ None — test-only.
 
 #### Automated
 
-- [ ] 3.1 `npm run test:ci` green on the final branch
-- [ ] 3.2 `git diff --stat main` shows only `alert-form.spec.ts` + `test-plan.md` — no production `.ts` / `.html`
-- [ ] 3.3 Stryker `mutation.json` shows zero (or only documented-equivalent) `submitting` / guard / `messageFor` survivors in `alert-form.ts`
+- [x] 3.1 `npm run test:ci` green on the final branch
+- [x] 3.2 `git diff --stat main` shows only `alert-form.spec.ts` + `test-plan.md` — no production `.ts` / `.html`
+- [x] 3.3 Stryker `mutation.json` shows zero (or only documented-equivalent) `submitting` / guard / `messageFor` survivors in `alert-form.ts`
 
 #### Manual
 
