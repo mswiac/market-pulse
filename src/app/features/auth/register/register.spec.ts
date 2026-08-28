@@ -1,27 +1,36 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { fireEvent, render, screen } from '@testing-library/angular/zoneless';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { AuthService, AuthUser } from '../../../core/auth/auth.service';
 import { Register } from './register';
 
 const FIXTURE_USER: AuthUser = { id: 1, email: 'user@example.com', isAdmin: false };
 
-async function renderRegister(registerImpl: () => ReturnType<AuthService['register']> = () => of(FIXTURE_USER)) {
+async function renderRegister(
+  registerImpl: () => ReturnType<AuthService['register']> = () => of(FIXTURE_USER),
+) {
+  const register = vi.fn(registerImpl);
   const result = await render(Register, {
     providers: [
-      { provide: AuthService, useValue: { register: registerImpl } },
+      { provide: AuthService, useValue: { register } },
       { provide: Router, useValue: { navigateByUrl: () => Promise.resolve(true) } },
       // RouterLink (used by the "Log in" footer link) injects ActivatedRoute
       // even though this component never navigates relative to it.
       { provide: ActivatedRoute, useValue: {} },
     ],
   });
-  const component = result.fixture.componentInstance as unknown as { form: Register['form'] };
-  return { ...result, form: component.form };
+  const component = result.fixture.componentInstance as unknown as {
+    form: Register['form'];
+    onSubmit: () => void;
+    submitting: () => boolean;
+  };
+  return { ...result, form: component.form, component, register };
 }
 
 describe('Register', () => {
+  const submitButton = () => screen.getByRole('button', { name: 'Register' }) as HTMLButtonElement;
+
   it('requires an email and rejects an invalid format', async () => {
     const { fixture, form } = await renderRegister();
 
@@ -47,17 +56,98 @@ describe('Register', () => {
 
   it('shows the taken-email message and marks the email control on a 409 conflict', async () => {
     const registerImpl = () => throwError(() => new HttpErrorResponse({ status: 409 }));
-    const { fixture, form, container } = await renderRegister(registerImpl);
+    const { fixture, form } = await renderRegister(registerImpl);
 
     form.controls.email.setValue('taken@example.com');
     form.controls.password.setValue('longenoughpassword');
     fixture.detectChanges();
 
-    const submitButton = container.querySelector('button[type="submit"]') as HTMLButtonElement;
-    fireEvent.click(submitButton);
+    fireEvent.click(submitButton());
     fixture.detectChanges();
 
     expect(await screen.findByText('This email is already registered.')).toBeTruthy();
     expect(form.controls.email.hasError('server')).toBe(true);
+  });
+
+  // submitting-flag / double-submit / error-handler mutants (issue #115): the old
+  // synchronous register() stub never let a test observe the in-flight state.
+
+  it('does not register while the form is invalid', async () => {
+    const { fixture, form, component, register } = await renderRegister();
+    fixture.detectChanges();
+
+    // Both controls start empty, so the form is invalid on render.
+    expect(form.invalid).toBe(true);
+    expect(submitButton().disabled).toBe(true);
+
+    component.onSubmit();
+
+    expect(register).not.toHaveBeenCalled();
+  });
+
+  it('keeps the submit button disabled and ignores a second submit while registration is in flight', async () => {
+    const pending = new Subject<AuthUser>();
+    const { fixture, form, component, register } = await renderRegister(() => pending);
+
+    form.controls.email.setValue('new@example.com');
+    form.controls.password.setValue('longenoughpassword');
+    fixture.detectChanges();
+    expect(submitButton().disabled).toBe(false);
+
+    fireEvent.click(submitButton());
+    fixture.detectChanges();
+
+    expect(submitButton().disabled).toBe(true);
+
+    component.onSubmit();
+
+    expect(register).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-enables the submit button once the user retries after a failed registration', async () => {
+    const pending = new Subject<AuthUser>();
+    const { fixture, form } = await renderRegister(() => pending);
+
+    form.controls.email.setValue('new@example.com');
+    form.controls.password.setValue('longenoughpassword');
+    fixture.detectChanges();
+    fireEvent.click(submitButton());
+    fixture.detectChanges();
+
+    pending.error(new HttpErrorResponse({ status: 500 }));
+    fixture.detectChanges();
+
+    // The error handler stamps a `server` error on the email control, so the
+    // form stays invalid until it's edited. Editing it clears that error — and
+    // the button only re-enables if `submitting` was also reset to false.
+    form.controls.email.setValue('another@example.com');
+    fixture.detectChanges();
+
+    expect(submitButton().disabled).toBe(false);
+  });
+
+  // onSubmit's error branch (issue #115): the existing 409 test only hits the
+  // taken-email path — these pin the `instanceof` / `status === 409` condition.
+
+  async function submitValidForm(registerImpl: () => ReturnType<AuthService['register']>) {
+    const rendered = await renderRegister(registerImpl);
+    rendered.form.controls.email.setValue('new@example.com');
+    rendered.form.controls.password.setValue('longenoughpassword');
+    rendered.fixture.detectChanges();
+    fireEvent.click(submitButton());
+    rendered.fixture.detectChanges();
+    return rendered;
+  }
+
+  it('shows the generic message for a non-409 error', async () => {
+    await submitValidForm(() => throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    expect(await screen.findByText('Something went wrong. Please try again.')).toBeTruthy();
+  });
+
+  it('treats a non-HttpErrorResponse 409-shaped error as generic', async () => {
+    await submitValidForm(() => throwError(() => ({ status: 409 })));
+
+    expect(await screen.findByText('Something went wrong. Please try again.')).toBeTruthy();
   });
 });
