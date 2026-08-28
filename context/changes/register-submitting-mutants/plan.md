@@ -252,10 +252,17 @@ submit while registration is in flight*: `renderRegister(() => pending)` with
 
 **Intent**: Kill `register.ts:40` (`false → true`).
 
-**Contract**: New `it` — *re-enables the submit button after a failed
-registration*: same `pending` setup; after submit,
-`pending.error(new HttpErrorResponse({ status: 500 }))`; `fixture.detectChanges()`;
-`expect(submitButton().disabled).toBe(false)`.
+**Contract**: New `it` — *re-enables the submit button once the user retries
+after a failed registration*: same `pending` setup; after submit,
+`pending.error(new HttpErrorResponse({ status: 500 }))`; `fixture.detectChanges()`.
+The error handler stamps `setErrors({ server: true })` on the email control
+unconditionally (`register.ts:49`), so the form stays invalid after the error —
+edit the email control to clear that error (`form.controls.email.setValue(...)`
++ `fixture.detectChanges()`), then `expect(submitButton().disabled).toBe(false)`.
+This still isolates `submitting.set(false)`: a stuck-`true` mutant keeps the
+button disabled even after the edit. (Adapted during implementation — a bare
+post-error `disabled` assertion, as first drafted, can't distinguish the
+`submitting` flag from the `server` form error.)
 
 #### 5. `form.invalid`-no-op `it`
 
