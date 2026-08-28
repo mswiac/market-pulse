@@ -46,6 +46,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Use the npm version pinned in package.json ("packageManager": "npm@…").
+      # The npm bundled with .nvmrc's Node is older and mis-validates a
+      # transitive optional peer dep (@cloudflare/workers-types) during `npm ci`.
+      - run: corepack enable
+
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
