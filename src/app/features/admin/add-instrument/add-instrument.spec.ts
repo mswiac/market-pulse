@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { fireEvent, render, screen } from '@testing-library/angular/zoneless';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { InstrumentsService } from '../../instruments/instruments.service';
 import { CREATABLE_INSTRUMENT_TYPES } from '../../instruments/instrument-types';
 import { AdminService, CreatedInstrument } from '../admin-panel.service';
@@ -29,6 +29,7 @@ async function renderAddInstrument(
   });
   const component = result.fixture.componentInstance as unknown as {
     onTypeChange: (type: string) => void;
+    onSubmit: () => void;
     type: () => string;
     ticker: () => string;
     currency: () => string;
@@ -78,7 +79,8 @@ describe('AddInstrument', () => {
     const { fixture, component } = await renderAddInstrument(() => of(CREATED), reload);
     const tickerInput = () => screen.getByLabelText('Ticker') as HTMLInputElement;
     const nameInput = () => screen.getByLabelText('Company name') as HTMLInputElement;
-    const submitButton = () => screen.getByRole('button', { name: 'Add instrument' }) as HTMLButtonElement;
+    const submitButton = () =>
+      screen.getByRole('button', { name: 'Add instrument' }) as HTMLButtonElement;
 
     fireEvent.input(tickerInput(), { target: { value: 'ABC' } });
     fireEvent.input(nameInput(), { target: { value: 'Foo Corp' } });
@@ -100,7 +102,8 @@ describe('AddInstrument', () => {
     const { fixture, addInstrument } = await renderAddInstrument();
     const tickerInput = () => screen.getByLabelText('Ticker') as HTMLInputElement;
     const nameInput = () => screen.getByLabelText('Company name') as HTMLInputElement;
-    const submitButton = () => screen.getByRole('button', { name: 'Add instrument' }) as HTMLButtonElement;
+    const submitButton = () =>
+      screen.getByRole('button', { name: 'Add instrument' }) as HTMLButtonElement;
 
     fireEvent.input(tickerInput(), { target: { value: '  ABC  ' } });
     fireEvent.input(nameInput(), { target: { value: '  Foo Corp  ' } });
@@ -108,16 +111,27 @@ describe('AddInstrument', () => {
     fireEvent.click(submitButton());
     fixture.detectChanges();
 
-    expect(addInstrument).toHaveBeenCalledWith(CREATABLE_INSTRUMENT_TYPES[0], 'ABC', 'Foo Corp', 'EUR', true, '');
+    expect(addInstrument).toHaveBeenCalledWith(
+      CREATABLE_INSTRUMENT_TYPES[0],
+      'ABC',
+      'Foo Corp',
+      'EUR',
+      true,
+      '',
+    );
   });
 
   it('shows the mapped message for a known error code', async () => {
     const { fixture } = await renderAddInstrument(() =>
-      throwError(() => new HttpErrorResponse({ status: 409, error: { code: 'instrument_duplicate_ticker' } })),
+      throwError(
+        () =>
+          new HttpErrorResponse({ status: 409, error: { code: 'instrument_duplicate_ticker' } }),
+      ),
     );
     const tickerInput = () => screen.getByLabelText('Ticker') as HTMLInputElement;
     const nameInput = () => screen.getByLabelText('Company name') as HTMLInputElement;
-    const submitButton = () => screen.getByRole('button', { name: 'Add instrument' }) as HTMLButtonElement;
+    const submitButton = () =>
+      screen.getByRole('button', { name: 'Add instrument' }) as HTMLButtonElement;
 
     fireEvent.input(tickerInput(), { target: { value: 'ABC' } });
     fireEvent.input(nameInput(), { target: { value: 'Foo Corp' } });
@@ -134,7 +148,8 @@ describe('AddInstrument', () => {
     );
     const tickerInput = () => screen.getByLabelText('Ticker') as HTMLInputElement;
     const nameInput = () => screen.getByLabelText('Company name') as HTMLInputElement;
-    const submitButton = () => screen.getByRole('button', { name: 'Add instrument' }) as HTMLButtonElement;
+    const submitButton = () =>
+      screen.getByRole('button', { name: 'Add instrument' }) as HTMLButtonElement;
 
     fireEvent.input(tickerInput(), { target: { value: 'ABC' } });
     fireEvent.input(nameInput(), { target: { value: 'Foo Corp' } });
@@ -143,5 +158,95 @@ describe('AddInstrument', () => {
     fixture.detectChanges();
 
     expect(await screen.findByText('Something went wrong. Please try again.')).toBeTruthy();
+  });
+
+  it('keeps the submit button disabled and ignores a second submit while the create is in flight', async () => {
+    const pending = new Subject<CreatedInstrument>();
+    const { fixture, component, addInstrument } = await renderAddInstrument(() => pending);
+    const tickerInput = () => screen.getByLabelText('Ticker') as HTMLInputElement;
+    const nameInput = () => screen.getByLabelText('Company name') as HTMLInputElement;
+    const submitButton = () =>
+      screen.getByRole('button', { name: 'Add instrument' }) as HTMLButtonElement;
+
+    fireEvent.input(tickerInput(), { target: { value: 'ABC' } });
+    fireEvent.input(nameInput(), { target: { value: 'Foo Corp' } });
+    fixture.detectChanges();
+
+    fireEvent.click(submitButton());
+    fixture.detectChanges();
+
+    expect(submitButton().disabled).toBe(true);
+
+    component.onSubmit();
+
+    expect(addInstrument).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-enables the submit button after a failed create', async () => {
+    const pending = new Subject<CreatedInstrument>();
+    const { fixture } = await renderAddInstrument(() => pending);
+    const tickerInput = () => screen.getByLabelText('Ticker') as HTMLInputElement;
+    const nameInput = () => screen.getByLabelText('Company name') as HTMLInputElement;
+    const submitButton = () =>
+      screen.getByRole('button', { name: 'Add instrument' }) as HTMLButtonElement;
+
+    fireEvent.input(tickerInput(), { target: { value: 'ABC' } });
+    fireEvent.input(nameInput(), { target: { value: 'Foo Corp' } });
+    fixture.detectChanges();
+    fireEvent.click(submitButton());
+    fixture.detectChanges();
+
+    pending.error(new HttpErrorResponse({ status: 500 }));
+    fixture.detectChanges();
+
+    expect(submitButton().disabled).toBe(false);
+  });
+
+  it('re-enables the submit button for a second instrument after a successful create', async () => {
+    const pending = new Subject<CreatedInstrument>();
+    const { fixture } = await renderAddInstrument(() => pending);
+    const tickerInput = () => screen.getByLabelText('Ticker') as HTMLInputElement;
+    const nameInput = () => screen.getByLabelText('Company name') as HTMLInputElement;
+    const submitButton = () =>
+      screen.getByRole('button', { name: 'Add instrument' }) as HTMLButtonElement;
+
+    fireEvent.input(tickerInput(), { target: { value: 'ABC' } });
+    fireEvent.input(nameInput(), { target: { value: 'Foo Corp' } });
+    fixture.detectChanges();
+    fireEvent.click(submitButton());
+    fixture.detectChanges();
+
+    pending.next(CREATED);
+    fixture.detectChanges();
+
+    // resetForm() clears the fields — the button is disabled until the next instrument is entered.
+    expect(submitButton().disabled).toBe(true);
+
+    fireEvent.input(tickerInput(), { target: { value: 'XYZ' } });
+    fireEvent.input(nameInput(), { target: { value: 'Bar Corp' } });
+    fixture.detectChanges();
+
+    expect(submitButton().disabled).toBe(false);
+  });
+
+  it('keeps submit disabled when the ticker or the name is blank or whitespace-only', async () => {
+    const { fixture } = await renderAddInstrument();
+    const tickerInput = () => screen.getByLabelText('Ticker') as HTMLInputElement;
+    const nameInput = () => screen.getByLabelText('Company name') as HTMLInputElement;
+    const submitButton = () =>
+      screen.getByRole('button', { name: 'Add instrument' }) as HTMLButtonElement;
+
+    fireEvent.input(tickerInput(), { target: { value: 'ABC' } });
+    fixture.detectChanges();
+    expect(submitButton().disabled).toBe(true);
+
+    fireEvent.input(nameInput(), { target: { value: '   ' } });
+    fixture.detectChanges();
+    expect(submitButton().disabled).toBe(true);
+
+    fireEvent.input(tickerInput(), { target: { value: '   ' } });
+    fireEvent.input(nameInput(), { target: { value: 'Foo Corp' } });
+    fixture.detectChanges();
+    expect(submitButton().disabled).toBe(true);
   });
 });
