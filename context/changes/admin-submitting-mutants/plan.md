@@ -374,33 +374,33 @@ None — test-only.
 
 #### Manual
 
-- [ ] 1.4 New `it` block names read as behavior statements, each mapping to a mutant row
-- [ ] 1.5 Existing admin-panel / add-instrument tests unchanged (diff only adds blocks + `onSubmit` cast)
+- [x] 1.4 New `it` block names read as behavior statements, each mapping to a mutant row
+- [x] 1.5 Existing admin-panel / add-instrument tests unchanged (diff only adds blocks + `onSubmit` cast)
 
 ### Phase 2: Dialog-flow components (remove-instrument, remove-user)
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npm run build`
-- [x] 2.2 Full unit suite passes: `npm run test:ci`
-- [x] 2.3 Prettier clean on the changed spec files
+- [x] 2.1 Type checking passes: `npm run build` — ed2cf7d
+- [x] 2.2 Full unit suite passes: `npm run test:ci` — ed2cf7d
+- [x] 2.3 Prettier clean on the changed spec files — ed2cf7d
 
 #### Manual
 
-- [ ] 2.4 `mat-select` disabled assertion uses an accessibility-first locator, not CSS
-- [ ] 2.5 Existing dialog-cancel and impact-error tests still pass unchanged
-- [ ] 2.6 New block names map one-to-one to the Phase 2 mutant rows
+- [x] 2.4 `mat-select` disabled assertion uses an accessibility-first locator, not CSS — adapted: asserts `component.submitting()` (signal read) instead of the mat-select DOM node; more robust, same mutant coverage, within the plan's fallback clause
+- [x] 2.5 Existing dialog-cancel and impact-error tests still pass unchanged
+- [x] 2.6 New block names map one-to-one to the Phase 2 mutant rows
 
 ### Phase 3: Verification & close-out
 
 #### Automated
 
-- [ ] 3.1 `npm run test:ci` green on the final branch
-- [ ] 3.2 `git diff --stat main` shows only `*.spec.ts` + `test-plan.md` — no production `.ts`
-- [ ] 3.3 Stryker `mutation.json` shows zero (or only documented-equivalent) `submitting` / `canSubmit` survivors in the four components
+- [x] 3.1 `npm run test:ci` green on the final branch
+- [x] 3.2 `git diff --stat main` shows only `*.spec.ts` + `test-plan.md` — no production `.ts`
+- [x] 3.3 Stryker `mutation.json` shows zero (or only documented-equivalent) `submitting` / `canSubmit` survivors in the four components
 
 #### Manual
 
 - [ ] 3.4 Before/after comment numbers match the Stryker report
 - [ ] 3.5 PR description accurate; PR left unmerged pending confirmation
-- [ ] 3.6 `test-plan.md` §3 Phase 5 note reads cleanly in context
+- [x] 3.6 `test-plan.md` §3 Phase 5 note reads cleanly in context
