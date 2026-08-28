@@ -1,7 +1,7 @@
 ---
 change_id: admin-submitting-mutants
 title: Harden admin panel tests against submitting-flag / double-submit mutants
-status: implemented
+status: impl_reviewed
 created: 2026-08-28
 updated: 2026-08-28
 archived_at: null
