@@ -99,8 +99,13 @@ npx playwright test --ui       # watch / debug
 npx playwright show-report     # HTML report from the last run
 ```
 
-Not wired into CI yet, and never run against the deployed Cloudflare shape —
-only the local dev servers. Rationale and the risk each spec protects:
+In CI these run via `.github/workflows/e2e.yml` (GitHub Actions, on PRs and
+pushes to `main`) — same specs, same local dev servers, spun up on an
+`ubuntu-latest` runner with an ephemeral offline Miniflare D1 and a seeded
+throwaway test account. It is **informational**, not a required
+branch-protection check (the required gate stays `Workers Builds: marketpulse`).
+Never run against the deployed Cloudflare shape — only local dev servers.
+Rationale and the risk each spec protects:
 `context/foundation/test-plan.md` §3 Phase 6 and §6.6.
 
 ## Deployment
