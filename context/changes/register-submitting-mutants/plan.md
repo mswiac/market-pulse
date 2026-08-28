@@ -515,25 +515,25 @@ None — test-only.
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npm run build`
-- [x] 2.2 Full unit suite passes: `npm run test:ci`
-- [x] 2.3 Prettier clean: `npx prettier --check "src/app/features/auth/register/register.spec.ts"`
+- [x] 2.1 Type checking passes: `npm run build` — 22845c4
+- [x] 2.2 Full unit suite passes: `npm run test:ci` — 22845c4
+- [x] 2.3 Prettier clean: `npx prettier --check "src/app/features/auth/register/register.spec.ts"` — 22845c4
 
 #### Manual
 
-- [x] 2.4 Each new `it` asserts a distinct user-visible message, not an internal branch
-- [x] 2.5 The three error-shape tests map one-to-one to the `:41` compound-condition mutants
+- [x] 2.4 Each new `it` asserts a distinct user-visible message, not an internal branch — 22845c4
+- [x] 2.5 The three error-shape tests map one-to-one to the `:41` compound-condition mutants — 22845c4
 
 ### Phase 3: Verification & close-out
 
 #### Automated
 
-- [ ] 3.1 `npm run test:ci` green on the final branch
-- [ ] 3.2 `git diff --stat main` shows only `register.spec.ts` + `test-plan.md` — no production `.ts` / `.html`
-- [ ] 3.3 Stryker `mutation.json` shows zero (or only documented-equivalent) `submitting` / guard / error-handler survivors in `register.ts`
+- [x] 3.1 `npm run test:ci` green on the final branch
+- [x] 3.2 `git diff --stat main` shows only `register.spec.ts` + `test-plan.md` — no production `.ts` / `.html`
+- [x] 3.3 Stryker `mutation.json` shows zero (or only documented-equivalent) `submitting` / guard / error-handler survivors in `register.ts`
 
 #### Manual
 
-- [ ] 3.4 Before/after comment numbers match the Stryker report
-- [ ] 3.5 PR description accurate; PR left unmerged pending confirmation
-- [ ] 3.6 `test-plan.md` §3 Phase 3 note reads cleanly in context
+- [x] 3.4 Before/after comment numbers match the Stryker report
+- [x] 3.5 PR description accurate; PR left unmerged pending confirmation
+- [x] 3.6 `test-plan.md` §3 Phase 3 note reads cleanly in context
