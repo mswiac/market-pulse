@@ -139,12 +139,8 @@ describe('AlertForm', () => {
     expect(screen.queryByText('RSI')).toBeNull();
   });
 
-  // --- submit guard / submitting-flag / double-submit (issue #114) ---
-  // Before: alert-form.spec.ts stubbed create/update with a synchronous of(null),
-  // so `submitting` flipped false→true→false in one tick and nothing observed the
-  // in-flight state or the error-path re-enable. A scoped Stryker run flagged
-  // `submitting.set(true/false)` and the guard/[disabled] `||`→`&&` mutants as
-  // survivors. These blocks kill that class.
+  // Submit-guard / submitting-flag / double-submit mutants (issue #114): the old
+  // synchronous `of(null)` stub never let a test observe the in-flight state.
 
   const createSubmitButton = () =>
     screen.getByRole('button', { name: 'Create alert' }) as HTMLButtonElement;
@@ -238,10 +234,8 @@ describe('AlertForm', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  // --- messageFor error-message map (issue #114, "cheap hits") ---
-  // Nothing exercised onSubmit's error path before the blocks above, so every
-  // branch of messageFor() was an uncovered mutant. One assertion per branch,
-  // against the rendered <p class="form-error"> text.
+  // messageFor() error map (issue #114): onSubmit's error path was uncovered —
+  // one assertion per branch, against the rendered <p class="form-error"> text.
 
   async function submitValidCreate(errorResponse: HttpErrorResponse) {
     const rendered = await renderAlertForm({ serviceImpl: () => throwError(() => errorResponse) });
