@@ -99,8 +99,13 @@ npx playwright test --ui       # watch / debug
 npx playwright show-report     # HTML report from the last run
 ```
 
-Not wired into CI yet, and never run against the deployed Cloudflare shape —
-only the local dev servers. Rationale and the risk each spec protects:
+In CI these run via `.github/workflows/e2e.yml` (GitHub Actions, on PRs and
+pushes to `main`) — same specs, same local dev servers, spun up on an
+`ubuntu-latest` runner with an ephemeral offline Miniflare D1 and a seeded
+throwaway test account. It is **informational**, not a required
+branch-protection check (the required gate stays `Workers Builds: marketpulse`).
+Never run against the deployed Cloudflare shape — only local dev servers.
+Rationale and the risk each spec protects:
 `context/foundation/test-plan.md` §3 Phase 6 and §6.6.
 
 ## Deployment
@@ -123,11 +128,18 @@ npm run migrate:remote
 
 `main` has a required GitHub branch-protection status check named **`Workers Builds: marketpulse`**. It must pass before any PR can merge, and it runs the same `npm run ci` build command described above (typecheck + backend test suite + Angular build).
 
-This check is configured entirely in the Cloudflare dashboard as a GitHub-App-based status check — it will not show up if you search the repo for `.github/workflows/`, husky hooks, or lint-staged config. If you need to re-verify it, check branch protection directly:
+This check is configured entirely in the Cloudflare dashboard as a GitHub-App-based status check — it is not defined by a `.github/workflows/` file, husky hook, or lint-staged config. If you need to re-verify it, check branch protection directly:
 
 ```bash
 gh api repos/mswiac/market-pulse/branches/main/protection
 ```
+
+There **is** one workflow file — `.github/workflows/e2e.yml`, which runs the
+Playwright E2E suite (see "End-to-end tests" above). It is **informational
+only**: it reports a status on PRs but is deliberately not part of branch
+protection, so a flaky browser run never blocks a merge. Promoting it to a
+required check is a deferred decision (`context/foundation/test-plan.md`
+§3 Phase 6).
 
 ## Mutation testing
 

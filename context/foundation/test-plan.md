@@ -26,7 +26,8 @@
 > Playwright. No risk-map change — the two scenarios cover the
 > browser-only facets of existing risks #4 and #6, not new risks. Added
 > as a 10xDevs Module 3 Lesson 4 practical exercise, not a
-> `/10x-test-plan --refresh`.
+> `/10x-test-plan --refresh`. Followed on the same day by CI wiring for
+> the suite (`.github/workflows/e2e.yml`, informational — issue #121).
 
 ## 1. Strategy
 
@@ -155,9 +156,16 @@ orchestrator updates Status as artifacts appear on disk.
   `test:worker` + `test:ci`, and runs the E2E suite only when the push touches
   `e2e/` or `src/app/` *and* the local E2E setup exists (else it skips with a
   warning — never blocks). `playwright.config.ts` has a `webServer` block so
-  the suite self-boots the dev servers. True CI enforcement (a GitHub Actions
-  job) is still deferred — the current pipeline is Cloudflare Workers Builds
-  (§5), which has no natural place for a browser job.
+  the suite self-boots the dev servers. In CI the suite runs via
+  `.github/workflows/e2e.yml` (GitHub Actions — free unlimited minutes on this
+  public repo; on PRs and pushes to `main`): an `ubuntu-latest` runner boots
+  the same two local dev servers against an ephemeral offline Miniflare D1,
+  seeds a throwaway test account via `POST /api/register`, then runs
+  `npx playwright test`. It is **informational, not a required check** — E2E
+  flakiness gating merges is a common regret, and the required gate stays
+  `Workers Builds: marketpulse` (§5). Promoting it to a required check is a
+  later decision once its stability on CI is known. The Cloudflare Workers
+  Builds pipeline is unchanged — the browser job lives only in GitHub Actions.
 
   **State (2026-08-28):** four specs exist and pass —
   `e2e/seed.spec.ts` (alert create→reload; doubles as the seed exemplar),
@@ -171,7 +179,8 @@ orchestrator updates Status as artifacts appear on disk.
   list had loaded — fixed by adding an anchor alert that must re-render first.
   Full suite (12 incl. setup) runs clean three times in a row (data isolation
   via unique thresholds + an API-sweep `afterEach`). Committed on branch
-  `test/e2e-playwright-smoke` / PR #119. No CI wiring yet.
+  `test/e2e-playwright-smoke` / PR #119. CI wiring (GitHub Actions,
+  informational) added afterwards in `.github/workflows/e2e.yml` (issue #121).
 
 If phases must be sequenced under time pressure, Phase 1 is the top priority — it covers both the user's top-stated concern (risk #2) and the one confirmed real code gap.
 
@@ -204,6 +213,7 @@ phase lands; before that, the gate is planned.
 |---|---|---|---|
 | lint + typecheck | local + CI (Cloudflare Workers Builds: "Workers Builds: marketpulse") | required — enforced via Cloudflare Workers Builds status check on `main` | syntactic / type drift |
 | unit + integration (Worker) | local + CI (Cloudflare Workers Builds: "Workers Builds: marketpulse") | required — enforced via Cloudflare Workers Builds status check on `main` | pipeline logic regressions, isolation failures |
+| E2E smoke (Playwright) | local (`pre-push` hook, conditional) + CI (GitHub Actions `.github/workflows/e2e.yml`) | informational — not a required check; see §3 Phase 6 | browser-only regressions across auth → routing → API → D1 |
 | post-edit hook | local (agent loop) | recommended after §3 Phase 1 | regressions at edit time |
 | pre-prod smoke (health + manual eval trigger) | between merge + prod | optional | environment-specific failures on Cloudflare |
 
@@ -432,6 +442,7 @@ new Worker test files under `test/worker/` (matched only by
 - AI-native tool references last verified: n/a (no AI-native layer)
 - 2026-08-25 — PR #91 mutation-testing triage (commits `8a2884f^`..`07bef80`, 6 commits): test-only sweep closing Stryker survivor gaps across `src/worker/**` (session/auth, scheduled/admin routes, index/email, market-data/password, alert-evaluation, alerts/trigger-events/admin/resend/rsi). ~823 lines added across 14 `test/worker/*.test.ts` files. No production code changed, no risk-map delta from this sweep itself (Risk #8 is a separate, interview-sourced addition — see §2).
 - 2026-08-28 — added the browser-level E2E layer (§3 Phase 6, §4 stack row, §6.6): Playwright `e2e/seed.spec.ts` exemplar plus four smoke specs — alert create→reload, auth-gate redirect, admin-gate redirect, alert delete confirm/cancel. 10xDevs M3L4 practical exercise. No risk-map delta — all cover browser-only facets of existing risks #4 and #6. Every spec anti-pattern-reviewed and deliberate-break-verified; `auth-gate-redirect`, `admin-gate-redirect`, `delete-alert` generated via standalone `/10x-e2e` runs. Branch `test/e2e-playwright-smoke` / PR #119.
+- 2026-08-28 — wired the E2E suite into CI (issue #121, follow-up to #119): `.github/workflows/e2e.yml` runs the `e2e/` specs on GitHub Actions (PRs + pushes to `main`) against the same local dev servers + an ephemeral offline Miniflare D1, seeding a throwaway account via `POST /api/register`. Free (public repo). **Informational, not a required branch-protection check** — required gate stays `Workers Builds: marketpulse`. §3 Phase 6 Enforcement + §5 gate table updated; no risk-map delta.
 
 Refresh (`/10x-test-plan --refresh`) when:
 

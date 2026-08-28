@@ -1,0 +1,148 @@
+name: E2E
+
+# Browser-level Playwright suite (context/foundation/test-plan.md §3 Phase 6).
+# Runs the specs in e2e/ against the same local dev servers used on a
+# developer's machine — the Angular SPA (:4200) and the Cloudflare Worker
+# (:8787, wrangler --local = Miniflare, fully offline). Nothing here touches a
+# real Cloudflare account or sends real email.
+#
+# Informational for now: NOT a required branch-protection check. The required
+# gate stays "Workers Builds: marketpulse". See test-plan.md §3 Phase 6.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'e2e/**'
+      - 'migrations/**'
+      - 'playwright.config.ts'
+      - 'angular.json'
+      - 'proxy.conf.json'
+      - 'wrangler.toml'
+      - 'package-lock.json'
+      - '.github/workflows/e2e.yml'
+
+# One in-flight run per ref; a newer push cancels the previous.
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright:
+    name: Playwright (local dev servers)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: 'true'
+      WRANGLER_SEND_METRICS: 'false'
+      # Throwaway credentials for an account seeded into the ephemeral, offline
+      # Miniflare D1. Nothing sensitive — no repo secrets required.
+      E2E_EMAIL: e2e@ci.market-pulse.test
+      E2E_PASSWORD: ci-e2e-pw-4f2b9c1a
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # The npm bundled with .nvmrc's Node (10.9.x) mis-reconciles wrangler's
+      # optional @cloudflare/workers-types peer during `npm ci` and fails on a
+      # lock file that is actually in sync. Match the version pinned in
+      # package.json ("packageManager"), which is what Cloudflare Workers Builds
+      # uses on main.
+      - run: npm install -g npm@11.13.0
+
+      - run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: playwright-${{ runner.os }}-
+
+      - name: Install Chromium + system libraries
+        run: npx playwright install --with-deps chromium
+
+      - name: Write Worker local secrets
+        # wrangler dev --local reads these from .dev.vars (gitignored). CI-only
+        # dummy values; the Phase 6 specs never exercise the email path.
+        run: |
+          cat > .dev.vars <<'EOF'
+          ADMIN_EMAILS=admin@ci.market-pulse.test
+          PASSWORD_PEPPER=ci-only-not-a-real-pepper
+          RESEND_API_KEY=dummy-ci-key
+          RESEND_VERIFIED_EMAIL=noreply@ci.market-pulse.test
+          EOF
+
+      - name: Apply D1 migrations (local / Miniflare)
+        run: npm run migrate:local
+
+      - name: Stub the Worker assets directory
+        # wrangler dev --local refuses to start if wrangler.toml's
+        # assets.directory is missing. E2E never touches the Worker's static
+        # assets or SPA fallback — every page is served by `ng serve` (:4200),
+        # the Worker only answers /api/* via proxy.conf.json — so a placeholder
+        # is enough and avoids a redundant production build here.
+        run: |
+          mkdir -p dist/market-pulse/browser/pl
+          echo '<!doctype html><title>e2e stub</title>' > dist/market-pulse/browser/pl/index.html
+
+      - name: Start dev servers
+        # Started here (not left to Playwright's webServer block) so the E2E
+        # account can be seeded before the `setup` project logs in. Playwright
+        # reuses these via reuseExistingServer: true.
+        run: |
+          npm run worker:dev > "$RUNNER_TEMP/worker.log" 2>&1 & worker_pid=$!
+          npm start          > "$RUNNER_TEMP/web.log"    2>&1 & web_pid=$!
+
+          wait_up() { # $1=name $2=pid $3=url $4=attempts
+            for _ in $(seq 1 "$4"); do
+              curl -sf "$3" >/dev/null && return 0
+              kill -0 "$2" 2>/dev/null || { echo "::error::$1 process exited before becoming reachable"; return 1; }
+              sleep 2
+            done
+            echo "::error::$1 did not become reachable at $3"
+            return 1
+          }
+
+          wait_up Worker "$worker_pid" http://localhost:8787/api/health 60 \
+            || { cat "$RUNNER_TEMP/worker.log"; exit 1; }
+          wait_up "Angular dev server" "$web_pid" http://localhost:4200 120 \
+            || { cat "$RUNNER_TEMP/web.log"; exit 1; }
+
+      - name: Seed E2E test account
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' \
+            -X POST http://localhost:8787/api/register \
+            -H 'content-type: application/json' \
+            -d "{\"email\":\"${E2E_EMAIL}\",\"password\":\"${E2E_PASSWORD}\"}")
+          echo "POST /api/register -> ${status}"
+          case "${status}" in
+            201|409) ;;
+            *) echo "::error::unexpected register status ${status}"; cat "$RUNNER_TEMP/worker.log"; exit 1 ;;
+          esac
+
+      - name: Run Playwright
+        run: npx playwright test
+
+      - name: Upload HTML report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Dump server logs on failure
+        if: ${{ failure() }}
+        run: |
+          echo '=== worker.log ==='; cat "$RUNNER_TEMP/worker.log" || true
+          echo '=== web.log ===';    cat "$RUNNER_TEMP/web.log"    || true
