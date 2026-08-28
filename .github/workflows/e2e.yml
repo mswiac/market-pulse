@@ -102,13 +102,13 @@ jobs:
           npm run worker:dev > "$RUNNER_TEMP/worker.log" 2>&1 & worker_pid=$!
           npm start          > "$RUNNER_TEMP/web.log"    2>&1 & web_pid=$!
 
-          wait_up() { # name pid url attempts
-            for _ in $(seq 1 "$3"); do
-              curl -sf "$4" >/dev/null && return 0
+          wait_up() { # $1=name $2=pid $3=url $4=attempts
+            for _ in $(seq 1 "$4"); do
+              curl -sf "$3" >/dev/null && return 0
               kill -0 "$2" 2>/dev/null || { echo "::error::$1 process exited before becoming reachable"; return 1; }
               sleep 2
             done
-            echo "::error::$1 did not become reachable at $4"
+            echo "::error::$1 did not become reachable at $3"
             return 1
           }
 
