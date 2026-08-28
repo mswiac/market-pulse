@@ -32,6 +32,13 @@ __screenshots__/
 .stryker-tmp/
 /reports
 
+# Playwright (E2E)
+/playwright/.auth
+/test-results
+/playwright-report
+/blob-report
+/e2e/.env
+
 # IDEs and editors
 .idea
 .idea/
@@ -64,8 +71,9 @@ idea-notes.md
 .mcp.json
 
 # Claude Code / 10x-cli workspace — all contents are local/auto-managed,
-# except the shared settings.json + hooks/ (PreToolUse guard blocking
-# .dev.vars reads, see lessons.md "Never read or print a whole secrets file")
+# except the shared settings.json + hooks/ (PreToolUse guard blocking reads of
+# .dev.vars / e2e/.env / playwright/.auth, see lessons.md "Never read or print
+# a whole secrets file")
 .claude/*
 !.claude/settings.json
 !.claude/hooks/
