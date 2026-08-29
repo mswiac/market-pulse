@@ -11,10 +11,11 @@ async function renderRegister(
   registerImpl: () => ReturnType<AuthService['register']> = () => of(FIXTURE_USER),
 ) {
   const register = vi.fn(registerImpl);
+  const navigateByUrl = vi.fn(() => Promise.resolve(true));
   const result = await render(Register, {
     providers: [
       { provide: AuthService, useValue: { register } },
-      { provide: Router, useValue: { navigateByUrl: () => Promise.resolve(true) } },
+      { provide: Router, useValue: { navigateByUrl } },
       // RouterLink (used by the "Log in" footer link) injects ActivatedRoute
       // even though this component never navigates relative to it.
       { provide: ActivatedRoute, useValue: {} },
@@ -25,7 +26,7 @@ async function renderRegister(
     onSubmit: () => void;
     submitting: () => boolean;
   };
-  return { ...result, form: component.form, component, register };
+  return { ...result, form: component.form, component, register, navigateByUrl };
 }
 
 describe('Register', () => {
@@ -149,5 +150,47 @@ describe('Register', () => {
     await submitValidForm(() => throwError(() => ({ status: 409 })));
 
     expect(await screen.findByText('Something went wrong. Please try again.')).toBeTruthy();
+  });
+
+  // Broad Stryker sweep (issue #110): close the success path — navigation and
+  // the exact credentials passed to AuthService.register — plus the
+  // retry-after-conflict flow deferred by #115.
+
+  it('registers with the entered credentials and navigates home on success', async () => {
+    const { fixture, form, register, navigateByUrl } = await renderRegister();
+
+    form.controls.email.setValue('new@example.com');
+    form.controls.password.setValue('longenoughpassword');
+    fixture.detectChanges();
+
+    fireEvent.click(submitButton());
+    fixture.detectChanges();
+
+    expect(register).toHaveBeenCalledWith('new@example.com', 'longenoughpassword');
+    expect(navigateByUrl).toHaveBeenCalledWith('/');
+  });
+
+  it('clears the taken-email message when the user fixes the address and resubmits', async () => {
+    let attempt = 0;
+    const { fixture, form, navigateByUrl } = await renderRegister(() =>
+      attempt++ === 0 ? throwError(() => new HttpErrorResponse({ status: 409 })) : of(FIXTURE_USER),
+    );
+
+    form.controls.email.setValue('taken@example.com');
+    form.controls.password.setValue('longenoughpassword');
+    fixture.detectChanges();
+    fireEvent.click(submitButton());
+    fixture.detectChanges();
+    expect(await screen.findByText('This email is already registered.')).toBeTruthy();
+
+    // A fresh address clears the `server` error → the form is valid again, so
+    // mat-form-field hides the stale <mat-error> and the retry can go through.
+    form.controls.email.setValue('free@example.com');
+    fixture.detectChanges();
+    fireEvent.click(submitButton());
+    fixture.detectChanges();
+
+    expect(screen.queryByText('This email is already registered.')).toBeNull();
+    expect(navigateByUrl).toHaveBeenCalledWith('/');
   });
 });

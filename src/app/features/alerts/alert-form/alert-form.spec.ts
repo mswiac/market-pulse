@@ -48,9 +48,10 @@ async function renderAlertForm(options: RenderOptions = {}) {
   } = options;
   const create = vi.fn(serviceImpl);
   const update = vi.fn(serviceImpl);
+  const close = vi.fn();
   const result = await render(AlertForm, {
     providers: [
-      { provide: MatDialogRef, useValue: { close: () => {} } },
+      { provide: MatDialogRef, useValue: { close } },
       { provide: MAT_DIALOG_DATA, useValue: dialogData },
       {
         provide: AuthService,
@@ -73,8 +74,11 @@ async function renderAlertForm(options: RenderOptions = {}) {
     form: AlertForm['form'];
     onSubmit: () => void;
     submitting: () => boolean;
+    instrumentTypeLabel: (type: string) => string;
+    showRsiOption: () => boolean;
+    selectedInstrumentCurrency: () => string;
   };
-  return { ...result, form: component.form, component, create, update };
+  return { ...result, form: component.form, component, create, update, close };
 }
 
 describe('AlertForm', () => {
@@ -280,5 +284,233 @@ describe('AlertForm', () => {
       new HttpErrorResponse({ status: 500, error: { code: 'rsi_not_eligible' } }),
     );
     expect(await screen.findByText('Something went wrong. Please try again.')).toBeTruthy();
+  });
+
+  // Broad Stryker sweep (issue #110): the submit-guard / messageFor class is
+  // covered above; these close the success path, the error-reset facet, the
+  // display helpers, and the negative branches of the valueChanges cascades.
+
+  it('closes the dialog with true and submits the entered values on a successful create', async () => {
+    const { fixture, form, create, update, close } = await renderAlertForm();
+
+    form.controls.threshold.setValue(100);
+    fixture.detectChanges();
+    fireEvent.click(createSubmitButton());
+    fixture.detectChanges();
+
+    expect(create).toHaveBeenCalledWith({
+      ticker: '^NDX',
+      alertType: 'PRICE',
+      threshold: 100,
+      direction: 'up',
+      notificationEmail: 'user@example.com',
+    });
+    expect(close).toHaveBeenCalledWith(true);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('routes a successful edit through update(id, payload) and closes with true', async () => {
+    const { fixture, create, update, close } = await renderAlertForm({
+      dialogData: { alert: ALERT },
+    });
+    const saveButton = () =>
+      screen.getByRole('button', { name: 'Save changes' }) as HTMLButtonElement;
+    fixture.detectChanges();
+
+    fireEvent.click(saveButton());
+    fixture.detectChanges();
+
+    expect(update).toHaveBeenCalledWith(42, {
+      ticker: '^NDX',
+      alertType: 'PRICE',
+      threshold: 100,
+      direction: 'up',
+      notificationEmail: 'user@example.com',
+    });
+    expect(close).toHaveBeenCalledWith(true);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('clears a stale error message when the user resubmits after a failure', async () => {
+    let call = 0;
+    const { fixture, form } = await renderAlertForm({
+      serviceImpl: () =>
+        call++ === 0 ? throwError(() => new HttpErrorResponse({ status: 500 })) : of(ALERT),
+    });
+
+    form.controls.threshold.setValue(100);
+    fixture.detectChanges();
+    fireEvent.click(createSubmitButton());
+    fixture.detectChanges();
+    expect(await screen.findByText('Something went wrong. Please try again.')).toBeTruthy();
+
+    fireEvent.click(createSubmitButton());
+    fixture.detectChanges();
+
+    // onSubmit's `formError.set(null)` is the only thing that clears it — the
+    // success path never touches formError.
+    expect(screen.queryByText('Something went wrong. Please try again.')).toBeNull();
+  });
+
+  it('maps known instrument types to a human label and falls back to the raw type', async () => {
+    const { component } = await renderAlertForm();
+
+    expect(component.instrumentTypeLabel('index')).toBe('Index');
+    expect(component.instrumentTypeLabel('us_stock')).toBe('US companies');
+    expect(component.instrumentTypeLabel('crypto')).toBe('crypto');
+  });
+
+  it('shows the selected instrument currency as a threshold suffix and updates it with the ticker', async () => {
+    const { fixture, form } = await renderAlertForm();
+
+    expect(screen.getByText('USD')).toBeTruthy();
+
+    form.controls.instrumentType.setValue('STOCK');
+    fixture.detectChanges();
+
+    expect(form.controls.ticker.value).toBe('CDR');
+    expect(screen.getByText('PLN')).toBeTruthy();
+    expect(screen.queryByText('USD')).toBeNull();
+  });
+
+  it('reformats a numeric threshold to two decimals on blur, ignoring empty and non-finite values', async () => {
+    const { fixture, form } = await renderAlertForm();
+    const input = screen.getByRole('spinbutton') as HTMLInputElement;
+
+    form.controls.threshold.setValue(12.5);
+    fixture.detectChanges();
+    fireEvent.blur(input);
+    expect(input.value).toBe('12.50');
+
+    form.controls.threshold.reset(null);
+    fixture.detectChanges();
+    fireEvent.blur(input);
+    expect(input.value).toBe('');
+
+    form.controls.threshold.setValue(Infinity);
+    fixture.detectChanges();
+    fireEvent.blur(input);
+    expect(input.value).not.toBe('Infinity');
+  });
+
+  it('rejects a threshold of exactly zero as a non-positive price', async () => {
+    const { fixture, form } = await renderAlertForm();
+
+    form.controls.threshold.setValue(0);
+    form.controls.threshold.markAsTouched();
+    fixture.detectChanges();
+
+    expect(form.controls.threshold.hasError('positive')).toBe(true);
+  });
+
+  it('accepts an in-range RSI threshold', async () => {
+    const { fixture, form } = await renderAlertForm();
+
+    form.controls.alertType.setValue('RSI');
+    fixture.detectChanges();
+    form.controls.threshold.setValue(50);
+    fixture.detectChanges();
+
+    expect(form.controls.threshold.hasError('min')).toBe(false);
+    expect(form.controls.threshold.hasError('max')).toBe(false);
+    expect(form.controls.threshold.valid).toBe(true);
+  });
+
+  it('does not wipe the threshold when the ticker changes while alertType stays PRICE', async () => {
+    const { fixture, form } = await renderAlertForm();
+
+    form.controls.threshold.setValue(250);
+    fixture.detectChanges();
+
+    // alertType is PRICE — switching instruments must not trip the alertType
+    // reset cascade, which would clear the threshold.
+    form.controls.ticker.setValue('^VIX');
+    fixture.detectChanges();
+
+    expect(form.controls.threshold.value).toBe(250);
+  });
+
+  it('swaps the threshold validators back to the price rules when alertType resets to PRICE', async () => {
+    const { fixture, form } = await renderAlertForm();
+
+    form.controls.alertType.setValue('RSI');
+    fixture.detectChanges();
+
+    // ^VIX is not RSI-eligible → alertType auto-resets to PRICE → the cascade
+    // must re-install the price validators, not keep the RSI range rules.
+    form.controls.ticker.setValue('^VIX');
+    fixture.detectChanges();
+    expect(form.controls.alertType.value).toBe('PRICE');
+
+    form.controls.threshold.setValue(-5);
+    form.controls.threshold.markAsTouched();
+    fixture.detectChanges();
+
+    expect(form.controls.threshold.hasError('positive')).toBe(true);
+  });
+
+  it('keeps the pre-filled instrument type and options in edit mode after instruments load', async () => {
+    const stockAlert: Alert = {
+      ...ALERT,
+      ticker: 'CDR',
+      instrumentName: 'CD Projekt',
+      instrumentType: 'STOCK',
+      currency: 'PLN',
+    };
+    const { form } = await renderAlertForm({ dialogData: { alert: stockAlert } });
+
+    // 'INDEX' is instrumentTypes()[0] — the load handler must not overwrite the
+    // alert's own 'STOCK' type, and selectedInstrumentType must stay 'STOCK' so
+    // instrumentOptions still resolves CDR (proven via the PLN currency suffix).
+    expect(form.controls.instrumentType.value).toBe('STOCK');
+    expect(await screen.findByText('PLN')).toBeTruthy();
+  });
+
+  it('keeps alertType RSI when the ticker switches to another RSI-eligible instrument', async () => {
+    const { fixture, form } = await renderAlertForm();
+
+    form.controls.alertType.setValue('RSI');
+    fixture.detectChanges();
+    expect(form.controls.alertType.value).toBe('RSI');
+
+    // ^NDX is rsiEligible — the reset-to-PRICE cascade must NOT fire.
+    form.controls.ticker.setValue('^NDX');
+    fixture.detectChanges();
+
+    expect(form.controls.alertType.value).toBe('RSI');
+  });
+
+  it('leaves the ticker untouched when the selected type has no matching instruments', async () => {
+    const { fixture, form } = await renderAlertForm();
+    expect(form.controls.ticker.value).toBe('^NDX');
+
+    form.controls.instrumentType.setValue('NONEXISTENT');
+    fixture.detectChanges();
+
+    expect(form.controls.ticker.value).toBe('^NDX');
+  });
+
+  it('offers the RSI alert type only while the selected instrument is RSI-eligible', async () => {
+    const { fixture, form, component } = await renderAlertForm();
+
+    expect(component.showRsiOption()).toBe(true); // ^NDX is RSI-eligible
+
+    form.controls.ticker.setValue('^VIX');
+    fixture.detectChanges();
+
+    expect(component.showRsiOption()).toBe(false); // ^VIX is not
+  });
+
+  it('reports no currency when the ticker matches no loaded instrument', async () => {
+    const { fixture, form, component } = await renderAlertForm();
+
+    expect(component.selectedInstrumentCurrency()).toBe('USD'); // ^NDX
+
+    form.controls.instrumentType.setValue('NONEXISTENT');
+    fixture.detectChanges();
+
+    // Options are now empty and the ticker is stale — the lookup must yield the
+    // empty string, not a placeholder, so the currency suffix simply disappears.
+    expect(component.selectedInstrumentCurrency()).toBe('');
   });
 });

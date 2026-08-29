@@ -137,4 +137,32 @@ describe('Login', () => {
 
     expect(await screen.findByText('Invalid email or password.')).toBeTruthy();
   });
+
+  // Broad Stryker sweep (issue #110): close the errorMessage-reset mutant
+  // (login.ts:32) that #116 deferred here. The message renders through a plain
+  // @if (errorMessage()) with no control-state gate, so a stale value stays
+  // visible unless onSubmit actively clears it.
+  it('clears the invalid-credentials message when the user retries and succeeds', async () => {
+    let attempt = 0;
+    const { fixture, form, navigateByUrl } = await renderLogin(() =>
+      attempt++ === 0 ? throwError(() => new HttpErrorResponse({ status: 401 })) : of(FIXTURE_USER),
+    );
+
+    form.controls.email.setValue('user@example.com');
+    form.controls.password.setValue('wrong-password');
+    fixture.detectChanges();
+    fireEvent.click(submitButton());
+    fixture.detectChanges();
+    expect(await screen.findByText('Invalid email or password.')).toBeTruthy();
+
+    // The error handler touches no control, so the form stays valid — the retry
+    // goes straight through.
+    form.controls.password.setValue('secret123');
+    fixture.detectChanges();
+    fireEvent.click(submitButton());
+    fixture.detectChanges();
+
+    expect(screen.queryByText('Invalid email or password.')).toBeNull();
+    expect(navigateByUrl).toHaveBeenCalledWith('/');
+  });
 });
