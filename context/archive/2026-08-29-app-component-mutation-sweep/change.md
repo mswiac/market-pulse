@@ -1,10 +1,10 @@
 ---
 change_id: app-component-mutation-sweep
 title: Scoped Stryker mutation triage for alert-form + register component tests (#110)
-status: impl_reviewed
+status: archived
 created: 2026-08-29
 updated: 2026-08-29
-archived_at: null
+archived_at: 2026-08-29T13:24:37Z
 ---
 
 ## Notes
