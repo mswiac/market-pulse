@@ -595,12 +595,12 @@ None — test-only.
 
 #### Automated
 
-- [x] 3.1 `npm run test:ci` green on the final branch
-- [x] 3.2 `git diff --stat main` shows only `login.spec.ts` (new) + `test-plan.md` — no production `.ts` / `.html`
-- [x] 3.3 Stryker `mutation.json` shows zero (or only the documented `:32` equivalent) survivors in `login.ts`
+- [x] 3.1 `npm run test:ci` green on the final branch — 67db844
+- [x] 3.2 `git diff --stat main` shows only `login.spec.ts` (new) + `test-plan.md` — no production `.ts` / `.html` — 67db844
+- [x] 3.3 Stryker `mutation.json` shows zero (or only the documented `:32` equivalent) survivors in `login.ts` — 67db844
 
 #### Manual
 
-- [x] 3.4 Before/after comment numbers match the Stryker report
-- [x] 3.5 PR description accurate; PR left unmerged pending confirmation
-- [x] 3.6 `test-plan.md` §3 + §8 notes read cleanly in context
+- [x] 3.4 Before/after comment numbers match the Stryker report — 67db844
+- [x] 3.5 PR description accurate; PR left unmerged pending confirmation — 67db844
+- [x] 3.6 `test-plan.md` §3 + §8 notes read cleanly in context — 67db844
