@@ -723,9 +723,9 @@ None — test-only.
 
 #### Automated
 
-- [x] 4.1 `npm run test:ci` green on the final branch
-- [x] 4.2 `git diff --stat main` shows only the three `*.spec.ts` + `test-plan.md` — no production `.ts` / `.html`
-- [x] 4.3 Each file's after-run `mutation.json` shows zero non-equivalent survivors in the swept scope
+- [x] 4.1 `npm run test:ci` green on the final branch — f032c44
+- [x] 4.2 `git diff --stat main` shows only the three `*.spec.ts` + `test-plan.md` — no production `.ts` / `.html` — f032c44
+- [x] 4.3 Each file's after-run `mutation.json` shows zero non-equivalent survivors in the swept scope — f032c44
 
 #### Manual
 
