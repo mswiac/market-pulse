@@ -582,25 +582,25 @@ None — test-only.
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npm run build`
-- [x] 2.2 Full unit suite passes: `npm run test:ci`
-- [x] 2.3 Prettier clean: `npx prettier --check "src/app/features/auth/login/login.spec.ts"`
+- [x] 2.1 Type checking passes: `npm run build` — 22038fd
+- [x] 2.2 Full unit suite passes: `npm run test:ci` — 22038fd
+- [x] 2.3 Prettier clean: `npx prettier --check "src/app/features/auth/login/login.spec.ts"` — 22038fd
 
 #### Manual
 
-- [x] 2.4 Happy-path test asserts both the service-call args and the navigation target
-- [x] 2.5 Error-message test asserts the rendered DOM text, not the `errorMessage()` signal
+- [x] 2.4 Happy-path test asserts both the service-call args and the navigation target — 22038fd
+- [x] 2.5 Error-message test asserts the rendered DOM text, not the `errorMessage()` signal — 22038fd
 
 ### Phase 3: Verification & close-out
 
 #### Automated
 
-- [ ] 3.1 `npm run test:ci` green on the final branch
-- [ ] 3.2 `git diff --stat main` shows only `login.spec.ts` (new) + `test-plan.md` — no production `.ts` / `.html`
-- [ ] 3.3 Stryker `mutation.json` shows zero (or only the documented `:32` equivalent) survivors in `login.ts`
+- [x] 3.1 `npm run test:ci` green on the final branch
+- [x] 3.2 `git diff --stat main` shows only `login.spec.ts` (new) + `test-plan.md` — no production `.ts` / `.html`
+- [x] 3.3 Stryker `mutation.json` shows zero (or only the documented `:32` equivalent) survivors in `login.ts`
 
 #### Manual
 
-- [ ] 3.4 Before/after comment numbers match the Stryker report
-- [ ] 3.5 PR description accurate; PR left unmerged pending confirmation
-- [ ] 3.6 `test-plan.md` §3 + §8 notes read cleanly in context
+- [x] 3.4 Before/after comment numbers match the Stryker report
+- [x] 3.5 PR description accurate; PR left unmerged pending confirmation
+- [x] 3.6 `test-plan.md` §3 + §8 notes read cleanly in context
