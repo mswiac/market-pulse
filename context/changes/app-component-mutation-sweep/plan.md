@@ -57,7 +57,7 @@ test at the behavioural level.
 
 ### What existing tests already cover (post #114/#115/#116)
 
-- **`alert-form.spec.ts`** (13 `it`): the 4 validator/cascade tests
+- **`alert-form.spec.ts`** (15 `it`): the 4 validator/cascade tests
   (`positiveNumberValidator`, RSI range + threshold-reset-on-alertType,
   ticker auto-fill, alertType→PRICE reset), the full `onSubmit` guard
   (`form.invalid`, in-flight double-submit, re-enable-on-error, `loadError()`
@@ -345,7 +345,7 @@ with `mockImplementationOnce(() => throwError(...))` then
 - The confirmed working `--mutate` scope is recorded in the scratch note.
 - Baseline + after survivor counts recorded; every non-equivalent target from
   the baseline is `Killed`/`Timeout` in the after run.
-- Existing 13 `it` blocks still pass; diff to them is assertion-additive only.
+- Existing 15 `it` blocks still pass; diff to them is assertion-additive only.
 - `git diff main -- src/app/features/alerts/alert-form/` shows only `.spec.ts`.
 
 **Implementation Note**: After Phase 1's automated verification passes, pause for
@@ -435,7 +435,7 @@ the `@else if (emailError())` template branch has no `.touched` guard) — do
 
 #### Manual Verification:
 
-- Baseline + after counts recorded; `:33` and `:38` are `Killed` in the after run.
+- Baseline + after counts recorded; `:38` is `Killed`; `:33` is a documented equivalent (see 2.5).
 - `:50` is either `Killed` or has a written equivalence argument.
 - The 8 existing `it` blocks still pass unchanged.
 - `git diff main -- src/app/features/auth/register/` shows only `.spec.ts`.
@@ -687,7 +687,7 @@ None — test-only.
 
 - [ ] 1.4 The confirmed working `--mutate` scope is recorded in the scratch note
 - [ ] 1.5 Baseline + after counts recorded; every non-equivalent target is Killed/Timeout in the after run
-- [ ] 1.6 Existing 13 `it` blocks still pass; diff to them is assertion-additive only
+- [ ] 1.6 Existing 15 `it` blocks still pass; diff to them is assertion-additive only
 - [ ] 1.7 `git diff main -- src/app/features/alerts/alert-form/` shows only `.spec.ts`
 
 ### Phase 2: register.ts broad pass
@@ -700,7 +700,7 @@ None — test-only.
 
 #### Manual
 
-- [ ] 2.4 Baseline + after counts recorded; `:33` and `:38` are Killed in the after run
+- [ ] 2.4 Baseline + after counts recorded; `:38` is Killed; `:33` documented equivalent (see 2.5)
 - [ ] 2.5 `:50` `markAsTouched()` is either Killed or has a written equivalence argument
 - [ ] 2.6 The 8 existing `it` blocks still pass unchanged
 - [ ] 2.7 `git diff main -- src/app/features/auth/register/` shows only `.spec.ts`
