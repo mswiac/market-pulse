@@ -709,9 +709,9 @@ None — test-only.
 
 #### Automated
 
-- [x] 3.1 Type checking passes: `npm run build`
-- [x] 3.2 Full unit suite passes: `npm run test:ci`
-- [x] 3.3 Prettier clean: `npx prettier --check "src/app/features/auth/login/login.spec.ts"`
+- [x] 3.1 Type checking passes: `npm run build` — b4c29b1
+- [x] 3.2 Full unit suite passes: `npm run test:ci` — b4c29b1
+- [x] 3.3 Prettier clean: `npx prettier --check "src/app/features/auth/login/login.spec.ts"` — b4c29b1
 
 #### Manual
 
@@ -723,9 +723,9 @@ None — test-only.
 
 #### Automated
 
-- [ ] 4.1 `npm run test:ci` green on the final branch
-- [ ] 4.2 `git diff --stat main` shows only the three `*.spec.ts` + `test-plan.md` — no production `.ts` / `.html`
-- [ ] 4.3 Each file's after-run `mutation.json` shows zero non-equivalent survivors in the swept scope
+- [x] 4.1 `npm run test:ci` green on the final branch
+- [x] 4.2 `git diff --stat main` shows only the three `*.spec.ts` + `test-plan.md` — no production `.ts` / `.html`
+- [x] 4.3 Each file's after-run `mutation.json` shows zero non-equivalent survivors in the swept scope
 
 #### Manual
 
