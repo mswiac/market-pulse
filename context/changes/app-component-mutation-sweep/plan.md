@@ -694,9 +694,9 @@ None — test-only.
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npm run build`
-- [x] 2.2 Full unit suite passes: `npm run test:ci`
-- [x] 2.3 Prettier clean: `npx prettier --check "src/app/features/auth/register/register.spec.ts"`
+- [x] 2.1 Type checking passes: `npm run build` — 9d389ba
+- [x] 2.2 Full unit suite passes: `npm run test:ci` — 9d389ba
+- [x] 2.3 Prettier clean: `npx prettier --check "src/app/features/auth/register/register.spec.ts"` — 9d389ba
 
 #### Manual
 
@@ -709,9 +709,9 @@ None — test-only.
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npm run build`
-- [ ] 3.2 Full unit suite passes: `npm run test:ci`
-- [ ] 3.3 Prettier clean: `npx prettier --check "src/app/features/auth/login/login.spec.ts"`
+- [x] 3.1 Type checking passes: `npm run build`
+- [x] 3.2 Full unit suite passes: `npm run test:ci`
+- [x] 3.3 Prettier clean: `npx prettier --check "src/app/features/auth/login/login.spec.ts"`
 
 #### Manual
 
