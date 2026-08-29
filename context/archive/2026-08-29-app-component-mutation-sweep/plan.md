@@ -685,10 +685,10 @@ None — test-only.
 
 #### Manual
 
-- [ ] 1.4 The confirmed working `--mutate` scope is recorded in the scratch note
-- [ ] 1.5 Baseline + after counts recorded; every non-equivalent target is Killed/Timeout in the after run
-- [ ] 1.6 Existing 15 `it` blocks still pass; diff to them is assertion-additive only
-- [ ] 1.7 `git diff main -- src/app/features/alerts/alert-form/` shows only `.spec.ts`
+- [x] 1.4 The confirmed working `--mutate` scope is recorded in the scratch note — b8a43e3
+- [x] 1.5 Baseline + after counts recorded; every non-equivalent target is Killed/Timeout in the after run — b8a43e3
+- [x] 1.6 Existing 15 `it` blocks still pass; diff to them is assertion-additive only — b8a43e3
+- [x] 1.7 `git diff main -- src/app/features/alerts/alert-form/` shows only `.spec.ts` — b8a43e3
 
 ### Phase 2: register.ts broad pass
 
@@ -700,10 +700,10 @@ None — test-only.
 
 #### Manual
 
-- [ ] 2.4 Baseline + after counts recorded; `:38` is Killed; `:33` documented equivalent (see 2.5)
-- [ ] 2.5 `:50` `markAsTouched()` is either Killed or has a written equivalence argument
-- [ ] 2.6 The 8 existing `it` blocks still pass unchanged
-- [ ] 2.7 `git diff main -- src/app/features/auth/register/` shows only `.spec.ts`
+- [x] 2.4 Baseline + after counts recorded; `:38` is Killed; `:33` documented equivalent (see 2.5) — 9d389ba
+- [x] 2.5 `:50` `markAsTouched()` is either Killed or has a written equivalence argument — 9d389ba
+- [x] 2.6 The 8 existing `it` blocks still pass unchanged — 9d389ba
+- [x] 2.7 `git diff main -- src/app/features/auth/register/` shows only `.spec.ts` — 9d389ba
 
 ### Phase 3: login.ts broad pass — close the deferred :32
 
@@ -715,9 +715,9 @@ None — test-only.
 
 #### Manual
 
-- [ ] 3.4 After run shows `login.ts:32` Killed (or a written equivalence argument)
-- [ ] 3.5 The 7 existing `it` blocks still pass unchanged
-- [ ] 3.6 `git diff main -- src/app/features/auth/login/` shows only `.spec.ts`
+- [x] 3.4 After run shows `login.ts:32` Killed (or a written equivalence argument) — b4c29b1
+- [x] 3.5 The 7 existing `it` blocks still pass unchanged — b4c29b1
+- [x] 3.6 `git diff main -- src/app/features/auth/login/` shows only `.spec.ts` — b4c29b1
 
 ### Phase 4: Verification & close-out
 
@@ -729,7 +729,7 @@ None — test-only.
 
 #### Manual
 
-- [ ] 4.4 The #110 comment numbers match the three scratch notes
-- [ ] 4.5 All three deliberate-break checks fail ≥1 test and were reverted (not committed)
-- [ ] 4.6 §3 / §4 / §8 edits read cleanly in context
-- [ ] 4.7 PR is open, unmerged
+- [x] 4.4 The #110 comment numbers match the three scratch notes — f032c44
+- [x] 4.5 All three deliberate-break checks fail ≥1 test and were reverted (not committed) — f032c44
+- [x] 4.6 §3 / §4 / §8 edits read cleanly in context — f032c44
+- [x] 4.7 PR is open, unmerged — f032c44
