@@ -568,28 +568,28 @@ None — test-only.
 
 #### Automated
 
-- [x] 1.1 Type checking passes: `npm run build`
-- [x] 1.2 Full unit suite passes: `npm run test:ci`
-- [x] 1.3 Prettier clean: `npx prettier --check "src/app/features/auth/login/login.spec.ts"`
+- [x] 1.1 Type checking passes: `npm run build` — 0a8d6f9
+- [x] 1.2 Full unit suite passes: `npm run test:ci` — 0a8d6f9
+- [x] 1.3 Prettier clean: `npx prettier --check "src/app/features/auth/login/login.spec.ts"` — 0a8d6f9
 
 #### Manual
 
-- [x] 1.4 New `it` block names read as behavior statements, each mapping to a mutant row
-- [x] 1.5 `login.spec.ts` picked up by `npm run test:ci`, not by `npm run test:worker`
-- [x] 1.6 Baseline Stryker survivor counts + whole-file-scope result recorded for Phase 3
+- [x] 1.4 New `it` block names read as behavior statements, each mapping to a mutant row — 0a8d6f9
+- [x] 1.5 `login.spec.ts` picked up by `npm run test:ci`, not by `npm run test:worker` — 0a8d6f9
+- [x] 1.6 Baseline Stryker survivor counts + whole-file-scope result recorded for Phase 3 — 0a8d6f9
 
 ### Phase 2: Happy path + error message
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npm run build`
-- [ ] 2.2 Full unit suite passes: `npm run test:ci`
-- [ ] 2.3 Prettier clean: `npx prettier --check "src/app/features/auth/login/login.spec.ts"`
+- [x] 2.1 Type checking passes: `npm run build`
+- [x] 2.2 Full unit suite passes: `npm run test:ci`
+- [x] 2.3 Prettier clean: `npx prettier --check "src/app/features/auth/login/login.spec.ts"`
 
 #### Manual
 
-- [ ] 2.4 Happy-path test asserts both the service-call args and the navigation target
-- [ ] 2.5 Error-message test asserts the rendered DOM text, not the `errorMessage()` signal
+- [x] 2.4 Happy-path test asserts both the service-call args and the navigation target
+- [x] 2.5 Error-message test asserts the rendered DOM text, not the `errorMessage()` signal
 
 ### Phase 3: Verification & close-out
 

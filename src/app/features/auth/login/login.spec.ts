@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { fireEvent, render, screen } from '@testing-library/angular/zoneless';
-import { Subject, of } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { AuthService, AuthUser } from '../../../core/auth/auth.service';
 import { Login } from './login';
 
@@ -55,6 +55,10 @@ describe('Login', () => {
     expect(await screen.findByText('Password is required.')).toBeTruthy();
   });
 
+  // submitting-flag / double-submit guard (issue #116): a synchronous login()
+  // stub flips submitting false->true->false in one tick, so no test can observe
+  // the in-flight state — the pending Subject holds the call open instead.
+
   it('does not log in while the form is invalid', async () => {
     const { fixture, form, component, login } = await renderLogin();
     fixture.detectChanges();
@@ -103,5 +107,34 @@ describe('Login', () => {
     // The error handler touches no form control, so the form stays valid — the
     // button re-enables only if `submitting` was also reset to false.
     expect(submitButton().disabled).toBe(false);
+  });
+
+  it('logs in with the entered credentials and navigates home on success', async () => {
+    const { fixture, form, login, navigateByUrl } = await renderLogin();
+
+    form.controls.email.setValue('user@example.com');
+    form.controls.password.setValue('secret123');
+    fixture.detectChanges();
+
+    fireEvent.click(submitButton());
+    fixture.detectChanges();
+
+    expect(login).toHaveBeenCalledWith('user@example.com', 'secret123');
+    expect(navigateByUrl).toHaveBeenCalledWith('/');
+  });
+
+  it('shows an invalid-credentials message when the login fails', async () => {
+    const { fixture, form } = await renderLogin(() =>
+      throwError(() => new HttpErrorResponse({ status: 401 })),
+    );
+
+    form.controls.email.setValue('user@example.com');
+    form.controls.password.setValue('wrong-password');
+    fixture.detectChanges();
+
+    fireEvent.click(submitButton());
+    fixture.detectChanges();
+
+    expect(await screen.findByText('Invalid email or password.')).toBeTruthy();
   });
 });
