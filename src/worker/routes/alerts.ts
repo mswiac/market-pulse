@@ -232,6 +232,18 @@ alertsRoutes.get('/', async (c) => {
   );
 });
 
+alertsRoutes.get('/:id', async (c) => {
+  const id = c.req.param('id');
+
+  const row = await c.env.DB.prepare(`${ALERT_SELECT} WHERE a.id = ${id}`).first();
+
+  if (!row) {
+    return c.json({ error: 'alert not found', code: 'alert_not_found' }, 404);
+  }
+
+  return c.json(toAlertResponse(row as Record<string, unknown>), 200);
+});
+
 function parseAlertId(idParam: string): number | null {
   const id = Number(idParam);
   return Number.isInteger(id) ? id : null;
