@@ -180,6 +180,12 @@ function toAlertResponse(row: Record<string, unknown>): Record<string, unknown> 
   return { ...row, active: row['active'] === 1 };
 }
 
+// D1 surfaces a violated UNIQUE constraint only through the error message —
+// there is no dedicated error code to match on.
+function isUniqueConstraintError(err: unknown): boolean {
+  return err instanceof Error && err.message.includes('UNIQUE');
+}
+
 alertsRoutes.post('/', async (c) => {
   const body = await parseAlertBody(c);
   if (!body) {
@@ -212,7 +218,7 @@ alertsRoutes.post('/', async (c) => {
 
     return c.json(toAlertResponse(selectResult.results[0] as Record<string, unknown>), 201);
   } catch (err) {
-    if (err instanceof Error && err.message.includes('UNIQUE')) {
+    if (isUniqueConstraintError(err)) {
       return c.json({ error: 'duplicate alert', code: 'duplicate_alert' }, 409);
     }
     throw err;
@@ -278,7 +284,7 @@ alertsRoutes.put('/:id', async (c) => {
 
     return c.json(toAlertResponse(updated as Record<string, unknown>), 200);
   } catch (err) {
-    if (err instanceof Error && err.message.includes('UNIQUE')) {
+    if (isUniqueConstraintError(err)) {
       return c.json({ error: 'duplicate alert', code: 'duplicate_alert' }, 409);
     }
     throw err;
