@@ -233,6 +233,7 @@ alertsRoutes.get('/', async (c) => {
 });
 
 alertsRoutes.get('/:id', async (c) => {
+  // Single-alert lookup for the edit route.
   const id = c.req.param('id');
 
   const row = await c.env.DB.prepare(`${ALERT_SELECT} WHERE a.id = ${id}`).first();
