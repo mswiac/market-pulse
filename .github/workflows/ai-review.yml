@@ -1,0 +1,176 @@
+name: AI Code Review
+
+# Runs the official Claude Code Action on every PR to main (and on manual
+# dispatch). The agent reviews the PR diff against .github/review-criteria.md,
+# scores the 6 criteria 1-10, and returns a schema-validated JSON verdict via
+# structured output. A following bash step renders that into a single sticky PR
+# comment (score table + advisory verdict + summary + fenced JSON).
+#
+# Auth: Claude Pro subscription OAuth token (secrets.CLAUDE_CODE_OAUTH_TOKEN,
+# issue #133 — consumer terms, training opt-out done) + the Claude GitHub App
+# installed on this repo. The verdict is ADVISORY: this workflow never fails the
+# check on a `fail` verdict (hard merge gate is issue #140).
+#
+# Informational: NOT a required branch-protection check.
+#
+# Note: claude-code-action skips the agent on a PR whose branch changes this
+# workflow file (security guard) — behaviour is verified post-merge, not from
+# this file's own PR.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
+    paths-ignore:
+      - '**/*.md'
+      - 'context/**'
+  workflow_dispatch:
+
+# One in-flight run per PR (or ref for manual dispatch); a newer push cancels the
+# previous review.
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Claude review
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Skip PRs from forks: `pull_request` does not expose secrets to forked
+    # repos, so the OAuth token would be absent and the run would fail at auth.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Claude Code Action
+        id: review
+        # Pinned to a commit SHA, not @v1 — third-party code with access to our
+        # secrets (M5L3 security note). SHA = tag v1.0.220.
+        uses: anthropics/claude-code-action@19dda84776b3518d98b8798e591daee763049ed3
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            You are the automated code reviewer for the MarketPulse repository.
+
+            REPO: ${{ github.repository }}
+            EVENT: ${{ github.event_name }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            The repository is checked out in the current working directory.
+
+            1. Read `.github/review-criteria.md` in full — it defines 6 scoring
+               criteria, each with an explicit "1:" (worst) and "10:" (best)
+               anchor state. That file is the single source of truth.
+            2. Obtain the change under review:
+               - On a pull_request event: run `gh pr diff ${{ github.event.pull_request.number }}`
+                 (and `gh pr view` for the title/description).
+               - On a workflow_dispatch event: there is no PR — this is a smoke
+                 run. Skip the diff, confirm you can read the criteria file, and
+                 return neutral placeholder scores of 5 with verdict "pass" and a
+                 one-line summary saying "workflow_dispatch smoke run".
+            3. Score every criterion from 1 to 10 against its anchors, using the
+               short slug keys:
+               implementation_correctness, project_idiomaticity, complexity,
+               test_risk_coverage, change_documentation, security_platform_limits.
+            4. Decide an overall verdict: "pass" or "fail". This verdict is
+               ADVISORY ONLY — it does not block merges.
+            5. Write a concise Markdown `summary` (a few sentences plus, if
+               useful, a short bullet list) that an author can act on. Name
+               concrete files/lines for any real problem; do not pad a clean
+               diff with invented issues.
+
+            Return the result as structured output matching the provided JSON
+            schema. Do NOT post a comment or a review yourself — a later workflow
+            step publishes the result.
+          claude_args: |
+            --max-turns 15
+            --allowedTools "Bash(gh pr diff:*),Bash(gh pr view:*),Read,Grep,Glob"
+            --json-schema '{"type":"object","properties":{"scores":{"type":"object","properties":{"implementation_correctness":{"type":"integer","description":"1-10 per .github/review-criteria.md anchors"},"project_idiomaticity":{"type":"integer","description":"1-10"},"complexity":{"type":"integer","description":"1-10"},"test_risk_coverage":{"type":"integer","description":"1-10"},"change_documentation":{"type":"integer","description":"1-10"},"security_platform_limits":{"type":"integer","description":"1-10"}},"required":["implementation_correctness","project_idiomaticity","complexity","test_risk_coverage","change_documentation","security_platform_limits"]},"verdict":{"type":"string","enum":["pass","fail"]},"summary":{"type":"string"}},"required":["scores","verdict","summary"]}'
+
+      - name: Post review comment
+        if: ${{ github.event_name == 'pull_request' && steps.review.outputs.conclusion == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          OUT: ${{ steps.review.outputs.structured_output }}
+        run: |
+          set -euo pipefail
+          MARKER='<!-- ai-review -->'
+
+          if [ -z "${OUT:-}" ] || ! jq -e . >/dev/null 2>&1 <<<"$OUT"; then
+            echo "::error::claude-code-action produced no valid structured_output"
+            exit 1
+          fi
+
+          KEYS="implementation_correctness project_idiomaticity complexity test_risk_coverage change_documentation security_platform_limits"
+          declare -A LABEL=(
+            [implementation_correctness]="Implementation correctness"
+            [project_idiomaticity]="Project idiomaticity"
+            [complexity]="Complexity / YAGNI"
+            [test_risk_coverage]="Test & risk coverage"
+            [change_documentation]="Change documentation"
+            [security_platform_limits]="Security & platform limits"
+          )
+
+          rows=""
+          for k in $KEYS; do
+            v=$(jq -r --arg k "$k" '.scores[$k] // empty' <<<"$OUT")
+            case "$v" in
+              ''|*[!0-9]*) echo "::error::missing or non-integer score for $k: '$v'"; exit 1 ;;
+            esac
+            if [ "$v" -lt 1 ] || [ "$v" -gt 10 ]; then
+              echo "::error::score for $k out of 1-10 range: $v"; exit 1
+            fi
+            rows="${rows}| ${LABEL[$k]} | ${v}/10 |"$'\n'
+          done
+
+          verdict=$(jq -r '.verdict' <<<"$OUT")
+          if [ "$verdict" != "pass" ] && [ "$verdict" != "fail" ]; then
+            echo "::error::bad verdict: '$verdict'"; exit 1
+          fi
+          summary=$(jq -r '.summary' <<<"$OUT")
+          pretty=$(jq '{scores, verdict, summary}' <<<"$OUT")
+
+          body=$(cat <<EOF
+          $MARKER
+          ## AI Code Review
+
+          | Criterion | Score |
+          | --- | --- |
+          ${rows}
+          **Verdict:** \`${verdict}\` _(advisory — hard merge gate is #140)_
+
+          ### Summary
+
+          ${summary}
+
+          <details><summary>Structured output (JSON)</summary>
+
+          \`\`\`json
+          ${pretty}
+          \`\`\`
+
+          </details>
+          EOF
+          )
+
+          all_ids=$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate \
+            --jq ".[] | select(.body | contains(\"${MARKER}\")) | .id")
+          existing=$(printf '%s\n' "$all_ids" | sed -n '1p')
+
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/${REPO}/issues/comments/${existing}" -f body="$body" >/dev/null
+            echo "updated comment $existing"
+          else
+            gh api -X POST "repos/${REPO}/issues/${PR}/comments" -f body="$body" >/dev/null
+            echo "posted new comment"
+          fi
