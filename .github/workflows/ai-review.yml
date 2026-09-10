@@ -1,0 +1,55 @@
+name: AI Code Review
+
+# Runs the official Claude Code Action on every PR to main (and on manual
+# dispatch), authenticating with a Claude Pro subscription OAuth token
+# (secrets.CLAUDE_CODE_OAUTH_TOKEN — see issue #133; consumer terms, training
+# opt-out done). PHASE 1: minimal prompt — this pass only proves auth + checkout.
+# The review logic against .github/review-criteria.md lands in phase 2.
+#
+# Informational: NOT a required branch-protection check.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
+    paths-ignore:
+      - '**/*.md'
+      - 'context/**'
+  workflow_dispatch:
+
+# One in-flight run per PR (or ref for manual dispatch); a newer push cancels the
+# previous review.
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Claude review
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Skip PRs from forks: `pull_request` does not expose secrets to forked
+    # repos, so the OAuth token would be absent and the run would fail at auth.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Claude Code Action
+        id: review
+        # Pinned to a commit SHA, not @v1 — third-party code with access to our
+        # secrets (M5L3 security note). SHA = tag v1.0.220.
+        uses: anthropics/claude-code-action@19dda84776b3518d98b8798e591daee763049ed3
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Reply with a single line confirming you can read this repository and
+            naming the framework used by the frontend. Do not post any comment.
+          claude_args: |
+            --max-turns 5
