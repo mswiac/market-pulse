@@ -1,10 +1,10 @@
 ---
 change_id: ai-review-workflow
 title: AI code review workflow via Claude Code Action on PRs to main
-status: impl_reviewed
+status: archived
 created: 2026-09-10
 updated: 2026-09-10
-archived_at: null
+archived_at: 2026-09-10T16:15:49Z
 ---
 
 ## Notes
