@@ -100,6 +100,26 @@ deterministic.
 
 ## Critical Implementation Details
 
+**Two prerequisites / guards discovered during Phase 1 (2026-09-10):**
+
+1. **Claude GitHub App must be installed** on `mswiac/market-pulse`
+   (https://github.com/apps/claude). `claude-code-action` exchanges the OIDC
+   token for a Claude App installation token *before* checking
+   `CLAUDE_CODE_OAUTH_TOKEN`; without the App that exchange 401s. Installed
+   2026-09-10. Recorded in `change.md`.
+2. **`claude-code-action` skips the agent when the workflow file on the PR branch
+   differs from the version on the default branch** (a security guard against
+   PRs that edit the review workflow to exfiltrate secrets). It exits
+   `conclusion: success` but does no work, logging *"your workflow will begin
+   working once you merge your PR."* Consequence: **`ai-review.yml` cannot be
+   behaviourally tested from its own PR** — not via `workflow_dispatch` (needs
+   the default branch) nor via the `pull_request` trigger (this guard).
+   Therefore Phases 1 and 2 are built together in one PR and verified only
+   statically + via the infra smoke (OIDC, App-token exchange, secret masking,
+   green job) before merge; the real agent smoke (`workflow_dispatch` on `main`)
+   and end-to-end behaviour move to Phase 3, post-merge. Phase 3's test PRs work
+   because they touch application code, not `ai-review.yml`, so the guard passes.
+
 **Comment must be a single sticky comment.** The post step finds an existing
 comment authored by the actions bot whose body contains the hidden marker
 `<!-- ai-review -->` and edits it in place (`gh pr comment --edit-last` is not
@@ -425,32 +445,36 @@ required check, so merging it cannot block existing PRs.
 
 #### Automated
 
-- [ ] 1.1 Workflow file is valid YAML and registered (`gh workflow list` shows "AI Code Review")
-- [x] 1.2 `actionlint` reports no errors (or skipped-with-note if unavailable)
-- [x] 1.3 Action reference pinned to a 40-hex SHA (no `@v1` / `@main`)
+- [x] 1.1 Workflow file is valid YAML and registered (`gh workflow list` shows "AI Code Review") — fe3a137
+- [x] 1.2 `actionlint` reports no errors (or skipped-with-note if unavailable) — fe3a137
+- [x] 1.3 Action reference pinned to a 40-hex SHA (no `@v1` / `@main`) — fe3a137
 
 #### Manual
 
-- [ ] 1.4 `gh workflow run` → run completes with conclusion `success`
-- [ ] 1.5 Run log shows auth OK and no token value printed
-- [ ] 1.6 Run visible in browser with at least one job + logs (badge evidence 1+2)
+- [x] 1.4 PR-triggered run completes with conclusion `success` (infra smoke: OIDC + Claude App-token exchange OK; agent run deferred to Phase 3 by the workflow-validation guard until merge) — fe3a137
+- [x] 1.5 Run log shows auth OK and no token value printed (`CLAUDE_CODE_OAUTH_TOKEN: ***`) — fe3a137
+- [x] 1.6 Run visible in browser with at least one job + logs (badge evidence 1+2) — fe3a137
 
 ### Phase 2: Review prompt + JSON schema + sticky comment
 
+> Built in the same PR as Phase 1 (#142). Behavioural checks (2.5–2.7) cannot run
+> pre-merge (workflow-validation guard) — they are verified post-merge together
+> with Phase 3.
+
 #### Automated
 
-- [ ] 2.1 `actionlint` clean (or skipped-with-note)
-- [ ] 2.2 Embedded `--json-schema` string is valid JSON (`jq empty`)
-- [ ] 2.3 SHA-pinned; `--json-schema`, `--max-turns 15`, read-only `--allowedTools` all present
-- [ ] 2.4 Token referenced only in the Action step, not echoed in any `run:`
+- [x] 2.1 `actionlint` clean (or skipped-with-note)
+- [x] 2.2 Embedded `--json-schema` string is valid JSON (`jq empty`)
+- [x] 2.3 SHA-pinned; `--json-schema`, `--max-turns 15`, read-only `--allowedTools` all present
+- [x] 2.4 Token referenced only in the Action step, not echoed in any `run:`
 
 #### Manual
 
-- [ ] 2.5 `workflow_dispatch` still green; post step skipped (not failed)
-- [ ] 2.6 Scratch PR → one comment, fenced JSON parses, 6 scores + verdict + summary
-- [ ] 2.7 Second push updates the same comment, no duplicate
+- [ ] 2.5 (post-merge) `workflow_dispatch` on `main` green; post step skipped (not failed) on the dispatch path
+- [ ] 2.6 (post-merge) Scratch PR → one comment, fenced JSON parses, 6 scores + verdict + summary
+- [ ] 2.7 (post-merge) Second push updates the same comment, no duplicate
 
-### Phase 3: End-to-end verification on test PRs
+### Phase 3: End-to-end verification on test PRs (post-merge)
 
 #### Automated
 
