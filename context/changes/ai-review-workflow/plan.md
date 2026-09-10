@@ -463,10 +463,10 @@ required check, so merging it cannot block existing PRs.
 
 #### Automated
 
-- [x] 2.1 `actionlint` clean (or skipped-with-note)
-- [x] 2.2 Embedded `--json-schema` string is valid JSON (`jq empty`)
-- [x] 2.3 SHA-pinned; `--json-schema`, `--max-turns 15`, read-only `--allowedTools` all present
-- [x] 2.4 Token referenced only in the Action step, not echoed in any `run:`
+- [x] 2.1 `actionlint` clean (or skipped-with-note) — c26fdf6
+- [x] 2.2 Embedded `--json-schema` string is valid JSON (`jq empty`) — c26fdf6
+- [x] 2.3 SHA-pinned; `--json-schema`, `--max-turns 15`, read-only `--allowedTools` all present — c26fdf6
+- [x] 2.4 Token referenced only in the Action step, not echoed in any `run:` — c26fdf6
 
 #### Manual
 
