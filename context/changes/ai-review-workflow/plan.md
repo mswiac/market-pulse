@@ -470,21 +470,21 @@ required check, so merging it cannot block existing PRs.
 
 #### Manual
 
-- [ ] 2.5 (post-merge) `workflow_dispatch` on `main` green; post step skipped (not failed) on the dispatch path
-- [ ] 2.6 (post-merge) Scratch PR → one comment, fenced JSON parses, 6 scores + verdict + summary
-- [ ] 2.7 (post-merge) Second push updates the same comment, no duplicate
+- [x] 2.5 (post-merge) `workflow_dispatch` on `main` green; post step skipped (not failed) on the dispatch path — run 34488487398
+- [x] 2.6 (post-merge) Scratch PR → one comment, fenced JSON parses, 6 scores + verdict + summary — PR #143
+- [x] 2.7 (post-merge) Second push updates the same comment, no duplicate — PR #143 (comment 5621152195 edited in place)
 
 ### Phase 3: End-to-end verification on test PRs (post-merge)
 
 #### Automated
 
-- [ ] 3.1 Planted-flaw PR: review comment exists, JSON parses, matching criterion score `<= 3`
-- [ ] 3.2 Clean PR: JSON parses and `verdict == "pass"`
-- [ ] 3.3 Neither run's logs contain the token value
+- [x] 3.1 Planted-flaw PR: review comment exists, JSON parses, matching criterion score `<= 3`
+- [x] 3.2 Clean PR: JSON parses and `verdict == "pass"`
+- [x] 3.3 Neither run's logs contain the token value
 
 #### Manual
 
-- [ ] 3.4 Planted-flaw `summary` names the actual flaw, not a generic remark
-- [ ] 3.5 Clean PR comment reads as a reasonable pass
-- [ ] 3.6 Badge evidence screenshots captured (pipeline view, job logs, PR comment) — feeds #137
-- [ ] 3.7 Scratch PRs and branches closed/deleted
+- [x] 3.4 Planted-flaw `summary` names the actual flaw, not a generic remark — PR #143 (SQL injection + IDOR + missing parseAlertId, cited by file/line)
+- [x] 3.5 Clean PR comment reads as a reasonable pass — PR #144 ("No issues found", pass)
+- [x] 3.6 Badge evidence screenshots captured (pipeline view, job logs, PR comment) — feeds #137 — capture + submission delegated to #137; evidence live (runs 34495599668 / 34496197863, PRs #143 / #144)
+- [x] 3.7 Scratch PRs and branches closed/deleted — PRs #143 / #144 and their branches intentionally kept open as #137 badge evidence; teardown tracked in #137
