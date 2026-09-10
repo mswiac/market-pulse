@@ -140,31 +140,35 @@ jobs:
           summary=$(jq -r '.summary' <<<"$OUT")
           pretty=$(jq '{scores, verdict, summary}' <<<"$OUT")
 
-          body=$(cat <<EOF
-          $MARKER
-          ## AI Code Review
+          # printf, not an unquoted heredoc: the model-authored $summary must be
+          # inserted as data, never re-parsed by the shell.
+          body=$(printf '%s\n' \
+            "$MARKER" \
+            "## AI Code Review" \
+            "" \
+            "| Criterion | Score |" \
+            "| --- | --- |" \
+            "${rows%$'\n'}" \
+            "" \
+            "**Verdict:** \`${verdict}\` _(advisory — hard merge gate is #140)_" \
+            "" \
+            "### Summary" \
+            "" \
+            "$summary" \
+            "" \
+            "<details><summary>Structured output (JSON)</summary>" \
+            "" \
+            '```json' \
+            "$pretty" \
+            '```' \
+            "" \
+            "</details>")
 
-          | Criterion | Score |
-          | --- | --- |
-          ${rows}
-          **Verdict:** \`${verdict}\` _(advisory — hard merge gate is #140)_
-
-          ### Summary
-
-          ${summary}
-
-          <details><summary>Structured output (JSON)</summary>
-
-          \`\`\`json
-          ${pretty}
-          \`\`\`
-
-          </details>
-          EOF
-          )
-
-          all_ids=$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate \
-            --jq ".[] | select(.body | contains(\"${MARKER}\")) | .id")
+          if ! all_ids=$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate \
+            --jq ".[] | select(.body | contains(\"${MARKER}\")) | .id"); then
+            echo "::error::failed to list PR comments for the sticky-comment lookup"
+            exit 1
+          fi
           existing=$(printf '%s\n' "$all_ids" | sed -n '1p')
 
           if [ -n "$existing" ]; then
