@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminService, AdminUser, RemovedUser } from '../admin-panel.service';
@@ -23,7 +24,15 @@ const SNACKBAR_DURATION_MS = 5000;
 
 @Component({
   selector: 'app-remove-user',
-  imports: [MatFormFieldModule, MatSelectModule, MatButtonModule, MatCardModule, MatSnackBarModule, MatDialogModule],
+  imports: [
+    MatFormFieldModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatCardModule,
+    MatSnackBarModule,
+    MatDialogModule,
+    MatProgressSpinnerModule,
+  ],
   templateUrl: './remove-user.html',
   styleUrl: './remove-user.scss',
 })
@@ -36,6 +45,7 @@ export class RemoveUser {
   protected readonly selectedUserId = signal<number | null>(null);
 
   protected readonly submitting = signal(false);
+  protected readonly loading = signal(true);
   protected readonly loadError = signal(false);
   protected readonly noUsers = computed(() => this.users().length === 0);
 
@@ -94,12 +104,17 @@ export class RemoveUser {
   }
 
   private fetchUsers(): void {
+    this.loading.set(true);
     this.adminService.listUsers().subscribe({
-      error: () => this.loadError.set(true),
+      error: () => {
+        this.loadError.set(true);
+        this.loading.set(false);
+      },
       next: (users) => {
         this.users.set([...users].sort((a, b) => a.email.localeCompare(b.email)));
         const firstUser = this.users()[0];
         this.selectedUserId.set(firstUser ? firstUser.id : null);
+        this.loading.set(false);
       },
     });
   }

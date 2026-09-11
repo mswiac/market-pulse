@@ -1,7 +1,16 @@
 <div class="admin-panel-page">
   <h2 i18n="@@adminPanel.title">Fetch market data</h2>
 
-  @if (loadError()) {
+  @if (loading()) {
+    <div class="loading">
+      <mat-progress-spinner
+        mode="indeterminate"
+        diameter="40"
+        i18n-aria-label="@@adminPanel.loading.ariaLabel"
+        aria-label="Loading instruments"
+      ></mat-progress-spinner>
+    </div>
+  } @else if (loadError()) {
     <p class="form-error" i18n="@@instrumentHistory.error.instrumentsLoadFailed">
       Failed to load instruments. Please refresh the page and try again.
     </p>
