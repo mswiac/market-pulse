@@ -8,12 +8,12 @@
 
 .welcome-card {
   width: 100%;
-  max-width: 48rem;
+  max-width: var(--page-max-width);
 }
 
 .alerts-section {
   width: 100%;
-  max-width: 48rem;
+  max-width: var(--page-max-width);
 }
 
 .alerts-section h2 {
