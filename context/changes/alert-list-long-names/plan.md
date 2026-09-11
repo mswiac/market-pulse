@@ -191,20 +191,20 @@ Not applicable — no data model or persisted-state changes.
 
 #### Manual
 
-- [x] 1.3 Every affected page visibly uses the new, wider max width and is horizontally centered
-- [x] 1.4 `login` and `register` pages are visually unchanged
-- [x] 1.5 No page shows a horizontal scrollbar at common desktop widths or down to ~800px
+- [x] 1.3 Every affected page visibly uses the new, wider max width and is horizontally centered — 4cf4204
+- [x] 1.4 `login` and `register` pages are visually unchanged — 4cf4204
+- [x] 1.5 No page shows a horizontal scrollbar at common desktop widths or down to ~800px — 4cf4204
 
 ### Phase 2: Alert list column rebalance and wrapping
 
 #### Automated
 
-- [x] 2.1 Production build succeeds: `npm run build`
-- [x] 2.2 Lint passes: `npm run lint`
+- [x] 2.1 Production build succeeds: `npm run build` — 4cf4204
+- [x] 2.2 Lint passes: `npm run lint` — 4cf4204
 
 #### Manual
 
-- [x] 2.3 Long instrument name wraps onto multiple lines with no clipping or overlap
-- [x] 2.4 Column headers stay aligned with row values, including on wrapped rows
-- [x] 2.5 Expand/collapse on a wrapped row works without visual glitches
-- [x] 2.6 A short-name row is unaffected (unchanged single-line height)
+- [x] 2.3 Long instrument name wraps onto multiple lines with no clipping or overlap — 4cf4204
+- [x] 2.4 Column headers stay aligned with row values, including on wrapped rows — 4cf4204
+- [x] 2.5 Expand/collapse on a wrapped row works without visual glitches — 4cf4204
+- [x] 2.6 A short-name row is unaffected (unchanged single-line height) — 4cf4204
