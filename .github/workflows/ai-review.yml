@@ -76,6 +76,13 @@ jobs:
                  run. Skip the diff, confirm you can read the criteria file, and
                  return neutral placeholder scores of 5 with verdict "pass" and a
                  one-line summary saying "workflow_dispatch smoke run".
+               - Stay turn-frugal: the `gh pr diff` output is usually sufficient
+                 context on its own — score directly from it. Only `Read` a full
+                 changed file when the diff's hunk context is genuinely too thin
+                 to judge a criterion (e.g. a changed signature whose call sites
+                 aren't shown in the diff). Don't `Read` every changed file by
+                 default, and don't `Grep` speculatively "just in case" — each
+                 tool call spends part of your turn budget.
             3. Score every criterion from 1 to 10 against its anchors, using the
                short slug keys:
                implementation_correctness, project_idiomaticity, complexity,
@@ -91,7 +98,7 @@ jobs:
             schema. Do NOT post a comment or a review yourself — a later workflow
             step publishes the result.
           claude_args: |
-            --max-turns 15
+            --max-turns 30
             --allowedTools "Bash(gh pr diff:*),Bash(gh pr view:*),Read,Grep,Glob"
             --json-schema '{"type":"object","properties":{"scores":{"type":"object","properties":{"implementation_correctness":{"type":"integer","description":"1-10 per .github/review-criteria.md anchors"},"project_idiomaticity":{"type":"integer","description":"1-10"},"complexity":{"type":"integer","description":"1-10"},"test_risk_coverage":{"type":"integer","description":"1-10"},"change_documentation":{"type":"integer","description":"1-10"},"security_platform_limits":{"type":"integer","description":"1-10"}},"required":["implementation_correctness","project_idiomaticity","complexity","test_risk_coverage","change_documentation","security_platform_limits"]},"verdict":{"type":"string","enum":["pass","fail"]},"summary":{"type":"string"}},"required":["scores","verdict","summary"]}'
 
