@@ -386,13 +386,13 @@ Not applicable — no data model or API changes.
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npm run typecheck`
-- [x] 2.2 Linting passes: `npm run lint`
-- [x] 2.3 Existing spec suite still passes unchanged: `npm run test:ci`
-- [x] 2.4 Production build succeeds: `npm run build`
+- [x] 2.1 Type checking passes: `npm run typecheck` — 16ce23c
+- [x] 2.2 Linting passes: `npm run lint` — 16ce23c
+- [x] 2.3 Existing spec suite still passes unchanged: `npm run test:ci` — 16ce23c
+- [x] 2.4 Production build succeeds: `npm run build` — 16ce23c
 
 #### Manual
 
-- [x] 2.5 Throttled hard-load of Fetch market data and Remove instrument shows spinner then form, no error-text flash
-- [x] 2.6 Remove instrument post-delete refetch shows spinner before picker reappears
-- [x] 2.7 Code review confirms `reload()`'s new error callback clears `loading`
+- [x] 2.5 Throttled hard-load of Fetch market data and Remove instrument shows spinner then form, no error-text flash — 16ce23c
+- [x] 2.6 Remove instrument post-delete refetch shows spinner before picker reappears — 16ce23c
+- [x] 2.7 Code review confirms `reload()`'s new error callback clears `loading` — 16ce23c
