@@ -37,6 +37,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/remove-user/remove-user').then((m) => m.RemoveUser),
         canActivate: [adminGuard],
       },
+      {
+        path: 'admin/cron-run',
+        loadComponent: () => import('./features/admin/cron-run/cron-run').then((m) => m.CronRun),
+        canActivate: [adminGuard],
+      },
     ],
   },
   {

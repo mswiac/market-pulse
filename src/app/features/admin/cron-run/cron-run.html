@@ -1,0 +1,85 @@
+<div class="cron-run-page">
+  <h2 i18n="@@cronRun.title">Run cron pipeline</h2>
+
+  <mat-card class="trigger-card" appearance="outlined">
+    <div class="trigger-row">
+      <button mat-flat-button type="button" [disabled]="submitting()" (click)="onTriggerClick()" i18n="@@cronRun.submit">
+        Run pipeline
+      </button>
+      @if (submitting()) {
+        <mat-progress-spinner
+          mode="indeterminate"
+          diameter="24"
+          i18n-aria-label="@@cronRun.loading.ariaLabel"
+          aria-label="Running pipeline"
+        ></mat-progress-spinner>
+      }
+    </div>
+  </mat-card>
+
+  @if (result(); as summary) {
+    <mat-card class="results-card" appearance="outlined">
+      <h3 i18n="@@cronRun.result.tickersHeading">Tickers</h3>
+      <table mat-table [dataSource]="summary.tickers">
+        <ng-container matColumnDef="instrument">
+          <th mat-header-cell *matHeaderCellDef i18n="@@cronRun.result.column.instrument">Instrument</th>
+          <td mat-cell *matCellDef="let row">{{ instrumentName(row.ticker) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef i18n="@@cronRun.result.column.status">Status</th>
+          <td mat-cell *matCellDef="let row">{{ tickerStatusLabel(row.status) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="error">
+          <th mat-header-cell *matHeaderCellDef i18n="@@cronRun.result.column.error">Error</th>
+          <td mat-cell *matCellDef="let row">{{ row.error }}</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="tickerColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: tickerColumns" [class.warn-row]="row.status === 'error'"></tr>
+      </table>
+
+      <p class="alerts-evaluated">{{ alertsEvaluatedLabel(summary.alertsEvaluated) }}</p>
+
+      <h3 i18n="@@cronRun.result.emailsHeading">Emails</h3>
+      @if (summary.emails.length > 0) {
+        <table mat-table [dataSource]="summary.emails">
+          <ng-container matColumnDef="instrument">
+            <th mat-header-cell *matHeaderCellDef i18n="@@cronRun.result.column.instrument">Instrument</th>
+            <td mat-cell *matCellDef="let row">{{ instrumentName(row.ticker) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="alertId">
+            <th mat-header-cell *matHeaderCellDef i18n="@@cronRun.result.column.alertId">Alert ID</th>
+            <td mat-cell *matCellDef="let row">{{ row.alertId }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef i18n="@@cronRun.result.column.status">Status</th>
+            <td mat-cell *matCellDef="let row">{{ emailStatusLabel(row.status) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="error">
+            <th mat-header-cell *matHeaderCellDef i18n="@@cronRun.result.column.error">Error</th>
+            <td mat-cell *matCellDef="let row">{{ row.error }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="emailColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: emailColumns" [class.warn-row]="row.status === 'failed'"></tr>
+        </table>
+      } @else {
+        <p class="empty-state" i18n="@@cronRun.result.noEmails">No emails were sent.</p>
+      }
+
+      @if (summary.errors.length > 0) {
+        <h3 i18n="@@cronRun.result.errorsHeading">Errors</h3>
+        <ul class="errors-list">
+          @for (error of summary.errors; track error) {
+            <li>{{ error }}</li>
+          }
+        </ul>
+      }
+    </mat-card>
+  }
+</div>

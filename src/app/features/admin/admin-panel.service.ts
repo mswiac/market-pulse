@@ -48,6 +48,26 @@ export interface RemovedUser {
   triggerEventsDeleted: number;
 }
 
+export interface CronRunTickerResult {
+  ticker: string;
+  status: 'ok' | 'error';
+  error?: string;
+}
+
+export interface CronRunEmailResult {
+  alertId: number;
+  ticker: string;
+  status: 'sent' | 'failed';
+  error?: string;
+}
+
+export interface CronRunSummary {
+  tickers: CronRunTickerResult[];
+  alertsEvaluated: number;
+  emails: CronRunEmailResult[];
+  errors: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private readonly http = inject(HttpClient);
@@ -85,5 +105,9 @@ export class AdminService {
 
   removeUser(id: number): Observable<RemovedUser> {
     return this.http.delete<RemovedUser>(`/api/admin/users/${id}`);
+  }
+
+  triggerCronRun(): Observable<CronRunSummary> {
+    return this.http.post<CronRunSummary>('/api/admin/cron/run', {});
   }
 }

@@ -1,0 +1,13 @@
+<h2 mat-dialog-title i18n="@@cronRunConfirm.title">Run the cron pipeline now?</h2>
+
+<mat-dialog-content>
+  <p i18n="@@cronRunConfirm.body">
+    This will fetch fresh market data, evaluate every alert, and may send real notification emails to real users. This action cannot be
+    undone.
+  </p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close cdkFocusInitial i18n="@@cronRunConfirm.cancel">Cancel</button>
+  <button mat-flat-button color="warn" [mat-dialog-close]="true" i18n="@@cronRunConfirm.confirm">Run</button>
+</mat-dialog-actions>

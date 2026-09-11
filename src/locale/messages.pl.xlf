@@ -214,6 +214,10 @@
         <source>Fetch market data</source>
         <target>Pobierz dane giełdowe</target>
       </trans-unit>
+      <trans-unit id="shell.nav.adminCronRun" datatype="html">
+        <source>Run pipeline</source>
+        <target>Uruchom pipeline</target>
+      </trans-unit>
       <trans-unit id="shell.nav.adminAddInstrument" datatype="html">
         <source>Add instrument</source>
         <target>Dodaj instrument</target>
@@ -761,6 +765,94 @@
       <trans-unit id="triggerHistory.type.rsi" datatype="html">
         <source>RSI threshold</source>
         <target>Próg RSI</target>
+      </trans-unit>
+      <trans-unit id="cronRunConfirm.title" datatype="html">
+        <source>Run the cron pipeline now?</source>
+        <target>Uruchomić pipeline crona teraz?</target>
+      </trans-unit>
+      <trans-unit id="cronRunConfirm.body" datatype="html">
+        <source> This will fetch fresh market data, evaluate every alert, and may send real notification emails to real users. This action cannot be undone. </source>
+        <target> To pobierze świeże dane rynkowe, oceni każdy alert i może wysłać realne powiadomienia e-mail do prawdziwych użytkowników. Tej operacji nie można cofnąć. </target>
+      </trans-unit>
+      <trans-unit id="cronRunConfirm.cancel" datatype="html">
+        <source>Cancel</source>
+        <target>Anuluj</target>
+      </trans-unit>
+      <trans-unit id="cronRunConfirm.confirm" datatype="html">
+        <source>Run</source>
+        <target>Uruchom</target>
+      </trans-unit>
+      <trans-unit id="cronRun.title" datatype="html">
+        <source>Run cron pipeline</source>
+        <target>Uruchom pipeline crona</target>
+      </trans-unit>
+      <trans-unit id="cronRun.submit" datatype="html">
+        <source> Run pipeline </source>
+        <target> Uruchom pipeline </target>
+      </trans-unit>
+      <trans-unit id="cronRun.loading.ariaLabel" datatype="html">
+        <source>Running pipeline</source>
+        <target>Trwa uruchamianie pipeline'u</target>
+      </trans-unit>
+      <trans-unit id="cronRun.result.tickersHeading" datatype="html">
+        <source>Tickers</source>
+        <target>Tickery</target>
+      </trans-unit>
+      <trans-unit id="cronRun.result.column.instrument" datatype="html">
+        <source>Instrument</source>
+        <target>Instrument</target>
+      </trans-unit>
+      <trans-unit id="cronRun.result.column.status" datatype="html">
+        <source>Status</source>
+        <target>Status</target>
+      </trans-unit>
+      <trans-unit id="cronRun.result.column.error" datatype="html">
+        <source>Error</source>
+        <target>Błąd</target>
+      </trans-unit>
+      <trans-unit id="cronRun.result.column.alertId" datatype="html">
+        <source>Alert ID</source>
+        <target>ID alertu</target>
+      </trans-unit>
+      <trans-unit id="cronRun.result.emailsHeading" datatype="html">
+        <source>Emails</source>
+        <target>E-maile</target>
+      </trans-unit>
+      <trans-unit id="cronRun.result.noEmails" datatype="html">
+        <source>No emails were sent.</source>
+        <target>Nie wysłano żadnych e-maili.</target>
+      </trans-unit>
+      <trans-unit id="cronRun.result.errorsHeading" datatype="html">
+        <source>Errors</source>
+        <target>Błędy</target>
+      </trans-unit>
+      <trans-unit id="cronRun.result.statusOk" datatype="html">
+        <source>OK</source>
+        <target>OK</target>
+      </trans-unit>
+      <trans-unit id="cronRun.result.statusError" datatype="html">
+        <source>Error</source>
+        <target>Błąd</target>
+      </trans-unit>
+      <trans-unit id="cronRun.result.statusSent" datatype="html">
+        <source>Sent</source>
+        <target>Wysłano</target>
+      </trans-unit>
+      <trans-unit id="cronRun.result.statusFailed" datatype="html">
+        <source>Failed</source>
+        <target>Nieudane</target>
+      </trans-unit>
+      <trans-unit id="cronRun.result.alertsEvaluated" datatype="html">
+        <source>Alerts evaluated: <x id="INTERPOLATION" equiv-text="count"/></source>
+        <target>Ocenione alerty: <x id="INTERPOLATION" equiv-text="count"/></target>
+      </trans-unit>
+      <trans-unit id="cronRun.error.forbidden" datatype="html">
+        <source>You don&apos;t have permission to do this.</source>
+        <target>Nie masz uprawnień do wykonania tej operacji.</target>
+      </trans-unit>
+      <trans-unit id="cronRun.error.generic" datatype="html">
+        <source>Something went wrong. Please try again.</source>
+        <target>Coś poszło nie tak. Spróbuj ponownie.</target>
       </trans-unit>
     </body>
   </file>

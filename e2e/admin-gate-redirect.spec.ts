@@ -26,6 +26,7 @@ const ADMIN_ROUTES = [
   '/admin/add-instrument',
   '/admin/remove-instrument',
   '/admin/remove-user',
+  '/admin/cron-run',
 ] as const;
 
 test.describe('admin-gate redirect (test-plan.md §3 Phase 6 — Risk #6, admin authorization boundary)', () => {

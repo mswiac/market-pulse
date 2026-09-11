@@ -289,9 +289,9 @@ None — no schema changes in this plan.
 
 #### Automated
 
-- [x] 2.1 Typecheck passes: `npm run typecheck`
-- [x] 2.2 Worker unit tests pass: `npm run test:worker`
-- [x] 2.3 Lint passes: `npm run lint`
+- [x] 2.1 Typecheck passes: `npm run typecheck` — d2e7863
+- [x] 2.2 Worker unit tests pass: `npm run test:worker` — d2e7863
+- [x] 2.3 Lint passes: `npm run lint` — d2e7863
 
 #### Manual
 
@@ -301,11 +301,11 @@ None — no schema changes in this plan.
 
 #### Automated
 
-- [ ] 3.1 Typecheck passes: `npm run typecheck`
-- [ ] 3.2 Lint passes: `npm run lint`
-- [ ] 3.3 Production build succeeds (i18n completeness): `npm run build`
-- [ ] 3.4 Angular unit tests still pass: `npm run test:ci`
-- [ ] 3.5 Extended admin-gate E2E coverage passes: `npx playwright test admin-gate-redirect`
+- [x] 3.1 Typecheck passes: `npm run typecheck`
+- [x] 3.2 Lint passes: `npm run lint`
+- [x] 3.3 Production build succeeds (i18n completeness): `npm run build`
+- [x] 3.4 Angular unit tests still pass: `npm run test:ci`
+- [x] 3.5 Extended admin-gate E2E coverage passes: `npx playwright test admin-gate-redirect`
 
 #### Manual
 
