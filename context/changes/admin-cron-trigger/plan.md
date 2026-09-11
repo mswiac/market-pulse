@@ -281,17 +281,17 @@ None — no schema changes in this plan.
 
 #### Automated
 
-- [x] 1.1 Typecheck passes: `npm run typecheck`
-- [x] 1.2 Worker unit tests pass: `npm run test:worker`
-- [x] 1.3 Lint passes: `npm run lint`
+- [x] 1.1 Typecheck passes: `npm run typecheck` — 7ffa024
+- [x] 1.2 Worker unit tests pass: `npm run test:worker` — 7ffa024
+- [x] 1.3 Lint passes: `npm run lint` — 7ffa024
 
 ### Phase 2: Admin endpoint
 
 #### Automated
 
-- [ ] 2.1 Typecheck passes: `npm run typecheck`
-- [ ] 2.2 Worker unit tests pass: `npm run test:worker`
-- [ ] 2.3 Lint passes: `npm run lint`
+- [x] 2.1 Typecheck passes: `npm run typecheck`
+- [x] 2.2 Worker unit tests pass: `npm run test:worker`
+- [x] 2.3 Lint passes: `npm run lint`
 
 #### Manual
 

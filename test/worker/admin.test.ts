@@ -1115,3 +1115,124 @@ describe('DELETE /api/admin/users/:id', () => {
     batchSpy.mockRestore();
   });
 });
+
+const CRON_RUN_VERIFIED_EMAIL = 'verified@example.com'; // matches RESEND_VERIFIED_EMAIL in vitest.config.mts
+
+interface CronRunSummaryBody {
+  tickers: Array<{ ticker: string; status: 'ok' | 'error'; error?: string }>;
+  alertsEvaluated: number;
+  emails: Array<{ alertId: number; ticker: string; status: 'sent' | 'failed'; error?: string }>;
+  errors: string[];
+}
+
+async function runCronRoute(cookie: string | null): Promise<Response> {
+  return exports.default.fetch(`${BASE_URL}/api/admin/cron/run`, {
+    method: 'POST',
+    headers: cookie ? { Cookie: cookie } : {},
+  });
+}
+
+// Routes a single fetch mock between the two external destinations the
+// pipeline calls: Yahoo (market data) and Resend (alert emails).
+function stubFetchForCronRun(options: { failTicker?: string; resendFails?: boolean } = {}): void {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockImplementation((url: string) => {
+      if (url.includes('api.resend.com')) {
+        return Promise.resolve(
+          options.resendFails ? jsonResponse(500, { message: 'resend boom' }) : jsonResponse(200, { id: 'fake-resend-id' }),
+        );
+      }
+      if (options.failTicker && url.includes(encodeURIComponent(options.failTicker))) {
+        return Promise.resolve(jsonResponse(500, {}));
+      }
+      return Promise.resolve(jsonResponse(200, yahooBody([1767620200], [25])));
+    }),
+  );
+}
+
+describe('POST /api/admin/cron/run', () => {
+  beforeEach(async () => {
+    // Default instruments (^VIX, ^NDX) always exist — clear what the
+    // pipeline writes to/reads from so each test starts from a clean slate.
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM trigger_events'),
+      env.DB.prepare('DELETE FROM alerts'),
+      env.DB.prepare('DELETE FROM market_data'),
+      env.DB.prepare('DELETE FROM price_history'),
+    ]);
+  });
+
+  afterEach(async () => {
+    vi.unstubAllGlobals();
+    await env.DB.prepare("DELETE FROM users WHERE email LIKE 'cron-run-%'").run();
+  });
+
+  it('returns 401 with no session', async () => {
+    const response = await runCronRoute(null);
+    expect(response.status).toBe(401);
+  });
+
+  it('returns 403 with code forbidden for a logged-in non-admin', async () => {
+    const cookie = await registerAndLogIn('cron-run-not-admin@example.com');
+
+    const response = await runCronRoute(cookie);
+
+    expect(response.status).toBe(403);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('forbidden');
+  });
+
+  it('returns 200 with a well-formed summary and no fired emails when nothing crosses', async () => {
+    stubFetchForCronRun();
+    const cookie = await logInAsAdmin();
+
+    const response = await runCronRoute(cookie);
+
+    expect(response.status).toBe(200);
+    const json = (await response.json()) as CronRunSummaryBody;
+    expect(json.errors).toEqual([]);
+    expect(json.emails).toEqual([]);
+    expect(json.tickers).toEqual(
+      expect.arrayContaining([
+        { ticker: '^VIX', status: 'ok' },
+        { ticker: '^NDX', status: 'ok' },
+      ]),
+    );
+  });
+
+  it('returns 207 when a ticker fetch fails, with that ticker marked error', async () => {
+    stubFetchForCronRun({ failTicker: '^VIX' });
+    const cookie = await logInAsAdmin();
+
+    const response = await runCronRoute(cookie);
+
+    expect(response.status).toBe(207);
+    const json = (await response.json()) as CronRunSummaryBody;
+    const vixResult = json.tickers.find((t) => t.ticker === '^VIX');
+    expect(vixResult?.status).toBe('error');
+    const ndxResult = json.tickers.find((t) => t.ticker === '^NDX');
+    expect(ndxResult?.status).toBe('ok');
+  });
+
+  it('fires an email for a crossing alert and records a trigger_events row', async () => {
+    stubFetchForCronRun();
+    const cookie = await logInAsAdmin();
+    const adminId = await getUserId(ADMIN_EMAIL);
+    const insertResult = await env.DB.prepare(
+      `INSERT INTO alerts (user_id, ticker, alert_type, threshold, notification_email, direction, armed) VALUES (?, '^VIX', 'PRICE', 20, ?, 'up', 1)`,
+    )
+      .bind(adminId, CRON_RUN_VERIFIED_EMAIL)
+      .run();
+    const alertId = insertResult.meta.last_row_id as number;
+
+    const response = await runCronRoute(cookie);
+
+    expect(response.status).toBe(200);
+    const json = (await response.json()) as CronRunSummaryBody;
+    expect(json.emails).toEqual([{ alertId, ticker: '^VIX', status: 'sent' }]);
+
+    const events = await env.DB.prepare('SELECT * FROM trigger_events WHERE alert_id = ?').bind(alertId).all();
+    expect(events.results).toHaveLength(1);
+  });
+});
