@@ -1,10 +1,10 @@
 ---
 change_id: alert-list-long-names
 title: Alert list: long instrument names break table layout
-status: impl_reviewed
+status: archived
 created: 2026-09-11
 updated: 2026-09-11
-archived_at: null
+archived_at: 2026-09-11T12:44:51Z
 ---
 
 ## Notes
