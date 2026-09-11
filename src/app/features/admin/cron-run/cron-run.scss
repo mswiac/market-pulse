@@ -17,6 +17,15 @@ h3 {
 
 .trigger-card {
   padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.trigger-description {
+  margin: 0;
+  max-width: 60ch;
+  opacity: 0.85;
 }
 
 .trigger-row {

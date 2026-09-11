@@ -215,8 +215,8 @@
         <target>Pobierz dane giełdowe</target>
       </trans-unit>
       <trans-unit id="shell.nav.adminCronRun" datatype="html">
-        <source>Run pipeline</source>
-        <target>Uruchom pipeline</target>
+        <source>Force data refresh</source>
+        <target>Wymuś aktualizację danych</target>
       </trans-unit>
       <trans-unit id="shell.nav.adminAddInstrument" datatype="html">
         <source>Add instrument</source>
@@ -767,8 +767,8 @@
         <target>Próg RSI</target>
       </trans-unit>
       <trans-unit id="cronRunConfirm.title" datatype="html">
-        <source>Run the cron pipeline now?</source>
-        <target>Uruchomić pipeline crona teraz?</target>
+        <source>Force a data refresh now?</source>
+        <target>Wymusić aktualizację danych teraz?</target>
       </trans-unit>
       <trans-unit id="cronRunConfirm.body" datatype="html">
         <source> This will fetch fresh market data, evaluate every alert, and may send real notification emails to real users. This action cannot be undone. </source>
@@ -779,20 +779,24 @@
         <target>Anuluj</target>
       </trans-unit>
       <trans-unit id="cronRunConfirm.confirm" datatype="html">
-        <source>Run</source>
-        <target>Uruchom</target>
+        <source>Force refresh</source>
+        <target>Wymuś</target>
       </trans-unit>
       <trans-unit id="cronRun.title" datatype="html">
-        <source>Run cron pipeline</source>
-        <target>Uruchom pipeline crona</target>
+        <source>Force data refresh</source>
+        <target>Wymuś aktualizację danych</target>
+      </trans-unit>
+      <trans-unit id="cronRun.description" datatype="html">
+        <source> Manually re-runs the daily pipeline: fetches fresh market data for every instrument, evaluates all alerts, and sends notification emails for any that fire. Use this to test alert behavior or recover from a missed scheduled run. </source>
+        <target> Ręcznie uruchamia ponownie codzienny proces: pobiera świeże dane rynkowe dla każdego instrumentu, ocenia wszystkie alerty i wysyła powiadomienia e-mail dla tych, które się wyzwolą. Użyj tego, aby przetestować działanie alertów lub nadrobić pominięte zaplanowane uruchomienie. </target>
       </trans-unit>
       <trans-unit id="cronRun.submit" datatype="html">
-        <source> Run pipeline </source>
-        <target> Uruchom pipeline </target>
+        <source> Force data refresh </source>
+        <target> Wymuś aktualizację danych </target>
       </trans-unit>
       <trans-unit id="cronRun.loading.ariaLabel" datatype="html">
-        <source>Running pipeline</source>
-        <target>Trwa uruchamianie pipeline'u</target>
+        <source>Refreshing data</source>
+        <target>Trwa aktualizacja danych</target>
       </trans-unit>
       <trans-unit id="cronRun.result.tickersHeading" datatype="html">
         <source>Tickers</source>

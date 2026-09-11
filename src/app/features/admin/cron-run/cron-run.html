@@ -1,17 +1,21 @@
 <div class="cron-run-page">
-  <h2 i18n="@@cronRun.title">Run cron pipeline</h2>
+  <h2 i18n="@@cronRun.title">Force data refresh</h2>
 
   <mat-card class="trigger-card" appearance="outlined">
+    <p class="trigger-description" i18n="@@cronRun.description">
+      Manually re-runs the daily pipeline: fetches fresh market data for every instrument, evaluates all alerts, and sends notification
+      emails for any that fire. Use this to test alert behavior or recover from a missed scheduled run.
+    </p>
     <div class="trigger-row">
       <button mat-flat-button type="button" [disabled]="submitting()" (click)="onTriggerClick()" i18n="@@cronRun.submit">
-        Run pipeline
+        Force data refresh
       </button>
       @if (submitting()) {
         <mat-progress-spinner
           mode="indeterminate"
           diameter="24"
           i18n-aria-label="@@cronRun.loading.ariaLabel"
-          aria-label="Running pipeline"
+          aria-label="Refreshing data"
         ></mat-progress-spinner>
       }
     </div>

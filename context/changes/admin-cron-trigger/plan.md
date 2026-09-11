@@ -177,7 +177,7 @@ Add the admin-panel UI that is the required way to trigger the endpoint: a new r
 
 **Intent**: A plain Confirm/Cancel dialog warning that this sends real emails to real users, opened before the POST fires — mirroring `remove-instrument-confirm`'s structure exactly, but with no `MAT_DIALOG_DATA` input (there's no per-instance data to show — this dialog's content is static, unlike the ticker/alert-count-specific `RemoveInstrumentConfirm`).
 
-**Contract**: `CronRunConfirm` component, selector `app-cron-run-confirm`, imports `[MatButtonModule, MatDialogModule]`, template with `mat-dialog-title` ("Uruchomić pipeline crona?" / i18n id `cronRunConfirm.title`), a body paragraph warning that this may send real emails and cannot be undone (i18n id `cronRunConfirm.body`), and `mat-dialog-actions` with Cancel (`mat-dialog-close`, i18n id `cronRunConfirm.cancel`) and a `color="warn"` Confirm button (`[mat-dialog-close]="true"`, i18n id `cronRunConfirm.confirm`) — same structural shape as `remove-instrument-confirm.html`.
+**Contract**: `CronRunConfirm` component, selector `app-cron-run-confirm`, imports `[MatButtonModule, MatDialogModule]`, template with `mat-dialog-title` ("Wymusić aktualizację danych teraz?" / i18n id `cronRunConfirm.title`), a body paragraph warning that this may send real emails and cannot be undone (i18n id `cronRunConfirm.body`), and `mat-dialog-actions` with Cancel (`mat-dialog-close`, i18n id `cronRunConfirm.cancel`) and a `color="warn"` Confirm button (`[mat-dialog-close]="true"`, i18n id `cronRunConfirm.confirm`, label "Wymuś") — same structural shape as `remove-instrument-confirm.html`. Naming note: the user-facing action is called "Wymuś aktualizację danych" ("Force data refresh"), not "Run pipeline" — chosen over the original "cron pipeline" phrasing during implementation as clearer, jargon-free copy for admins.
 
 #### 3. Trigger page component
 
@@ -201,7 +201,7 @@ Template layout: a trigger button (disabled while `submitting()`, showing a `mat
 
 **Intent**: Register the new page the same way every other admin page is registered, and add it to the collapsible Admin nav section in its correct alphabetical (by Polish label) position.
 
-**Contract**: In `app.routes.ts`, add `{ path: 'admin/cron-run', loadComponent: () => import('./features/admin/cron-run/cron-run').then((m) => m.CronRun), canActivate: [adminGuard] }` alongside the other `admin/*` routes. In `shell.html`'s admin nav panel (inside the existing `@if (adminExpanded())` block), add `<a mat-list-item class="nested-item" routerLink="/admin/cron-run" routerLinkActive="active-link"><span matListItemTitle i18n="@@shell.nav.adminCronRun">Run pipeline</span></a>`. Polish label "Uruchom pipeline" sorts alphabetically **before** "Usuń instrument"/"Usuń użytkownika" (Uruchom < Usuń) and after "Pobierz dane giełdowe" — final nav order: Dodaj instrument, Pobierz dane giełdowe, Uruchom pipeline, Usuń instrument, Usuń użytkownika. Move the new `<a>` to that position in the list, not appended at the end.
+**Contract**: In `app.routes.ts`, add `{ path: 'admin/cron-run', loadComponent: () => import('./features/admin/cron-run/cron-run').then((m) => m.CronRun), canActivate: [adminGuard] }` alongside the other `admin/*` routes. In `shell.html`'s admin nav panel (inside the existing `@if (adminExpanded())` block), add `<a mat-list-item class="nested-item" routerLink="/admin/cron-run" routerLinkActive="active-link"><span matListItemTitle i18n="@@shell.nav.adminCronRun">Force data refresh</span></a>`. Polish label "Wymuś aktualizację danych" sorts alphabetically **after** every other admin nav item (W > D/P/U) — final nav order: Dodaj instrument, Pobierz dane giełdowe, Usuń instrument, Usuń użytkownika, Wymuś aktualizację danych. Place the new `<a>` last in the list.
 
 #### 5. Extend the existing admin-gate E2E coverage
 
@@ -301,11 +301,11 @@ None — no schema changes in this plan.
 
 #### Automated
 
-- [x] 3.1 Typecheck passes: `npm run typecheck`
-- [x] 3.2 Lint passes: `npm run lint`
-- [x] 3.3 Production build succeeds (i18n completeness): `npm run build`
-- [x] 3.4 Angular unit tests still pass: `npm run test:ci`
-- [x] 3.5 Extended admin-gate E2E coverage passes: `npx playwright test admin-gate-redirect`
+- [x] 3.1 Typecheck passes: `npm run typecheck` — 63c8473
+- [x] 3.2 Lint passes: `npm run lint` — 63c8473
+- [x] 3.3 Production build succeeds (i18n completeness): `npm run build` — 63c8473
+- [x] 3.4 Angular unit tests still pass: `npm run test:ci` — 63c8473
+- [x] 3.5 Extended admin-gate E2E coverage passes: `npx playwright test admin-gate-redirect` — 63c8473
 
 #### Manual
 
