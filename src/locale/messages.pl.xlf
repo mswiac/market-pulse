@@ -788,7 +788,7 @@
       </trans-unit>
       <trans-unit id="cronRun.description" datatype="html">
         <source> Manually re-runs the daily pipeline: fetches fresh market data for every instrument, evaluates all alerts, and sends notification emails for any that fire. Use this to test alert behavior or recover from a missed scheduled run. </source>
-        <target> Ręcznie uruchamia ponownie codzienny proces: pobiera świeże dane rynkowe dla każdego instrumentu, ocenia wszystkie alerty i wysyła powiadomienia e-mail dla tych, które się wyzwolą. Użyj tego, aby przetestować działanie alertów lub nadrobić pominięte zaplanowane uruchomienie. </target>
+        <target> Ręcznie wymusza ponowną aktualizację danych: pobiera świeże dane rynkowe dla każdego instrumentu, ocenia wszystkie alerty i wysyła powiadomienia e-mail dla tych, które się wyzwolą. Użyj tego, aby przetestować działanie alertów lub nadrobić pominięte zaplanowane uruchomienie. </target>
       </trans-unit>
       <trans-unit id="cronRun.submit" datatype="html">
         <source> Force data refresh </source>
