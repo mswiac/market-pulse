@@ -1,10 +1,10 @@
 ---
 change_id: remove-user-loading-flash
 title: Fix "no users" flash on Remove user admin page before picker loads
-status: impl_reviewed
+status: archived
 created: 2026-09-11
 updated: 2026-09-11
-archived_at: null
+archived_at: 2026-09-11T14:36:32Z
 ---
 
 ## Notes
