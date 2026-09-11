@@ -96,7 +96,13 @@ export function resolveFiringValue(
   return directional ?? snapshot.price;
 }
 
-export async function evaluateAlerts(env: Env): Promise<void> {
+export interface AlertEvaluationSummary {
+  alertsEvaluated: number;
+  emails: Array<{ alertId: number; ticker: string; status: 'sent' | 'failed'; error?: string }>;
+  errors: string[];
+}
+
+export async function evaluateAlerts(env: Env): Promise<AlertEvaluationSummary> {
   let alerts: AlertEvalRow[];
   try {
     const { results } = await env.DB.prepare(
@@ -109,10 +115,17 @@ export async function evaluateAlerts(env: Env): Promise<void> {
     alerts = results;
   } catch (err) {
     console.error('alert-notifications: failed to load alerts for evaluation', err);
-    return;
+    return { alertsEvaluated: 0, emails: [], errors: [] };
   }
 
+  const emails: AlertEvaluationSummary['emails'] = [];
+  const errors: string[] = [];
+
   for (const alert of alerts) {
+    // Set right before the sendAlertEmail call below — the catch block uses
+    // this to tell an email-send failure apart from an exception in the
+    // not-armed/re-arm branch, which never touched sendAlertEmail at all.
+    let reachedSend = false;
     try {
       const value = alert.alert_type === 'RSI' ? alert.rsi : alert.price;
       if (value === null) continue;
@@ -128,6 +141,7 @@ export async function evaluateAlerts(env: Env): Promise<void> {
         if (firingValue === null || !conditionMet(alert.direction, firingValue, alert.threshold)) continue;
 
         const { subject, text } = buildEmail(alert, value);
+        reachedSend = true;
         const sendResult = await sendAlertEmail(env, { to: alert.notification_email, subject, text });
 
         // A transient send failure (network-level, not a permanent
@@ -160,6 +174,12 @@ export async function evaluateAlerts(env: Env): Promise<void> {
           statements.push(env.DB.prepare('UPDATE alerts SET armed = 0 WHERE id = ?').bind(alert.id));
         }
         await env.DB.batch(statements);
+
+        emails.push(
+          sendResult.ok
+            ? { alertId: alert.id, ticker: alert.ticker, status: 'sent' }
+            : { alertId: alert.id, ticker: alert.ticker, status: 'failed', error: sendResult.error },
+        );
       } else {
         if (hasRetreatedPastMargin(alert.direction, value, alert.threshold, margin)) {
           await env.DB.prepare('UPDATE alerts SET armed = 1 WHERE id = ?').bind(alert.id).run();
@@ -167,6 +187,13 @@ export async function evaluateAlerts(env: Env): Promise<void> {
       }
     } catch (err) {
       console.error(`alert-notifications: failed to evaluate alert ${alert.id}`, err);
+      if (reachedSend) {
+        emails.push({ alertId: alert.id, ticker: alert.ticker, status: 'failed', error: String(err) });
+      } else {
+        errors.push(`alert ${alert.id}: ${String(err)}`);
+      }
     }
   }
+
+  return { alertsEvaluated: alerts.length, emails, errors };
 }

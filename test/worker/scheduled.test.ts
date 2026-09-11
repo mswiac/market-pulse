@@ -8,6 +8,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // structured-cloneable across the exports RPC boundary. Do not "fix" this
 // back to the exports.default pattern.
 import worker from '../../src/worker/index';
+// The exported `scheduled` handler discards handleScheduled's return value
+// (see src/worker/index.ts) — the summary tests below call handleScheduled
+// directly instead of going through worker.scheduled(...).
+import { handleScheduled } from '../../src/worker/scheduled';
 
 function yahooBody(
   timestamps: number[],
@@ -321,5 +325,72 @@ describe('scheduled handler', () => {
 
     const row = await env.DB.prepare('SELECT currency FROM instruments WHERE ticker = ?').bind('TEST').first<{ currency: string }>();
     expect(row?.currency).toBe('PLN');
+  });
+});
+
+describe('handleScheduled summary', () => {
+  it('marks every ticker ok and reports no errors when the whole run succeeds', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS))),
+        ),
+    );
+
+    const summary = await handleScheduled(env);
+
+    expect(summary.errors).toEqual([]);
+    expect(summary.tickers).toEqual(
+      expect.arrayContaining([
+        { ticker: '^VIX', status: 'ok' },
+        { ticker: '^NDX', status: 'ok' },
+      ]),
+    );
+    expect(summary.tickers).toHaveLength(2);
+    expect(typeof summary.alertsEvaluated).toBe('number');
+    expect(summary.emails).toEqual([]);
+  });
+
+  it('marks a failing ticker as status error with a message, without affecting the other ticker', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) => {
+        if (url.includes(encodeURIComponent('^VIX'))) {
+          return Promise.resolve(jsonResponse(500, {}));
+        }
+        return Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES)));
+      }),
+    );
+
+    const summary = await handleScheduled(env);
+
+    const vixResult = summary.tickers.find((t) => t.ticker === '^VIX');
+    expect(vixResult?.status).toBe('error');
+    expect(typeof vixResult?.error).toBe('string');
+    const ndxResult = summary.tickers.find((t) => t.ticker === '^NDX');
+    expect(ndxResult?.status).toBe('ok');
+  });
+
+  it('returns zero tickers and a populated errors array when the instruments registry query fails', async () => {
+    await env.DB.exec('DROP TABLE instruments');
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      const summary = await handleScheduled(env);
+      expect(summary.tickers).toEqual([]);
+      expect(summary.alertsEvaluated).toBe(0);
+      expect(summary.emails).toEqual([]);
+      expect(summary.errors).toHaveLength(1);
+    } finally {
+      consoleErrorSpy.mockRestore();
+      // Same restore snippet as the "logs and returns" test above — this
+      // table isn't reset per test, so it must come back before later tests run.
+      await env.DB.exec(
+        "CREATE TABLE instruments (ticker TEXT PRIMARY KEY, name TEXT NOT NULL, type TEXT NOT NULL CHECK (type IN ('index', 'pl_stock', 'us_stock')), rsi_eligible INTEGER NOT NULL, provider TEXT NOT NULL, currency TEXT NOT NULL DEFAULT 'USD', suffix TEXT NOT NULL DEFAULT '');\n" +
+          "INSERT INTO instruments (ticker, name, type, rsi_eligible, provider) VALUES ('^VIX', 'VIX', 'index', 0, 'yahoo'), ('^NDX', 'NASDAQ-100', 'index', 1, 'yahoo');",
+      );
+    }
   });
 });

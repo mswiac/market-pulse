@@ -1,5 +1,5 @@
 import type { Env } from './index';
-import { evaluateAlerts } from './lib/alert-evaluation';
+import { evaluateAlerts, type AlertEvaluationSummary } from './lib/alert-evaluation';
 import type { InstrumentRow } from './lib/instruments';
 import { buildCurrencyCorrection, fetchDailyCloses, upsertPriceHistory, type DailyClosesResult } from './lib/market-data';
 import { calculateRSI } from './lib/rsi';
@@ -33,15 +33,24 @@ async function fetchWithRetry(symbol: string): Promise<DailyClosesResult> {
   throw lastError;
 }
 
-export async function handleScheduled(env: Env): Promise<void> {
+export interface CronRunSummary {
+  tickers: Array<{ ticker: string; status: 'ok' | 'error'; error?: string }>;
+  alertsEvaluated: number;
+  emails: AlertEvaluationSummary['emails'];
+  errors: string[];
+}
+
+export async function handleScheduled(env: Env): Promise<CronRunSummary> {
   let instruments: InstrumentRow[];
   try {
     const { results } = await env.DB.prepare(`SELECT ticker, rsi_eligible, suffix, currency FROM instruments`).all<InstrumentRow>();
     instruments = results;
   } catch (err) {
     console.error('market-data-pipeline: failed to load instruments registry', err);
-    return;
+    return { tickers: [], alertsEvaluated: 0, emails: [], errors: [String(err)] };
   }
+
+  const tickers: CronRunSummary['tickers'] = [];
 
   for (const { ticker, rsi_eligible, suffix, currency } of instruments) {
     try {
@@ -53,6 +62,7 @@ export async function handleScheduled(env: Env): Promise<void> {
         // trading days — but fetchDailyCloses's contract now allows an empty
         // result (see market-data.ts), so guard rather than write undefined
         // fields from a missing `latest`.
+        tickers.push({ ticker, status: 'ok' });
         continue;
       }
       const rsi = rsi_eligible ? calculateRSI(closes.map((c) => c.close)) : null;
@@ -76,10 +86,19 @@ export async function handleScheduled(env: Env): Promise<void> {
       if (currencyCorrection) {
         console.log(`market-data-pipeline: corrected currency for ${ticker}: ${currency} -> ${fetchedCurrency}`);
       }
+      tickers.push({ ticker, status: 'ok' });
     } catch (err) {
       console.error(`market-data-pipeline: failed to process ${ticker}`, err);
+      tickers.push({ ticker, status: 'error', error: String(err) });
     }
   }
 
-  await evaluateAlerts(env);
+  const alertSummary = await evaluateAlerts(env);
+
+  return {
+    tickers,
+    alertsEvaluated: alertSummary.alertsEvaluated,
+    emails: alertSummary.emails,
+    errors: alertSummary.errors,
+  };
 }
