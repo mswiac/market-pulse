@@ -30,7 +30,7 @@ Every content page (except login/register) shares one `--page-max-width: 64rem` 
 
 **In scope:**
 - One shared `--page-max-width` CSS variable, consumed by 7 files (8 declarations).
-- Alerts list column-width rebalance (`11rem 12rem 1fr` → `17rem 9.5rem 1fr`) in both `.list-header` and `.alert-summary`.
+- Alerts list column-width rebalance (`11rem 12rem 1fr` → `36rem 9.5rem 1fr`, revised up twice — via `17rem` then `28rem` — after manual verification kept showing too much slack in the trailing column) in both `.list-header` and `.alert-summary`.
 - Removing `mat-expansion-panel-header`'s fixed height so wrapped names grow the row instead of clipping.
 
 **Out of scope:**

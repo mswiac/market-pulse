@@ -111,7 +111,9 @@ Give the instrument-name column more (fixed) width, shrink the over-sized alert-
 
 **Intent**: Give the instrument-name column noticeably more room and reclaim the alert-type column's unused space, without breaking the header/row alignment.
 
-**Contract**: In both `.list-header` (`:32`) and `.alert-summary` (`:69`), change `grid-template-columns: 11rem 12rem 1fr;` to `grid-template-columns: 17rem 9.5rem 1fr;`. Both selectors must be changed to the **exact same value** — this is the load-bearing invariant that keeps the header bar and each row's columns aligned (see Current State Analysis). Only the trailing column may be a flexible `1fr`; the first two must stay fixed lengths in both places.
+**Contract**: In both `.list-header` (`:32`) and `.alert-summary` (`:69`), change `grid-template-columns: 11rem 12rem 1fr;` to `grid-template-columns: 36rem 9.5rem 1fr;`. Both selectors must be changed to the **exact same value** — this is the load-bearing invariant that keeps the header bar and each row's columns aligned (see Current State Analysis). Only the trailing column may be a flexible `1fr`; the first two must stay fixed lengths in both places.
+
+**Revised twice during manual verification**: the initial `17rem` left the trailing `1fr` "Threshold" column claiming nearly half the row's width once the page-width token (Phase 1) widened the container to `64rem` — user-reported. Bumped to `28rem`, still judged too much leftover space in "Threshold" — bumped again to `36rem`, leaving a proportionate ~9-12rem for the threshold column while comfortably fitting the full "Powszechna Kasa Oszczędności Bank Polski S.A." example on one line in most cases.
 
 #### 2. Allow the instrument name to wrap without clipping
 
@@ -184,25 +186,25 @@ Not applicable — no data model or persisted-state changes.
 
 #### Automated
 
-- [x] 1.1 Production build succeeds: `npm run build`
-- [x] 1.2 Lint passes: `npm run lint`
+- [x] 1.1 Production build succeeds: `npm run build` — dc883d7
+- [x] 1.2 Lint passes: `npm run lint` — dc883d7
 
 #### Manual
 
-- [ ] 1.3 Every affected page visibly uses the new, wider max width and is horizontally centered
-- [ ] 1.4 `login` and `register` pages are visually unchanged
-- [ ] 1.5 No page shows a horizontal scrollbar at common desktop widths or down to ~800px
+- [x] 1.3 Every affected page visibly uses the new, wider max width and is horizontally centered
+- [x] 1.4 `login` and `register` pages are visually unchanged
+- [x] 1.5 No page shows a horizontal scrollbar at common desktop widths or down to ~800px
 
 ### Phase 2: Alert list column rebalance and wrapping
 
 #### Automated
 
-- [ ] 2.1 Production build succeeds: `npm run build`
-- [ ] 2.2 Lint passes: `npm run lint`
+- [x] 2.1 Production build succeeds: `npm run build`
+- [x] 2.2 Lint passes: `npm run lint`
 
 #### Manual
 
-- [ ] 2.3 Long instrument name wraps onto multiple lines with no clipping or overlap
-- [ ] 2.4 Column headers stay aligned with row values, including on wrapped rows
-- [ ] 2.5 Expand/collapse on a wrapped row works without visual glitches
-- [ ] 2.6 A short-name row is unaffected (unchanged single-line height)
+- [x] 2.3 Long instrument name wraps onto multiple lines with no clipping or overlap
+- [x] 2.4 Column headers stay aligned with row values, including on wrapped rows
+- [x] 2.5 Expand/collapse on a wrapped row works without visual glitches
+- [x] 2.6 A short-name row is unaffected (unchanged single-line height)

@@ -20,6 +20,13 @@ mat-expansion-panel {
 mat-expansion-panel-header {
   background-color: var(--mat-sys-secondary-container) !important;
   color: var(--mat-sys-on-secondary-container);
+  // Material sets height via its own `.mat-expansion-panel-header` class rule
+  // (higher specificity than this bare element selector), so !important is
+  // required here too — without it, a wrapped multi-line instrument name
+  // would still overflow the fixed collapsed/expanded height and overlap
+  // neighboring rows.
+  height: auto !important;
+  min-height: var(--mat-expansion-header-collapsed-state-height, 48px) !important;
 
   &.inactive {
     background-color: var(--mat-sys-surface-container-low) !important;
@@ -29,7 +36,7 @@ mat-expansion-panel-header {
 
 .list-header {
   display: grid;
-  grid-template-columns: 11rem 12rem 1fr;
+  grid-template-columns: 36rem 9.5rem 1fr;
   column-gap: 1.5rem;
   padding: 0.5rem 1.5rem;
   margin-bottom: 0.5rem;
@@ -66,7 +73,7 @@ button.sort-col:hover {
 
 .alert-summary {
   display: grid;
-  grid-template-columns: 11rem 12rem 1fr;
+  grid-template-columns: 36rem 9.5rem 1fr;
   column-gap: 1.5rem;
   row-gap: 0.25rem;
   width: 100%;
