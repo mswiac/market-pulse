@@ -1,7 +1,7 @@
 ---
 change_id: admin-cron-trigger
 title: Admin endpoint and panel UI to manually trigger the daily cron pipeline
-status: implementing
+status: impl_reviewed
 created: 2026-09-11
 updated: 2026-09-11
 archived_at: null
