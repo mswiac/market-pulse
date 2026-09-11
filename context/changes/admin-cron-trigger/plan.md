@@ -295,7 +295,7 @@ None — no schema changes in this plan.
 
 #### Manual
 
-- [ ] 2.4 curl smoke test against local `wrangler dev` returns matching summary shape
+- [x] 2.4 curl smoke test against local `wrangler dev` returns matching summary shape
 
 ### Phase 3: Admin panel UI — trigger page, confirm dialog, results panel
 
@@ -309,9 +309,9 @@ None — no schema changes in this plan.
 
 #### Manual
 
-- [ ] 3.6 Nav link appears in correct alphabetical position and navigates correctly
-- [ ] 3.7 Confirm dialog appears on click; Cancel aborts with no request sent
-- [ ] 3.8 No-crossing run shows all-OK results panel with instrument names
-- [ ] 3.9 Seeded crossing alert produces real sandboxed email + results panel reflects it + `trigger_events` row appears
-- [ ] 3.10 Forced ticker failure shown as an error row, visually distinct from OK rows
-- [ ] 3.11 Non-admin cannot reach `/admin/cron-run`
+- [x] 3.6 Nav link appears in correct alphabetical position and navigates correctly
+- [x] 3.7 Confirm dialog appears on click; Cancel aborts with no request sent
+- [x] 3.8 No-crossing run shows all-OK results panel with instrument names
+- [x] 3.9 Seeded crossing alert produces real sandboxed email + results panel reflects it + `trigger_events` row appears
+- [ ] 3.10 Forced ticker failure shown as an error row, visually distinct from OK rows — skipped manually (hard to force a real network failure by hand); covered by the automated 207-partial-failure test in `admin.test.ts`
+- [x] 3.11 Non-admin cannot reach `/admin/cron-run`
