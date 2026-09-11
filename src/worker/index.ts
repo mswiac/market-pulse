@@ -33,5 +33,7 @@ app.get('*', (c) => c.env.ASSETS.fetch(c.req.raw));
 
 export default {
   fetch: app.fetch,
-  scheduled: (_controller: ScheduledController, env: Env, _ctx: ExecutionContext) => handleScheduled(env),
+  scheduled: async (_controller: ScheduledController, env: Env, _ctx: ExecutionContext) => {
+    await handleScheduled(env);
+  },
 };

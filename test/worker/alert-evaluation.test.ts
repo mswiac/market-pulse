@@ -460,6 +460,92 @@ describe('evaluateAlerts', () => {
   });
 });
 
+describe('evaluateAlerts summary', () => {
+  it('counts alertsEvaluated for every loaded alert; only a fired alert appears in emails', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('summary-counts@example.com');
+    const firingId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    await seedAlert(userId, { ticker: '^NDX', alertType: 'PRICE', threshold: 5000, direction: 'up', armed: 1 });
+    await seedMarketData('^VIX', 25);
+    await seedMarketData('^NDX', 4500);
+
+    const summary = await evaluateAlerts(env);
+
+    expect(summary.alertsEvaluated).toBe(2);
+    expect(summary.emails).toEqual([{ alertId: firingId, ticker: '^VIX', status: 'sent' }]);
+    expect(summary.errors).toEqual([]);
+  });
+
+  it('records a failed email in the summary (not errors) for an unverified recipient', async () => {
+    vi.stubGlobal('fetch', vi.fn());
+    const userId = await seedUser('summary-unverified@example.com');
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+      notificationEmail: 'someone-else@example.com',
+    });
+    await seedMarketData('^VIX', 25);
+
+    const summary = await evaluateAlerts(env);
+
+    expect(summary.emails).toEqual([
+      { alertId, ticker: '^VIX', status: 'failed', error: 'recipient not verified in Resend sandbox' },
+    ]);
+    expect(summary.errors).toEqual([]);
+  });
+
+  it('records a failed email (not errors) when the trigger_events write throws after a send attempt', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('summary-batch-throws@example.com');
+    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    await seedMarketData('^VIX', 25);
+    const batchSpy = vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('batch boom'));
+
+    try {
+      const summary = await evaluateAlerts(env);
+      expect(summary.emails).toEqual([
+        { alertId, ticker: '^VIX', status: 'failed', error: expect.stringContaining('batch boom') },
+      ]);
+      expect(summary.errors).toEqual([]);
+    } finally {
+      batchSpy.mockRestore();
+    }
+  });
+
+  it('records the exception in errors, not emails, when the non-armed re-arm write throws', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('summary-rearm-throws@example.com');
+    // Not armed, value already retreated past the margin — takes the re-arm
+    // branch, which never calls sendAlertEmail at all.
+    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 0 });
+    await seedMarketData('^VIX', 10);
+
+    const originalPrepare = env.DB.prepare.bind(env.DB);
+    const prepareSpy = vi.spyOn(env.DB, 'prepare').mockImplementation((sql: string) => {
+      if (sql.startsWith('UPDATE alerts SET armed = 1')) {
+        return {
+          bind: () => ({
+            run: () => {
+              throw new Error('re-arm write failed');
+            },
+          }),
+        } as unknown as ReturnType<typeof originalPrepare>;
+      }
+      return originalPrepare(sql);
+    });
+
+    try {
+      const summary = await evaluateAlerts(env);
+      expect(summary.emails).toEqual([]);
+      expect(summary.errors).toEqual([expect.stringContaining(`alert ${alertId}`)]);
+    } finally {
+      prepareSpy.mockRestore();
+    }
+  });
+});
+
 describe('buildEmail', () => {
   const basePriceAlert = {
     id: 1,

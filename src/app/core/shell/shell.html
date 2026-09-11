@@ -62,7 +62,10 @@
         </button>
 
         @if (adminExpanded()) {
-          <a mat-list-item id="admin-nav-panel" class="nested-item" routerLink="/admin/add-instrument" routerLinkActive="active-link">
+          <a mat-list-item id="admin-nav-panel" class="nested-item" routerLink="/admin/cron-run" routerLinkActive="active-link">
+            <span matListItemTitle i18n="@@shell.nav.adminCronRun">Refresh data</span>
+          </a>
+          <a mat-list-item class="nested-item" routerLink="/admin/add-instrument" routerLinkActive="active-link">
             <span matListItemTitle i18n="@@shell.nav.adminAddInstrument">Add instrument</span>
           </a>
           <a

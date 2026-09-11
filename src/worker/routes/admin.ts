@@ -3,6 +3,7 @@ import type { Env } from '../index';
 import { adminMiddleware } from '../lib/admin';
 import { MarketDataFetchError, buildCurrencyCorrection, fetchDailyCloses, upsertPriceHistory } from '../lib/market-data';
 import { sessionMiddleware } from '../lib/session';
+import { handleScheduled } from '../scheduled';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_RANGE_DAYS = 730;
@@ -97,6 +98,24 @@ adminRoutes.post('/market-data', async (c) => {
   }
 
   return c.json({ ticker, from: fromIso, to: toIso, daysWritten: closes.length }, 200);
+});
+
+// Manually re-runs the full daily pipeline (fetch closes -> RSI -> evaluate
+// alerts -> send emails) on demand — see GitHub issue #150. This sends real
+// Resend emails and mutates real alert state if any threshold is crossed,
+// which is why it stays behind adminMiddleware like every other route here.
+adminRoutes.post('/cron/run', async (c) => {
+  let summary;
+  try {
+    summary = await handleScheduled(c.env);
+  } catch {
+    return c.json({ error: 'cron run failed', code: 'cron_run_failed' }, 500);
+  }
+
+  const hasFailures =
+    summary.errors.length > 0 || summary.tickers.some((t) => t.status === 'error') || summary.emails.some((e) => e.status === 'failed');
+
+  return c.json(summary, hasFailures ? 207 : 200);
 });
 
 async function parseInstrumentBody(c: { req: { json: () => Promise<unknown> } }): Promise<{
