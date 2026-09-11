@@ -230,6 +230,10 @@
         <source>Fetch market data</source>
         <target>Pobierz dane giełdowe</target>
       </trans-unit>
+      <trans-unit id="adminPanel.loading.ariaLabel" datatype="html">
+        <source>Loading instruments</source>
+        <target>Wczytywanie instrumentów</target>
+      </trans-unit>
       <trans-unit id="adminPanel.type.label" datatype="html">
         <source>Type</source>
         <target>Typ</target>
@@ -369,6 +373,10 @@
       <trans-unit id="removeInstrument.title" datatype="html">
         <source>Remove instrument</source>
         <target>Usuń instrument</target>
+      </trans-unit>
+      <trans-unit id="removeInstrument.loading.ariaLabel" datatype="html">
+        <source>Loading instruments</source>
+        <target>Wczytywanie instrumentów</target>
       </trans-unit>
       <trans-unit id="removeInstrument.type.label" datatype="html">
         <source>Type</source>

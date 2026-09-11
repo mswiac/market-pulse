@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminService, RemovedInstrument } from '../admin-panel.service';
@@ -24,7 +25,15 @@ const SNACKBAR_DURATION_MS = 5000;
 
 @Component({
   selector: 'app-remove-instrument',
-  imports: [MatFormFieldModule, MatSelectModule, MatButtonModule, MatCardModule, MatSnackBarModule, MatDialogModule],
+  imports: [
+    MatFormFieldModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatCardModule,
+    MatSnackBarModule,
+    MatDialogModule,
+    MatProgressSpinnerModule,
+  ],
   templateUrl: './remove-instrument.html',
   styleUrl: './remove-instrument.scss',
 })
@@ -47,6 +56,7 @@ export class RemoveInstrument {
   protected readonly selectedTicker = signal('');
 
   protected readonly submitting = signal(false);
+  protected readonly loading = signal(true);
   protected readonly loadError = signal(false);
   protected readonly noInstruments = computed(() => this.instrumentsService.instruments().length === 0);
 
@@ -54,8 +64,14 @@ export class RemoveInstrument {
 
   constructor() {
     this.instrumentsService.ensureLoaded().subscribe({
-      error: () => this.loadError.set(true),
-      next: () => this.resetPickerToFirst(),
+      error: () => {
+        this.loadError.set(true);
+        this.loading.set(false);
+      },
+      next: () => {
+        this.resetPickerToFirst();
+        this.loading.set(false);
+      },
     });
   }
 
@@ -107,7 +123,14 @@ export class RemoveInstrument {
     this.adminService.removeInstrument(ticker).subscribe({
       next: (result) => {
         this.submitting.set(false);
-        this.instrumentsService.reload().subscribe({ next: () => this.resetPickerToFirst() });
+        this.loading.set(true);
+        this.instrumentsService.reload().subscribe({
+          next: () => {
+            this.resetPickerToFirst();
+            this.loading.set(false);
+          },
+          error: () => this.loading.set(false),
+        });
         this.showResult(result);
       },
       error: (err: unknown) => {

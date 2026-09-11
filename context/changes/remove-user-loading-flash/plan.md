@@ -371,16 +371,16 @@ Not applicable — no data model or API changes.
 
 #### Automated
 
-- [x] 1.1 Type checking passes: `npm run typecheck`
-- [x] 1.2 Linting passes: `npm run lint`
-- [x] 1.3 Existing spec suite still passes unchanged: `npm run test:ci`
-- [x] 1.4 Production build succeeds: `npm run build`
+- [x] 1.1 Type checking passes: `npm run typecheck` — 2cb7ae3
+- [x] 1.2 Linting passes: `npm run lint` — 2cb7ae3
+- [x] 1.3 Existing spec suite still passes unchanged: `npm run test:ci` — 2cb7ae3
+- [x] 1.4 Production build succeeds: `npm run build` — 2cb7ae3
 
 #### Manual
 
-- [x] 1.5 Throttled hard-load of Remove user shows spinner then picker, no empty-state flash
-- [x] 1.6 Post-delete refetch shows spinner, not a flash of the empty/error state
-- [x] 1.7 Simulated load failure shows spinner then load-error message, no empty-state flash
+- [x] 1.5 Throttled hard-load of Remove user shows spinner then picker, no empty-state flash — 2cb7ae3
+- [x] 1.6 Post-delete refetch shows spinner, not a flash of the empty/error state — 2cb7ae3
+- [x] 1.7 Simulated load failure shows spinner then load-error message, no empty-state flash — 2cb7ae3
 
 ### Phase 2: `remove-instrument` and `admin-panel`
 

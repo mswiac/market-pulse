@@ -5,6 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { INSTRUMENT_TYPE_LABELS } from '../instruments/instrument-types';
@@ -38,7 +39,16 @@ const SNACKBAR_DURATION_MS = 5000;
 
 @Component({
   selector: 'app-admin-panel',
-  imports: [MatFormFieldModule, MatSelectModule, MatInputModule, MatDatepickerModule, MatButtonModule, MatCardModule, MatSnackBarModule],
+  imports: [
+    MatFormFieldModule,
+    MatSelectModule,
+    MatInputModule,
+    MatDatepickerModule,
+    MatButtonModule,
+    MatCardModule,
+    MatSnackBarModule,
+    MatProgressSpinnerModule,
+  ],
   templateUrl: './admin-panel.html',
   styleUrl: './admin-panel.scss',
 })
@@ -64,6 +74,7 @@ export class AdminPanel {
 
   protected readonly submitting = signal(false);
 
+  protected readonly loading = signal(true);
   protected readonly loadError = signal(false);
 
   protected readonly canSubmit = computed(
@@ -72,10 +83,14 @@ export class AdminPanel {
 
   constructor() {
     this.instrumentsService.ensureLoaded().subscribe({
-      error: () => this.loadError.set(true),
+      error: () => {
+        this.loadError.set(true);
+        this.loading.set(false);
+      },
       next: () => {
         const firstType = this.instrumentTypes()[0];
         if (firstType) this.onTypeChange(firstType);
+        this.loading.set(false);
       },
     });
   }
