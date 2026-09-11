@@ -12,7 +12,7 @@ Add `POST /api/admin/cron/run` plus a new admin-panel page (`/admin/cron-run`) t
 
 ## Desired End State
 
-An admin opens `/admin/cron-run` from the sidebar, clicks "Uruchom pipeline", confirms in a dialog, and sees a results panel — per-ticker outcomes, alerts-evaluated count, per-email outcomes (with instrument names), and errors — with zero need for curl or logs.
+An admin opens `/admin/cron-run` from the sidebar (nav label "Aktualizuj dane"), clicks "Wymuś aktualizację danych", confirms in a dialog, and sees a results panel — per-ticker outcomes, alerts-evaluated count, per-email outcomes (with instrument names), and errors — with zero need for curl or logs.
 
 ## Key Decisions Made
 

@@ -28,7 +28,7 @@ Add an authenticated admin endpoint, `POST /api/admin/cron/run`, that manually r
 
 ## Desired End State
 
-An admin (session-authenticated, email in `ADMIN_EMAILS`) navigates to `/admin/cron-run` from the sidebar, clicks "Uruchom pipeline", confirms in a dialog, and sees — on the same page, without touching curl or production logs — a results panel listing every ticker's fetch outcome, the alerts-evaluated count, every fired alert's email outcome (with instrument names, not raw tickers), and any errors. The backend endpoint (`POST /api/admin/cron/run`) is the same call this UI makes; it is not exposed as a separate, UI-less capability.
+An admin (session-authenticated, email in `ADMIN_EMAILS`) navigates to `/admin/cron-run` from the sidebar (nav label "Aktualizuj dane"), clicks the page's "Wymuś aktualizację danych" button, confirms in a dialog, and sees — on the same page, without touching curl or production logs — a results panel listing every ticker's fetch outcome, the alerts-evaluated count, every fired alert's email outcome (with instrument names, not raw tickers), and any errors. The backend endpoint (`POST /api/admin/cron/run`) is the same call this UI makes; it is not exposed as a separate, UI-less capability.
 
 **Verification**: `npm run typecheck`, `npm run test:worker`, `npm run lint`, and `npm run build` (which exercises the i18n-completeness check) all pass; a manual walkthrough in the browser — click, confirm, observe a real sandboxed email fire for a seeded crossing alert, see it reflected in the results panel — succeeds.
 
@@ -231,7 +231,7 @@ Template layout: a trigger button (disabled while `submitting()`, showing a `mat
 
 #### Manual Verification:
 
-- Log in as the admin user, open the sidebar, confirm "Uruchom pipeline" appears in the correct alphabetical position and navigates to `/admin/cron-run`.
+- Log in as the admin user, open the sidebar, confirm "Aktualizuj dane" appears in the correct alphabetical position and navigates to `/admin/cron-run`.
 - Click the trigger button — confirm the confirm dialog appears with Cancel/Confirm; clicking Cancel does nothing (no request sent, button re-enabled).
 - Confirming with no crossing alerts — confirm the results panel shows all tickers as OK, zero emails, zero errors, using instrument names (not raw tickers).
 - Seed a local alert whose threshold is already crossed by local market data, trigger again from the UI — confirm a real (sandboxed, `RESEND_VERIFIED_EMAIL`-restricted) email attempt fires, the results panel shows that alert's email as sent (with the instrument's name), and a new `trigger_events` row appears in local D1.
@@ -265,6 +265,10 @@ None beyond what the existing cron already does — same instrument count (curre
 ## Migration Notes
 
 None — no schema changes in this plan.
+
+## Related Fixes
+
+- **`556a318` — fetch window excluded today's own close**: while manually testing this change, discovered that `fetchWithRetry` (`scheduled.ts`) used today's date as the Yahoo `period2` bound, which Yahoo treats as the START of that UTC day — since a daily bar is stamped later in the day (e.g. GPW closes ~07:00 UTC), today's own close was excluded from every cron run, regardless of what time it fired. Confirmed empirically against the live Yahoo endpoint. Fixed by using tomorrow's date for `to` instead. This is a pre-existing production bug unrelated to issue #150 — bundled into this branch at the user's explicit request rather than opened as a separate change, since it was small, well-understood, and directly surfaced by testing this feature.
 
 ## References
 

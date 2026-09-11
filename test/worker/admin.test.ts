@@ -1235,4 +1235,22 @@ describe('POST /api/admin/cron/run', () => {
     const events = await env.DB.prepare('SELECT * FROM trigger_events WHERE alert_id = ?').bind(alertId).all();
     expect(events.results).toHaveLength(1);
   });
+
+  it('returns 207 when a crossing alert\'s email send fails, with that email marked failed', async () => {
+    stubFetchForCronRun({ resendFails: true });
+    const cookie = await logInAsAdmin();
+    const adminId = await getUserId(ADMIN_EMAIL);
+    const insertResult = await env.DB.prepare(
+      `INSERT INTO alerts (user_id, ticker, alert_type, threshold, notification_email, direction, armed) VALUES (?, '^VIX', 'PRICE', 20, ?, 'up', 1)`,
+    )
+      .bind(adminId, CRON_RUN_VERIFIED_EMAIL)
+      .run();
+    const alertId = insertResult.meta.last_row_id as number;
+
+    const response = await runCronRoute(cookie);
+
+    expect(response.status).toBe(207);
+    const json = (await response.json()) as CronRunSummaryBody;
+    expect(json.emails).toEqual([{ alertId, ticker: '^VIX', status: 'failed', error: expect.any(String) }]);
+  });
 });

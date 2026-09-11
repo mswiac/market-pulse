@@ -105,7 +105,13 @@ adminRoutes.post('/market-data', async (c) => {
 // Resend emails and mutates real alert state if any threshold is crossed,
 // which is why it stays behind adminMiddleware like every other route here.
 adminRoutes.post('/cron/run', async (c) => {
-  const summary = await handleScheduled(c.env);
+  let summary;
+  try {
+    summary = await handleScheduled(c.env);
+  } catch {
+    return c.json({ error: 'cron run failed', code: 'cron_run_failed' }, 500);
+  }
+
   const hasFailures =
     summary.errors.length > 0 || summary.tickers.some((t) => t.status === 'error') || summary.emails.some((e) => e.status === 'failed');
 
