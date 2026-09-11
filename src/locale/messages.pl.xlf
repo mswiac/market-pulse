@@ -406,6 +406,10 @@
         <source>Remove user</source>
         <target>Usuń użytkownika</target>
       </trans-unit>
+      <trans-unit id="removeUser.loading.ariaLabel" datatype="html">
+        <source>Loading users</source>
+        <target>Wczytywanie użytkowników</target>
+      </trans-unit>
       <trans-unit id="removeUser.error.usersLoadFailed" datatype="html">
         <source>Failed to load users. Please refresh the page and try again.</source>
         <target>Nie udało się wczytać użytkowników. Odśwież stronę i spróbuj ponownie.</target>

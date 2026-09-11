@@ -1,7 +1,16 @@
 <div class="remove-user-page">
   <h2 i18n="@@removeUser.title">Remove user</h2>
 
-  @if (loadError()) {
+  @if (loading()) {
+    <div class="loading">
+      <mat-progress-spinner
+        mode="indeterminate"
+        diameter="40"
+        i18n-aria-label="@@removeUser.loading.ariaLabel"
+        aria-label="Loading users"
+      ></mat-progress-spinner>
+    </div>
+  } @else if (loadError()) {
     <p class="form-error" i18n="@@removeUser.error.usersLoadFailed">Failed to load users. Please refresh the page and try again.</p>
   } @else if (noUsers()) {
     <p class="form-error" i18n="@@removeUser.noUsers">No users available to remove.</p>
