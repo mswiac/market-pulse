@@ -16,7 +16,13 @@ function dateToIsoDateString(date: Date): string {
 }
 
 async function fetchWithRetry(symbol: string): Promise<DailyClosesResult> {
-  const to = dateToIsoDateString(new Date());
+  // `to` must be TOMORROW's date, not today's. Yahoo's period2 bound is UTC
+  // midnight of that date (the START of it), while a daily bar is stamped
+  // later in the day (e.g. GPW closes are stamped ~07:00 UTC) — using
+  // today's date here excludes today's own close from every single run,
+  // no matter what time the cron actually fires. Confirmed empirically
+  // against the live Yahoo endpoint (see plan.md history for this fix).
+  const to = dateToIsoDateString(new Date(Date.now() + 24 * 60 * 60 * 1000));
   const from = dateToIsoDateString(new Date(Date.now() - CRON_LOOKBACK_DAYS * 24 * 60 * 60 * 1000));
 
   let lastError: unknown;

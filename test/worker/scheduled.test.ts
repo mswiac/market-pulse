@@ -273,7 +273,11 @@ describe('scheduled handler', () => {
     expect(wrongKeyRow).toBeNull();
   });
 
-  it('requests a 30-day lookback window ending today, as valid UTC-midnight unix timestamps', async () => {
+  it('requests a 30-day lookback window ending tomorrow (UTC midnight), so today\'s own close is included', async () => {
+    // Yahoo's period2 bound is the START of that UTC day, while a daily bar
+    // is stamped later in the day — period2 must be tomorrow's midnight for
+    // today's bar to fall inside the range at all. Confirmed empirically
+    // against the live Yahoo endpoint.
     const fetchMock = vi
       .fn()
       .mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))));
@@ -287,10 +291,11 @@ describe('scheduled handler', () => {
 
     expect(Number.isFinite(period1)).toBe(true);
     expect(Number.isFinite(period2)).toBe(true);
-    expect(period2 - period1).toBe(30 * 24 * 60 * 60);
+    // 30-day lookback (`from`) plus the one extra day pushed onto `to`.
+    expect(period2 - period1).toBe(31 * 24 * 60 * 60);
 
-    const todayUtcMidnight = Math.floor(Date.now() / 1000 / 86400) * 86400;
-    expect(period2).toBe(todayUtcMidnight);
+    const tomorrowUtcMidnight = Math.floor(Date.now() / 1000 / 86400) * 86400 + 24 * 60 * 60;
+    expect(period2).toBe(tomorrowUtcMidnight);
   });
 
   it('retries a failing fetch exactly 3 times before giving up on that ticker', async () => {
