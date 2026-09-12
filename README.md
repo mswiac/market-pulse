@@ -36,7 +36,7 @@ RESEND_API_KEY=<a Resend API key, or a dummy value if you don't need real emails
 RESEND_VERIFIED_EMAIL=you@example.com
 ```
 
-`ADMIN_EMAILS` is a comma-separated list of emails that get admin panel access (see "Admin panel" below). The others are only exercised when an alert actually fires and tries to send an email.
+`ADMIN_EMAILS` is a comma-separated list of emails that get admin panel access (see "Admin panel" above). The others are only exercised when an alert actually fires and tries to send an email.
 
 ### Local D1 database
 
