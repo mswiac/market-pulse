@@ -71,7 +71,7 @@ then fill in the new/changed `<trans-unit>` entries in `messages.pl.xlf` by hand
 
 ### Checks before pushing
 
-A Husky **pre-commit** hook runs `npm run typecheck && npx lint-staged` (ESLint via `lint-staged`, scoped to staged files only). A separate **pre-push** hook runs automatically:
+A Husky **pre-commit** hook runs `npm run typecheck && npx lint-staged`. `lint-staged` (config in `.lintstagedrc.mjs`) runs ESLint on every staged `.ts`/`.html` file, and — for staged files under `src/worker/lib/`, `src/worker/routes/`, `src/worker/scheduled.ts`, or `test/worker/`— also runs that file's mapped Vitest test, so a broken worker test can fail the commit, not just lint. A separate **pre-push** hook runs automatically:
 
 - always: `npm run test:worker` + `npm run test:ci` (worker + Angular component
   suites, ~20s, no servers needed);
@@ -166,11 +166,13 @@ status on PRs but are deliberately not part of branch protection:
   tests" above). A flaky browser run never blocks a merge; promoting it to a
   required check is a deferred decision (`context/foundation/test-plan.md`
   §3 Phase 6).
-- `.github/workflows/ai-review.yml` runs the Claude Code Action against every
-  PR to `main`, scoring the diff against `.github/review-criteria.md` and
-  posting a single sticky PR comment (score table + advisory verdict). The
-  verdict never fails the check — it's advisory only; a hard merge gate on it
-  is a deferred decision (see the workflow file's own header comment).
+- `.github/workflows/ai-review.yml` runs the Claude Code Action on PRs to
+  `main`, scoring the diff against `.github/review-criteria.md` and posting a
+  single sticky PR comment (score table + advisory verdict). It skips PRs that
+  only touch `**/*.md` or `context/**` (its own `paths-ignore`), so a docs-only
+  PR gets no review comment. The verdict never fails the check — it's advisory
+  only; a hard merge gate on it is a deferred decision (see the workflow
+  file's own header comment).
 
 ## Mutation testing
 
