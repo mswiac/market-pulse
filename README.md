@@ -2,6 +2,20 @@
 
 MarketPulse is a stock market alert web app. Users set price- or RSI-based alerts and get an email notification when a threshold is crossed. The instrument registry ships seeded with the VIX and NASDAQ-100 indices, but an admin can add more instruments through the admin panel — US stocks and GPW-listed Polish stocks (fetched via a ticker + `.WA` suffix) are both supported. Market data for every registered instrument is fetched once a day from Yahoo Finance via a Cloudflare Cron Trigger, which also calculates RSI and evaluates every active alert.
 
+## Admin panel
+
+Users whose email is listed in `ADMIN_EMAILS` get an "Admin" section in the app. Access is enforced both client-side (`adminGuard`) and server-side (`adminMiddleware`), which re-derives admin status from the `users` table on every request rather than trusting anything the client claims. It exposes:
+
+- **Fetch market data** (`/admin`) — manually backfills price history for one instrument over an arbitrary date range (up to 730 days), through the same Yahoo Finance fetch path the daily cron uses.
+- **Run the cron pipeline manually** (`/admin/cron-run`) — re-runs the full daily job on demand instead of waiting for the scheduled Cron Trigger. This sends real emails and mutates real alert state if a threshold is crossed.
+- **Add instrument** (`/admin/add-instrument`) — registers a new instrument (index, US stock, or GPW-listed Polish stock) beyond the seeded VIX/NASDAQ-100 pair.
+- **Remove instrument** (`/admin/remove-instrument`) — previews how many alerts reference the instrument, then deletes it and its dependent data.
+- **Remove user** (`/admin/remove-user`) — previews how many alerts and trigger events belong to the account, then deletes it; an admin cannot delete their own account.
+
+Exact deletion cascades and the mechanics of the manual cron run (what
+`handleScheduled()` actually touches) are documented in
+`context/foundation/admin-panel-notes.md`.
+
 ## Running locally
 
 The app is a split deployment — an Angular SPA and a separate Cloudflare Worker (Hono API) — so local development runs both as independent dev servers that talk to each other through a proxy.
@@ -22,7 +36,7 @@ RESEND_API_KEY=<a Resend API key, or a dummy value if you don't need real emails
 RESEND_VERIFIED_EMAIL=you@example.com
 ```
 
-`ADMIN_EMAILS` is a comma-separated list of emails that get admin panel access. The others are only exercised when an alert actually fires and tries to send an email.
+`ADMIN_EMAILS` is a comma-separated list of emails that get admin panel access (see "Admin panel" above). The others are only exercised when an alert actually fires and tries to send an email.
 
 ### Local D1 database
 
@@ -45,9 +59,19 @@ npm start             # ng serve --configuration development-pl — Angular SPA,
 
 `npm start` uses the `development-pl` build configuration, so the local app is served with Polish (`pl`) localization, matching production. `proxy.conf.json` forwards every `/api/*` request from the Angular dev server (`:4200`) to the local Worker (`:8787`), so open `http://localhost:4200` in the browser — not `:8787` directly.
 
+### Internationalization (i18n)
+
+The Angular app's source locale is `en-US`; every user-facing template string carries an `i18n="@@key"` attribute. Polish translations live in `src/locale/messages.pl.xlf` and are baked into a separate `pl` output at build time (`angular.json`'s `i18n.locales.pl`) — that's the bundle both `npm start` (`development-pl` config) and production (`wrangler.toml`'s assets directory `dist/market-pulse/browser/pl`) actually serve. After adding or changing an `i18n`-tagged string, refresh the translation source file with:
+
+```bash
+npm run extract-i18n   # ng extract-i18n --output-path src/locale
+```
+
+then fill in the new/changed `<trans-unit>` entries in `messages.pl.xlf` by hand.
+
 ### Checks before pushing
 
-A Husky **pre-push** hook runs automatically:
+A Husky **pre-commit** hook runs `npm run typecheck && npx lint-staged`. `lint-staged` (config in `.lintstagedrc.mjs`) runs ESLint on every staged `.ts`/`.html` file, and — for staged files under `src/worker/lib/`, `src/worker/routes/`, `src/worker/scheduled.ts`, or `test/worker/`— also runs that file's mapped Vitest test, so a broken worker test can fail the commit, not just lint. A separate **pre-push** hook runs automatically:
 
 - always: `npm run test:worker` + `npm run test:ci` (worker + Angular component
   suites, ~20s, no servers needed);
@@ -59,6 +83,7 @@ Bypass with `git push --no-verify`. To run the checks by hand:
 
 ```bash
 npm run typecheck     # tsc --noEmit for both the Angular app and the Worker
+npm run lint          # eslint . — full-repo lint (lint-staged only checks staged files)
 npm run test:worker   # Vitest + @cloudflare/vitest-pool-workers — backend suite
 npm run test:ci       # Angular component tests (Vitest via @angular/build:unit-test, no watch)
 ```
@@ -134,12 +159,20 @@ This check is configured entirely in the Cloudflare dashboard as a GitHub-App-ba
 gh api repos/mswiac/market-pulse/branches/main/protection
 ```
 
-There **is** one workflow file — `.github/workflows/e2e.yml`, which runs the
-Playwright E2E suite (see "End-to-end tests" above). It is **informational
-only**: it reports a status on PRs but is deliberately not part of branch
-protection, so a flaky browser run never blocks a merge. Promoting it to a
-required check is a deferred decision (`context/foundation/test-plan.md`
-§3 Phase 6).
+There **are** two workflow files, both informational only — they report a
+status on PRs but are deliberately not part of branch protection:
+
+- `.github/workflows/e2e.yml` runs the Playwright E2E suite (see "End-to-end
+  tests" above). A flaky browser run never blocks a merge; promoting it to a
+  required check is a deferred decision (`context/foundation/test-plan.md`
+  §3 Phase 6).
+- `.github/workflows/ai-review.yml` runs the Claude Code Action on PRs to
+  `main`, scoring the diff against `.github/review-criteria.md` and posting a
+  single sticky PR comment (score table + advisory verdict). It skips PRs that
+  only touch `**/*.md` or `context/**` (its own `paths-ignore`), so a docs-only
+  PR gets no review comment. The verdict never fails the check — it's advisory
+  only; a hard merge gate on it is a deferred decision (see the workflow
+  file's own header comment).
 
 ## Mutation testing
 
@@ -151,13 +184,11 @@ npx stryker run                                              # full configured s
 npx stryker run --mutate "src/worker/lib/rsi.ts"              # a single file — much faster, prefer this
 
 # Angular (src/app/**), on top of npm run test:ci
-npx stryker run --configFile stryker.config.app.json
-npx stryker run --configFile stryker.config.app.json --mutate "src/app/features/alerts/alert-form/alert-form.ts"
+npx stryker run stryker.config.app.json
+npx stryker run stryker.config.app.json --mutate "src/app/features/alerts/alert-form/alert-form.ts"
 ```
 
-The Angular profile (`stryker.config.app.json`) uses Stryker's `command` runner instead of the dedicated Vitest runner, since `ng test` runs through Angular's native `@angular/build:unit-test` builder, which doesn't expose a standalone Vitest config for the dedicated runner to drive. This means the full Angular suite reruns per mutant (no per-test coverage narrowing) — slower than the Worker profile, but the only option that works against the native builder today.
-
-See `CLAUDE.md`'s "Mutation testing" section for how to scope a run, the Angular profile's rationale, and a known gotcha with this repo's Worker test style. Reports land at `reports/mutation/mutation.html` (gitignored).
+Full rationale for the two profiles (why the Angular one needs a different runner, and a deliberate `vitest.related: false` gotcha on the Worker side) lives in `context/foundation/stryker-notes.md` — read it before changing either config. Reports land at `reports/mutation/mutation.html` (gitignored).
 
 ## Project structure notes
 
