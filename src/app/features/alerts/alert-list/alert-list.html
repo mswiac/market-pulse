@@ -5,6 +5,21 @@
     <p class="delete-error" i18n="@@alertList.deleteError">Failed to delete the alert. Please try again.</p>
   }
   @if (alerts().length > 0) {
+    <div class="filter-bar">
+      <app-instrument-picker class="filter-picker" [(ticker)]="filterTicker" [(type)]="filterType" />
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="alert-type-field">
+        <mat-label i18n="@@alertList.filter.alertType">Alert type</mat-label>
+        <mat-select [(value)]="filterAlertType">
+          <mat-option value="" i18n="@@alertList.filter.alertType.all">All alert types</mat-option>
+          @for (type of alertTypeOptions; track type) {
+            <mat-option [value]="type">{{ alertTypeLabel(type) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      @if (hasActiveFilters()) {
+        <button mat-stroked-button class="clear-filters" type="button" (click)="clearFilters()" i18n="@@alertList.filter.clear">Clear filters</button>
+      }
+    </div>
     <div class="list-header">
       <button type="button" class="sort-col" (click)="toggleSort('instrumentName')">
         <span i18n="@@alertList.sort.instrument">Instrument</span>
@@ -106,7 +121,11 @@
         </mat-action-row>
       </mat-expansion-panel>
     } @empty {
-      <p class="empty-state" i18n="@@alertList.emptyState">No alerts yet — add your first one to get started.</p>
+      @if (alerts().length > 0) {
+        <p class="empty-state" i18n="@@alertList.noMatches">No alerts match the selected filters.</p>
+      } @else {
+        <p class="empty-state" i18n="@@alertList.emptyState">No alerts yet — add your first one to get started.</p>
+      }
     }
   </mat-accordion>
 }

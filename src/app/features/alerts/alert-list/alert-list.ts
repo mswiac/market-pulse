@@ -3,8 +3,13 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSelectModule } from '@angular/material/select';
+import { InstrumentPicker } from '../../instruments/instrument-picker/instrument-picker';
+import { InstrumentsService } from '../../instruments/instruments.service';
 import { AlertForm } from '../alert-form/alert-form';
+import { filterAlerts } from '../alert-filter';
 import { Alert, AlertsService } from '../alerts.service';
 import { DeleteAlertConfirm, DeleteAlertConfirmData } from '../delete-alert-confirm/delete-alert-confirm';
 
@@ -27,13 +32,24 @@ type SortDirection = 'asc' | 'desc';
 
 @Component({
   selector: 'app-alert-list',
-  imports: [MatExpansionModule, MatIconModule, MatButtonModule, MatDialogModule, DatePipe, DecimalPipe],
+  imports: [
+    MatExpansionModule,
+    MatIconModule,
+    MatButtonModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatSelectModule,
+    InstrumentPicker,
+    DatePipe,
+    DecimalPipe,
+  ],
   templateUrl: './alert-list.html',
   styleUrl: './alert-list.scss',
 })
 export class AlertList {
   private readonly alertsService = inject(AlertsService);
   private readonly dialog = inject(MatDialog);
+  private readonly instrumentsService = inject(InstrumentsService);
 
   protected readonly alerts = this.alertsService.alerts;
   protected readonly sortBy = signal<SortableColumn | null>(null);
@@ -41,8 +57,24 @@ export class AlertList {
   protected readonly loadError = signal(false);
   protected readonly deleteError = signal(false);
 
+  protected readonly filterType = signal('');
+  protected readonly filterTicker = signal('');
+  protected readonly filterAlertType = signal('');
+  protected readonly alertTypeOptions = Object.keys(ALERT_TYPE_LABELS);
+  protected readonly hasActiveFilters = computed(
+    () => !!(this.filterType() || this.filterTicker() || this.filterAlertType()),
+  );
+
+  protected readonly filteredAlerts = computed(() =>
+    filterAlerts(this.alerts(), {
+      type: this.filterType(),
+      ticker: this.filterTicker(),
+      alertType: this.filterAlertType(),
+    }),
+  );
+
   protected readonly sortedAlerts = computed(() => {
-    const alerts = this.alerts();
+    const alerts = this.filteredAlerts();
     const sortBy = this.sortBy();
     if (!sortBy) return alerts;
 
@@ -58,7 +90,15 @@ export class AlertList {
   });
 
   constructor() {
+    // A catalogue load failure only leaves the picker without options; the list still works.
+    this.instrumentsService.ensureLoaded().subscribe({ error: () => {} });
     this.alertsService.list().subscribe({ error: () => this.loadError.set(true) });
+  }
+
+  protected clearFilters(): void {
+    this.filterType.set('');
+    this.filterTicker.set('');
+    this.filterAlertType.set('');
   }
 
   protected toggleSort(column: SortableColumn): void {

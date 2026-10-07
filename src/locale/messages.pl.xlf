@@ -106,6 +106,22 @@
         <source>Alert type</source>
         <target>Typ alertu</target>
       </trans-unit>
+      <trans-unit id="alertList.filter.alertType" datatype="html">
+        <source>Alert type</source>
+        <target>Typ alertu</target>
+      </trans-unit>
+      <trans-unit id="alertList.filter.alertType.all" datatype="html">
+        <source>All alert types</source>
+        <target>Wszystkie typy alertów</target>
+      </trans-unit>
+      <trans-unit id="alertList.filter.clear" datatype="html">
+        <source>Clear filters</source>
+        <target>Wyczyść filtry</target>
+      </trans-unit>
+      <trans-unit id="alertList.noMatches" datatype="html">
+        <source>No alerts match the selected filters.</source>
+        <target>Żaden alert nie pasuje do wybranych filtrów.</target>
+      </trans-unit>
       <trans-unit id="alertList.sort.threshold" datatype="html">
         <source>Threshold</source>
         <target>Próg</target>
