@@ -230,14 +230,6 @@
         <source>Loading instruments</source>
         <target>Wczytywanie instrumentów</target>
       </trans-unit>
-      <trans-unit id="adminPanel.type.label" datatype="html">
-        <source>Type</source>
-        <target>Typ</target>
-      </trans-unit>
-      <trans-unit id="adminPanel.instrument.label" datatype="html">
-        <source>Instrument</source>
-        <target>Instrument</target>
-      </trans-unit>
       <trans-unit id="adminPanel.from.label" datatype="html">
         <source>From</source>
         <target>Od</target>

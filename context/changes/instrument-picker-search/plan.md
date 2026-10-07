@@ -212,6 +212,34 @@ Fix the existing e2e that uses the alert form and add one picker scenario.
 
 - No leftover unused i18n strings or dead code; app builds in both locales.
 
+## Phase 5: Fetch market data (admin panel)
+
+### Overview
+
+Added after Phase 4 when a fourth copy of the cascade turned up in the admin "Fetch market data" page (`/admin`), which the issue did not list. Same swap as Phase 3.
+
+### Changes Required:
+
+#### 1. Admin panel adoption
+
+**File**: `src/app/features/admin/admin-panel.{ts,html}`, `admin-panel.spec.ts`
+
+**Intent**: Replace the type and instrument selects with the picker; no auto-selected instrument; submit stays disabled until an instrument and both dates are set.
+
+**Contract**: `canSubmit` unchanged (ticker, both dates, not submitting). The spec's render helper pre-selects `^NDX`; a new case covers the empty start.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- `npm run typecheck`, `npm run lint`, `npm run test:ci`, `npm run build` pass
+
+#### Manual Verification:
+
+- On `/admin` the picker starts empty, the fetch button is disabled until an instrument and both dates are chosen, and a fetch for the chosen instrument still reports the saved days.
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests:
@@ -298,3 +326,13 @@ None (no data or API changes). Issue #159 (`alerts-list-filtering`) consumes the
 #### Manual
 
 - [x] 4.3 No leftover dead code or unused i18n strings; both locales build
+
+### Phase 5: Fetch market data (admin panel)
+
+#### Automated
+
+- [x] 5.1 `npm run typecheck`, `npm run lint`, `npm run test:ci`, `npm run build` pass
+
+#### Manual
+
+- [ ] 5.2 Admin fetch page: picker empty at start, button gated by instrument + dates, fetch works
