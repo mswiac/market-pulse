@@ -20,6 +20,7 @@ const RESULT: MarketDataFetchResult = {
 
 async function renderAdminPanel(
   impl: () => ReturnType<AdminService['fetchMarketData']> = () => of(RESULT),
+  initialTicker = '^NDX',
 ) {
   const fetchMarketData = vi.fn(impl);
   const result = await render(AdminPanel, {
@@ -37,22 +38,29 @@ async function renderAdminPanel(
     ],
   });
   const component = result.fixture.componentInstance as unknown as {
-    onTypeChange: (type: string) => void;
+    onTickerChange: (ticker: string) => void;
     onFromDateChange: (date: Date | null) => void;
     onToDateChange: (date: Date | null) => void;
     onSubmit: () => void;
   };
+  // Nothing is selected on load; most tests are about the fetch flow, so they
+  // start with ^NDX picked. Pass '' to keep the picker empty.
+  if (initialTicker) {
+    component.onTickerChange(initialTicker);
+    result.fixture.detectChanges();
+  }
   return { ...result, component, fetchMarketData };
 }
 
 describe('AdminPanel', () => {
-  it('narrows the instrument picker to the selected type and auto-selects the first match', async () => {
-    const { fixture, component } = await renderAdminPanel();
-
-    component.onTypeChange('pl_stock');
+  it('starts with nothing selected and keeps submit disabled even with both dates set', async () => {
+    const { fixture, component } = await renderAdminPanel(() => of(RESULT), '');
+    component.onFromDateChange(new Date('2026-01-01'));
+    component.onToDateChange(new Date('2026-01-31'));
     fixture.detectChanges();
 
-    expect(await screen.findByText('CD Projekt')).toBeTruthy();
+    expect((screen.getByRole('combobox', { name: 'Instrument' }) as HTMLInputElement).value).toBe('');
+    expect((screen.getByRole('button', { name: 'Fetch market data' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('disables submit until both from and to dates are set', async () => {

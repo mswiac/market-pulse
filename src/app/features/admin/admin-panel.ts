@@ -6,10 +6,9 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { INSTRUMENT_TYPE_LABELS } from '../instruments/instrument-types';
-import { Instrument, InstrumentsService } from '../instruments/instruments.service';
+import { InstrumentPicker } from '../instruments/instrument-picker/instrument-picker';
+import { InstrumentsService } from '../instruments/instruments.service';
 import { AdminService, MarketDataFetchResult } from './admin-panel.service';
 
 function toIsoDate(date: Date): string {
@@ -40,8 +39,8 @@ const SNACKBAR_DURATION_MS = 5000;
 @Component({
   selector: 'app-admin-panel',
   imports: [
+    InstrumentPicker,
     MatFormFieldModule,
-    MatSelectModule,
     MatInputModule,
     MatDatepickerModule,
     MatButtonModule,
@@ -57,16 +56,6 @@ export class AdminPanel {
   private readonly adminService = inject(AdminService);
   private readonly snackBar = inject(MatSnackBar);
 
-  protected readonly instrumentTypes = computed(() =>
-    [...this.instrumentsService.types()].sort((a, b) => this.instrumentTypeLabel(a).localeCompare(this.instrumentTypeLabel(b))),
-  );
-  protected readonly selectedInstrumentType = signal('');
-  protected readonly instrumentOptions = computed(() =>
-    this.instrumentsService
-      .instruments()
-      .filter((i: Instrument) => i.type === this.selectedInstrumentType())
-      .sort((a, b) => a.name.localeCompare(b.name)),
-  );
   protected readonly selectedTicker = signal('');
 
   protected readonly fromDate = signal<Date | null>(null);
@@ -87,22 +76,8 @@ export class AdminPanel {
         this.loadError.set(true);
         this.loading.set(false);
       },
-      next: () => {
-        const firstType = this.instrumentTypes()[0];
-        if (firstType) this.onTypeChange(firstType);
-        this.loading.set(false);
-      },
+      next: () => this.loading.set(false),
     });
-  }
-
-  protected instrumentTypeLabel(type: string): string {
-    return INSTRUMENT_TYPE_LABELS[type] ?? type;
-  }
-
-  protected onTypeChange(type: string): void {
-    this.selectedInstrumentType.set(type);
-    const firstMatch = this.instrumentOptions()[0];
-    this.selectedTicker.set(firstMatch ? firstMatch.ticker : '');
   }
 
   protected onTickerChange(ticker: string): void {

@@ -38,6 +38,9 @@ interface RenderOptions {
   serviceImpl?: () => Observable<Alert>;
   dialogData?: AlertFormData | null;
   ensureLoaded?: () => Observable<Instrument[]>;
+  // A new alert starts with no instrument selected; most tests are about
+  // something else, so they begin with ^NDX picked. Pass '' to keep it empty.
+  initialTicker?: string;
 }
 
 async function renderAlertForm(options: RenderOptions = {}) {
@@ -45,6 +48,7 @@ async function renderAlertForm(options: RenderOptions = {}) {
     serviceImpl = () => of(ALERT),
     dialogData = null,
     ensureLoaded = () => of(INSTRUMENTS),
+    initialTicker = '^NDX',
   } = options;
   const create = vi.fn(serviceImpl);
   const update = vi.fn(serviceImpl);
@@ -74,10 +78,13 @@ async function renderAlertForm(options: RenderOptions = {}) {
     form: AlertForm['form'];
     onSubmit: () => void;
     submitting: () => boolean;
-    instrumentTypeLabel: (type: string) => string;
     showRsiOption: () => boolean;
     selectedInstrumentCurrency: () => string;
   };
+  if (!dialogData?.alert && initialTicker) {
+    component.form.controls.ticker.setValue(initialTicker);
+    result.fixture.detectChanges();
+  }
   return { ...result, form: component.form, component, create, update, close };
 }
 
@@ -96,7 +103,7 @@ describe('AlertForm', () => {
   it('rejects an out-of-range RSI threshold and resets the threshold when alertType switches to RSI', async () => {
     const { fixture, form } = await renderAlertForm();
 
-    // Default ticker after render is ^NDX (rsiEligible), so switching to RSI is valid.
+    // ^NDX (rsiEligible) is pre-selected by the render helper, so switching to RSI is valid.
     form.controls.threshold.setValue(42);
     form.controls.alertType.setValue('RSI');
     fixture.detectChanges();
@@ -112,18 +119,35 @@ describe('AlertForm', () => {
     expect(await screen.findByText('Value must be between 0 and 100.')).toBeTruthy();
   });
 
-  it('auto-fills the ticker to the first matching instrument when instrumentType changes', async () => {
-    const { fixture, form } = await renderAlertForm();
+  it('starts a new alert with no instrument selected, which keeps the form invalid', async () => {
+    const { form } = await renderAlertForm({ initialTicker: '' });
 
-    expect(form.controls.ticker.value).toBe('^NDX');
+    expect(form.controls.ticker.value).toBe('');
+    expect(form.controls.ticker.hasError('required')).toBe(true);
+    expect(form.invalid).toBe(true);
+  });
 
-    form.controls.instrumentType.setValue('STOCK');
+  it('selects the instrument chosen in the picker into the ticker control', async () => {
+    const { fixture, form } = await renderAlertForm({ initialTicker: '' });
+    const input = screen.getByRole('combobox', { name: 'Instrument' }) as HTMLInputElement;
+
+    input.focus();
+    fireEvent.input(input, { target: { value: 'cdr' } });
+    fixture.detectChanges();
+    fireEvent.click(await screen.findByRole('option', { name: 'CDR — CD Projekt' }));
     fixture.detectChanges();
 
     expect(form.controls.ticker.value).toBe('CDR');
-    // The ticker mat-select's closed trigger renders the selected option's
-    // label — proves the template reflects the cascade, not just the control.
-    expect(await screen.findByText('CD Projekt')).toBeTruthy();
+  });
+
+  it('shows the edited alert instrument in the picker', async () => {
+    const { fixture } = await renderAlertForm({ dialogData: { alert: ALERT } });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect((screen.getByRole('combobox', { name: 'Instrument' }) as HTMLInputElement).value).toBe(
+      '^NDX — NASDAQ-100',
+    );
   });
 
   it('resets alertType to PRICE when the ticker switches to a non-RSI-eligible instrument', async () => {
@@ -153,7 +177,7 @@ describe('AlertForm', () => {
     const { fixture, form, component, create } = await renderAlertForm();
     fixture.detectChanges();
 
-    // The render cascade fills every required control except the threshold.
+    // Every required control is filled except the threshold.
     expect(form.invalid).toBe(true);
 
     component.onSubmit();
@@ -203,7 +227,7 @@ describe('AlertForm', () => {
     });
     fixture.detectChanges();
 
-    // The load-error branch replaces the type/instrument fields with a notice —
+    // The load-error branch replaces the instrument picker with a notice —
     // its presence proves loadError() is genuinely true.
     expect(
       screen.getByText('Failed to load instruments. Please close this dialog and try again.'),
@@ -352,23 +376,14 @@ describe('AlertForm', () => {
     expect(screen.queryByText('Something went wrong. Please try again.')).toBeNull();
   });
 
-  it('maps known instrument types to a human label and falls back to the raw type', async () => {
-    const { component } = await renderAlertForm();
-
-    expect(component.instrumentTypeLabel('index')).toBe('Index');
-    expect(component.instrumentTypeLabel('us_stock')).toBe('US companies');
-    expect(component.instrumentTypeLabel('crypto')).toBe('crypto');
-  });
-
   it('shows the selected instrument currency as a threshold suffix and updates it with the ticker', async () => {
     const { fixture, form } = await renderAlertForm();
 
     expect(screen.getByText('USD')).toBeTruthy();
 
-    form.controls.instrumentType.setValue('STOCK');
+    form.controls.ticker.setValue('CDR');
     fixture.detectChanges();
 
-    expect(form.controls.ticker.value).toBe('CDR');
     expect(screen.getByText('PLN')).toBeTruthy();
     expect(screen.queryByText('USD')).toBeNull();
   });
@@ -449,7 +464,7 @@ describe('AlertForm', () => {
     expect(form.controls.threshold.hasError('positive')).toBe(true);
   });
 
-  it('keeps the pre-filled instrument type and options in edit mode after instruments load', async () => {
+  it('keeps the pre-filled instrument in edit mode after instruments load', async () => {
     const stockAlert: Alert = {
       ...ALERT,
       ticker: 'CDR',
@@ -459,10 +474,9 @@ describe('AlertForm', () => {
     };
     const { form } = await renderAlertForm({ dialogData: { alert: stockAlert } });
 
-    // 'INDEX' is instrumentTypes()[0] — the load handler must not overwrite the
-    // alert's own 'STOCK' type, and selectedInstrumentType must stay 'STOCK' so
-    // instrumentOptions still resolves CDR (proven via the PLN currency suffix).
-    expect(form.controls.instrumentType.value).toBe('STOCK');
+    // Instrument lookup goes through the whole catalogue, so CDR resolves
+    // (proven via the PLN currency suffix) without any type being selected.
+    expect(form.controls.ticker.value).toBe('CDR');
     expect(await screen.findByText('PLN')).toBeTruthy();
   });
 
@@ -478,16 +492,6 @@ describe('AlertForm', () => {
     fixture.detectChanges();
 
     expect(form.controls.alertType.value).toBe('RSI');
-  });
-
-  it('leaves the ticker untouched when the selected type has no matching instruments', async () => {
-    const { fixture, form } = await renderAlertForm();
-    expect(form.controls.ticker.value).toBe('^NDX');
-
-    form.controls.instrumentType.setValue('NONEXISTENT');
-    fixture.detectChanges();
-
-    expect(form.controls.ticker.value).toBe('^NDX');
   });
 
   it('offers the RSI alert type only while the selected instrument is RSI-eligible', async () => {
@@ -506,11 +510,11 @@ describe('AlertForm', () => {
 
     expect(component.selectedInstrumentCurrency()).toBe('USD'); // ^NDX
 
-    form.controls.instrumentType.setValue('NONEXISTENT');
+    form.controls.ticker.setValue('UNKNOWN');
     fixture.detectChanges();
 
-    // Options are now empty and the ticker is stale — the lookup must yield the
-    // empty string, not a placeholder, so the currency suffix simply disappears.
+    // The lookup must yield the empty string, not a placeholder, so the currency
+    // suffix simply disappears.
     expect(component.selectedInstrumentCurrency()).toBe('');
   });
 });

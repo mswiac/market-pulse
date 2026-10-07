@@ -1,0 +1,46 @@
+<div class="picker">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="type-field">
+    <mat-label i18n="@@instrumentPicker.type.label">Type</mat-label>
+    <mat-select [value]="type()" [disabled]="isDisabled()" (selectionChange)="onTypeChange($event.value)">
+      <mat-option value="" i18n="@@instrumentPicker.type.all">All types</mat-option>
+      @for (t of types(); track t) {
+        <mat-option [value]="t">{{ typeLabel(t) }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search-field">
+    <mat-label i18n="@@instrumentPicker.instrument.label">Instrument</mat-label>
+    <input
+      matInput
+      [matAutocomplete]="auto"
+      [value]="text()"
+      [disabled]="isDisabled()"
+      autocomplete="off"
+      (input)="onInput($any($event.target).value)"
+      (blur)="onBlur()"
+    />
+    @if (text() && !isDisabled()) {
+      <button
+        matSuffix
+        mat-icon-button
+        type="button"
+        (click)="clear()"
+        i18n-aria-label="@@instrumentPicker.clear"
+        aria-label="Clear selection"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+    <mat-autocomplete #auto="matAutocomplete" [displayWith]="displayWith" (optionSelected)="onOptionSelected($event.option.value)">
+      @for (instrument of options(); track instrument.ticker) {
+        <mat-option [value]="instrument.ticker">{{ label(instrument) }}</mat-option>
+      } @empty {
+        <mat-option disabled i18n="@@instrumentPicker.noMatches">No matches</mat-option>
+      }
+    </mat-autocomplete>
+    @if (showInvalidHint()) {
+      <mat-hint class="invalid-hint" i18n="@@instrumentPicker.invalidHint">Choose an instrument from the list</mat-hint>
+    }
+  </mat-form-field>
+</div>

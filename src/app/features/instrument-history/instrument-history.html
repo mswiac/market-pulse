@@ -6,25 +6,7 @@
       Failed to load instruments. Please refresh the page and try again.
     </p>
   } @else {
-    <div class="filters">
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label i18n="@@instrumentHistory.type.label">Type</mat-label>
-        <mat-select [value]="selectedInstrumentType()" (selectionChange)="onTypeChange($event.value)">
-          @for (type of instrumentTypes(); track type) {
-            <mat-option [value]="type">{{ instrumentTypeLabel(type) }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label i18n="@@instrumentHistory.instrument.label">Instrument</mat-label>
-        <mat-select [value]="selectedTicker()" (selectionChange)="onTickerChange($event.value)">
-          @for (instrument of instrumentOptions(); track instrument.ticker) {
-            <mat-option [value]="instrument.ticker">{{ instrument.name }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-    </div>
+    <app-instrument-picker class="picker" [ticker]="selectedTicker()" (tickerChange)="onTickerChange($event)" />
 
     @if (historyError()) {
       <p class="form-error" i18n="@@instrumentHistory.error.historyLoadFailed">
@@ -80,6 +62,8 @@
           <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
         </table>
       </mat-card>
+    } @else {
+      <p class="choose-prompt" i18n="@@instrumentHistory.choosePrompt">Choose an instrument to see its history.</p>
     }
   }
 </div>

@@ -18,25 +18,7 @@
     <p class="form-error" i18n="@@removeInstrument.noInstruments">No instruments available to remove.</p>
   } @else {
     <mat-card class="remove-card" appearance="outlined">
-      <div class="filters">
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label i18n="@@removeInstrument.type.label">Type</mat-label>
-          <mat-select [value]="selectedInstrumentType()" [disabled]="submitting()" (selectionChange)="onTypeChange($event.value)">
-            @for (type of instrumentTypes(); track type) {
-              <mat-option [value]="type">{{ instrumentTypeLabel(type) }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label i18n="@@removeInstrument.instrument.label">Instrument</mat-label>
-          <mat-select [value]="selectedTicker()" [disabled]="submitting()" (selectionChange)="onTickerChange($event.value)">
-            @for (instrument of instrumentOptions(); track instrument.ticker) {
-              <mat-option [value]="instrument.ticker">{{ instrument.name }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-      </div>
+      <app-instrument-picker [ticker]="selectedTicker()" [disabled]="submitting()" (tickerChange)="onTickerChange($event)" />
 
       <button mat-flat-button color="warn" type="button" [disabled]="!canSubmit()" (click)="onSubmit()" i18n="@@removeInstrument.submit">
         Remove instrument

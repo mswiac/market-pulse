@@ -10,14 +10,6 @@
         <source>Edit alert</source>
         <target>Edytuj alert</target>
       </trans-unit>
-      <trans-unit id="alertForm.instrumentType.label" datatype="html">
-        <source>Type</source>
-        <target>Typ</target>
-      </trans-unit>
-      <trans-unit id="alertForm.instrument.label" datatype="html">
-        <source>Instrument</source>
-        <target>Instrument</target>
-      </trans-unit>
       <trans-unit id="alertForm.error.instrumentsLoadFailed" datatype="html">
         <source> Failed to load instruments. Please close this dialog and try again. </source>
         <target> Nie udało się wczytać instrumentów. Zamknij to okno i spróbuj ponownie. </target>
@@ -238,14 +230,6 @@
         <source>Loading instruments</source>
         <target>Wczytywanie instrumentów</target>
       </trans-unit>
-      <trans-unit id="adminPanel.type.label" datatype="html">
-        <source>Type</source>
-        <target>Typ</target>
-      </trans-unit>
-      <trans-unit id="adminPanel.instrument.label" datatype="html">
-        <source>Instrument</source>
-        <target>Instrument</target>
-      </trans-unit>
       <trans-unit id="adminPanel.from.label" datatype="html">
         <source>From</source>
         <target>Od</target>
@@ -381,14 +365,6 @@
       <trans-unit id="removeInstrument.loading.ariaLabel" datatype="html">
         <source>Loading instruments</source>
         <target>Wczytywanie instrumentów</target>
-      </trans-unit>
-      <trans-unit id="removeInstrument.type.label" datatype="html">
-        <source>Type</source>
-        <target>Typ</target>
-      </trans-unit>
-      <trans-unit id="removeInstrument.instrument.label" datatype="html">
-        <source>Instrument</source>
-        <target>Instrument</target>
       </trans-unit>
       <trans-unit id="removeInstrument.submit" datatype="html">
         <source>Remove instrument</source>
@@ -642,13 +618,33 @@
         <source> Failed to load instruments. Please refresh the page and try again. </source>
         <target> Nie udało się załadować instrumentów. Odśwież stronę i spróbuj ponownie. </target>
       </trans-unit>
-      <trans-unit id="instrumentHistory.type.label" datatype="html">
+      <trans-unit id="instrumentHistory.choosePrompt" datatype="html">
+        <source>Choose an instrument to see its history.</source>
+        <target>Wybierz instrument, aby zobaczyć jego historię.</target>
+      </trans-unit>
+      <trans-unit id="instrumentPicker.type.label" datatype="html">
         <source>Type</source>
         <target>Typ</target>
       </trans-unit>
-      <trans-unit id="instrumentHistory.instrument.label" datatype="html">
+      <trans-unit id="instrumentPicker.type.all" datatype="html">
+        <source>All types</source>
+        <target>Wszystkie typy</target>
+      </trans-unit>
+      <trans-unit id="instrumentPicker.instrument.label" datatype="html">
         <source>Instrument</source>
         <target>Instrument</target>
+      </trans-unit>
+      <trans-unit id="instrumentPicker.clear" datatype="html">
+        <source>Clear selection</source>
+        <target>Wyczyść wybór</target>
+      </trans-unit>
+      <trans-unit id="instrumentPicker.noMatches" datatype="html">
+        <source>No matches</source>
+        <target>Brak wyników</target>
+      </trans-unit>
+      <trans-unit id="instrumentPicker.invalidHint" datatype="html">
+        <source>Choose an instrument from the list</source>
+        <target>Wybierz instrument z listy</target>
       </trans-unit>
       <trans-unit id="instrumentType.index" datatype="html">
         <source>Index</source>
