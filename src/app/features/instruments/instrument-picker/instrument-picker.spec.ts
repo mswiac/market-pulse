@@ -36,6 +36,12 @@ class FormHost {
   control = new FormControl('', { nonNullable: true });
 }
 
+@Component({
+  imports: [InstrumentPicker],
+  template: `<app-instrument-picker [disabled]="true" />`,
+})
+class DisabledHost {}
+
 const combobox = () => screen.getByRole('combobox', { name: 'Instrument' }) as HTMLInputElement;
 
 function type(text: string) {
@@ -153,5 +159,57 @@ describe('InstrumentPicker', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.control.value).toBe('^NDX');
+  });
+  it('selects the highlighted option with the keyboard (ArrowDown, Enter)', async () => {
+    const { fixture } = await render(SignalHost, { providers });
+
+    type('cdr');
+    fixture.detectChanges();
+    await screen.findByRole('option', { name: 'CDR — CD Projekt' });
+    fireEvent.keyDown(combobox(), { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40 });
+    fixture.detectChanges();
+    fireEvent.keyDown(combobox(), { key: 'Enter', code: 'Enter', keyCode: 13 });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.ticker()).toBe('CDR');
+    expect(combobox().value).toBe('CDR — CD Projekt');
+  });
+
+  it('keeps a ticker set before the catalogue loads and shows its label once instruments arrive', async () => {
+    const loaded = signal<Instrument[]>([]);
+    const { fixture } = await render(SignalHost, {
+      providers: [
+        {
+          provide: InstrumentsService,
+          useValue: { instruments: () => loaded(), types: () => [...new Set(loaded().map((i) => i.type))] },
+        },
+      ],
+    });
+    fixture.componentInstance.ticker.set('CDR');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(combobox().value).toBe('');
+
+    loaded.set(INSTRUMENTS);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.ticker()).toBe('CDR');
+    expect(combobox().value).toBe('CDR — CD Projekt');
+  });
+
+  it('disables the search field from the disabled input', async () => {
+    await render(DisabledHost, { providers });
+
+    expect(combobox().disabled).toBe(true);
+  });
+
+  it('disables the search field when the form control is disabled', async () => {
+    const { fixture } = await render(FormHost, { providers });
+    fixture.componentInstance.control.disable();
+    fixture.detectChanges();
+
+    expect(combobox().disabled).toBe(true);
   });
 });

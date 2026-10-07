@@ -273,6 +273,13 @@ None (no data or API changes). Issue #159 (`alerts-list-filtering`) consumes the
 - Existing cascades: `instrument-history.ts`, `remove-instrument.ts`, `alert-form.ts`
 - E2E seed patterns: `e2e/seed.spec.ts`, `e2e/delete-alert.spec.ts`
 
+## Addendum (post-implementation review)
+
+- `src/locale/messages.xlf` (source language) was intentionally not touched: it was already out of sync with the templates (`extract-i18n` rewrites ~700 lines), so new ids and removals were applied to `messages.pl.xlf` only, which the build uses. Resyncing the source file belongs in a separate change.
+- Phase 4 also updated `e2e/seed.spec.ts`, which used the same instrument-selection flow as `e2e/delete-alert.spec.ts`.
+- Phase 5 (admin "Fetch market data" page) was added before implementation after a fourth copy of the cascade was found.
+- Review follow-up added the picker tests listed in the Testing Strategy that were initially missing: keyboard selection, a ticker set before the catalogue loads, and disabled state.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles. See `references/progress-format.md`.
