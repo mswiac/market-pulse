@@ -20,7 +20,7 @@ const randomThreshold = (min: number, spread: number) => {
 };
 
 const rowFor = (page: Page, label: string, threshold: string) =>
-  page.getByRole('button', { name: new RegExp(`NASDAQ-100.*${label}.*${threshold.replace('.', '[.,]')}`) });
+  page.getByRole('button', { name: new RegExp(`NASDAQ-100.*${label}.*(?<![\\d.,])${threshold.replace('.', '[.,]')}`) });
 
 async function createNdxAlert(page: Page, alertType: 'Cena' | 'RSI', threshold: string) {
   await page.getByRole('button', { name: 'Nowy alert' }).click();

@@ -76,7 +76,10 @@ test.describe('auth-gate redirect (test-plan.md §3 Phase 6 — client-side auth
 
     // Navigating in-app to the triggered-alerts page fires GET /api/trigger-events;
     // it 401s → session-expired.interceptor → navigateByUrl('/login').
-    await page.getByRole('button', { name: 'Historia' }).click();
+    // The History group starts collapsed on `/`; one click expands it.
+    const historyToggle = page.getByRole('button', { name: 'Historia' });
+    await expect(historyToggle).toHaveAttribute('aria-expanded', 'false');
+    await historyToggle.click();
     await page.getByRole('link', { name: 'Uruchomione alerty' }).click();
 
     await page.waitForURL('**/login');

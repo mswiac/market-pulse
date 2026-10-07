@@ -129,6 +129,13 @@ One Playwright scenario for the user-visible filter flow.
 
 The "no match" empty state shows only its message, not a second "Clear filters" button: the filter bar's own button stays visible above it and does the same job.
 
+### Addendum (impl-review F1): existing e2e specs
+
+The filter bar adds a second "Instrument" combobox to the home page, and `AlertList` now prefetches the instrument catalogue in its constructor. Three existing e2e specs had to change:
+
+- `e2e/seed.spec.ts`, `e2e/delete-alert.spec.ts`: the Instrument combobox is scoped to the dialog (strict-mode violation with two matches).
+- `e2e/auth-gate-redirect.spec.ts` (mid-session 401): opening the alert dialog no longer fires the first `GET /api/instruments`, so the 401 is triggered by navigating in-app to the triggered-alerts page (`GET /api/trigger-events`). The risk covered is unchanged.
+
 ## Testing Strategy
 
 ### Unit Tests:

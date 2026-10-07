@@ -91,7 +91,7 @@ export class AlertList {
 
   constructor() {
     // A catalogue load failure only leaves the picker without options; the list still works.
-    this.instrumentsService.ensureLoaded().subscribe({ error: () => {} });
+    this.instrumentsService.ensureLoaded().subscribe({ error: () => undefined });
     this.alertsService.list().subscribe({ error: () => this.loadError.set(true) });
   }
 
