@@ -10,14 +10,12 @@ h2 {
   margin: 0 0 1rem;
 }
 
-.filters {
-  display: flex;
-  gap: 1rem;
+.picker {
   margin-bottom: 1rem;
 }
 
-.filters mat-form-field {
-  flex: 1 1 0;
+.choose-prompt {
+  opacity: 0.8;
 }
 
 .partial-notice {

@@ -1,37 +1,22 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
-import { INSTRUMENT_TYPE_LABELS } from '../instruments/instrument-types';
-import { Instrument, InstrumentsService } from '../instruments/instruments.service';
+import { InstrumentPicker } from '../instruments/instrument-picker/instrument-picker';
+import { InstrumentsService } from '../instruments/instruments.service';
 import { InstrumentHistoryEntry, InstrumentHistoryService } from './instrument-history.service';
 
 const HISTORY_DAYS = 30;
 
 @Component({
   selector: 'app-instrument-history',
-  imports: [MatFormFieldModule, MatSelectModule, MatTableModule, MatCardModule, DecimalPipe],
+  imports: [InstrumentPicker, MatTableModule, MatCardModule, DecimalPipe],
   templateUrl: './instrument-history.html',
   styleUrl: './instrument-history.scss',
 })
 export class InstrumentHistory {
   private readonly instrumentsService = inject(InstrumentsService);
   private readonly instrumentHistoryService = inject(InstrumentHistoryService);
-
-  // Sorted alphabetically by what's actually shown to the user — the type's
-  // display label, and each instrument's name — not raw insertion order.
-  protected readonly instrumentTypes = computed(() =>
-    [...this.instrumentsService.types()].sort((a, b) => this.instrumentTypeLabel(a).localeCompare(this.instrumentTypeLabel(b))),
-  );
-  protected readonly selectedInstrumentType = signal('');
-  protected readonly instrumentOptions = computed(() =>
-    this.instrumentsService
-      .instruments()
-      .filter((i: Instrument) => i.type === this.selectedInstrumentType())
-      .sort((a, b) => a.name.localeCompare(b.name)),
-  );
 
   protected readonly selectedTicker = signal('');
   // Endpoint returns oldest→newest (required for correct RSI smoothing order);
@@ -52,34 +37,17 @@ export class InstrumentHistory {
   protected readonly historyError = signal(false);
 
   constructor() {
-    this.instrumentsService.ensureLoaded().subscribe({
-      error: () => this.loadError.set(true),
-      next: () => {
-        const firstType = this.instrumentTypes()[0];
-        if (firstType) this.onTypeChange(firstType);
-      },
-    });
-  }
-
-  protected instrumentTypeLabel(type: string): string {
-    return INSTRUMENT_TYPE_LABELS[type] ?? type;
-  }
-
-  protected onTypeChange(type: string): void {
-    this.selectedInstrumentType.set(type);
-    const firstMatch = this.instrumentOptions()[0];
-    if (firstMatch) {
-      this.onTickerChange(firstMatch.ticker);
-    } else {
-      this.selectedTicker.set('');
-      this.history.set([]);
-      this.historyError.set(false);
-    }
+    this.instrumentsService.ensureLoaded().subscribe({ error: () => this.loadError.set(true) });
   }
 
   protected onTickerChange(ticker: string): void {
     this.selectedTicker.set(ticker);
     this.historyError.set(false);
+
+    if (!ticker) {
+      this.history.set([]);
+      return;
+    }
 
     this.instrumentHistoryService.getHistory(ticker).subscribe({
       // Rapid switching can let responses arrive out of order — only apply
