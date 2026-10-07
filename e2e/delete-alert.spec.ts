@@ -35,8 +35,9 @@ async function createPriceAlert(page: Page): Promise<{ thresholdText: RegExp; pa
   await page.getByRole('button', { name: 'Nowy alert' }).click();
   await expect(page.getByRole('heading', { name: 'Nowy alert' })).toBeVisible();
 
-  await page.getByRole('combobox', { name: 'Instrument' }).click();
-  await page.getByRole('option', { name: 'NASDAQ-100' }).click();
+  // Searchable picker: nothing is preselected, so type to find the instrument.
+  await page.getByRole('combobox', { name: 'Instrument' }).fill('NASDAQ');
+  await page.getByRole('option', { name: /NASDAQ-100/ }).click();
   await page.getByRole('spinbutton', { name: 'Próg' }).fill(threshold);
 
   const created = page.waitForResponse(
