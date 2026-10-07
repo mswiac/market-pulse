@@ -1,10 +1,10 @@
 ---
 change_id: instrument-picker-search
 title: Extract searchable InstrumentPicker component
-status: impl_reviewed
+status: archived
 created: 2026-10-07
 updated: 2026-10-07
-archived_at: null
+archived_at: 2026-10-07T18:03:36Z
 ---
 
 ## Notes
