@@ -281,58 +281,58 @@ None (no data or API changes). Issue #159 (`alerts-list-filtering`) consumes the
 
 #### Automated
 
-- [x] 1.1 Type check passes: `npm run typecheck`
-- [x] 1.2 Lint passes: `npm run lint`
-- [x] 1.3 Component and helper specs pass: `npm run test:ci`
-- [x] 1.4 Production build (incl. Polish i18n) passes: `npm run build`
+- [x] 1.1 Type check passes: `npm run typecheck` — 15f5345
+- [x] 1.2 Lint passes: `npm run lint` — 15f5345
+- [x] 1.3 Component and helper specs pass: `npm run test:ci` — 15f5345
+- [x] 1.4 Production build (incl. Polish i18n) passes: `npm run build` — 15f5345
 
 #### Manual
 
-- [x] 1.5 Search by ticker, name and diacritic-free query works with correct ranking
-- [x] 1.6 Type filter narrows results and clears a non-matching selection
-- [x] 1.7 Unmatched text stays with hint; clear works; history shows hint when empty
-- [x] 1.8 Keyboard-only and screen-reader use work
+- [x] 1.5 Search by ticker, name and diacritic-free query works with correct ranking — 15f5345
+- [x] 1.6 Type filter narrows results and clears a non-matching selection — 15f5345
+- [x] 1.7 Unmatched text stays with hint; clear works; history shows hint when empty — 15f5345
+- [x] 1.8 Keyboard-only and screen-reader use work — 15f5345
 
 ### Phase 2: Alert form
 
 #### Automated
 
-- [x] 2.1 `npm run typecheck`, `npm run lint`, `npm run test:ci` pass
+- [x] 2.1 `npm run typecheck`, `npm run lint`, `npm run test:ci` pass — ebe1a94
 
 #### Manual
 
-- [x] 2.2 VIX hides RSI; switching to VIX resets to Price
-- [x] 2.3 Editing an existing alert shows its instrument and saves
-- [x] 2.4 Currency suffix still appears for price alerts
+- [x] 2.2 VIX hides RSI; switching to VIX resets to Price — ebe1a94
+- [x] 2.3 Editing an existing alert shows its instrument and saves — ebe1a94
+- [x] 2.4 Currency suffix still appears for price alerts — ebe1a94
 
 ### Phase 3: Remove instrument
 
 #### Automated
 
-- [x] 3.1 `npm run typecheck`, `npm run lint`, `npm run test:ci` pass
+- [x] 3.1 `npm run typecheck`, `npm run lint`, `npm run test:ci` pass — 1a6a0e1
 
 #### Manual
 
-- [x] 3.2 Remove button inactive on load, active after choosing; confirm dialog correct
-- [x] 3.3 After removal the picker is empty and the instrument is gone
+- [x] 3.2 Remove button inactive on load, active after choosing; confirm dialog correct — 1a6a0e1
+- [x] 3.3 After removal the picker is empty and the instrument is gone — 1a6a0e1
 
 ### Phase 4: E2E and cleanup
 
 #### Automated
 
-- [x] 4.1 `npm run typecheck`, `npm run lint`, `npm run test:ci`, `npm run build` pass
-- [x] 4.2 E2E passes: `npx playwright test e2e/delete-alert.spec.ts e2e/instrument-picker.spec.ts`
+- [x] 4.1 `npm run typecheck`, `npm run lint`, `npm run test:ci`, `npm run build` pass — e2fbaf3
+- [x] 4.2 E2E passes: `npx playwright test e2e/delete-alert.spec.ts e2e/instrument-picker.spec.ts` — e2fbaf3
 
 #### Manual
 
-- [x] 4.3 No leftover dead code or unused i18n strings; both locales build
+- [x] 4.3 No leftover dead code or unused i18n strings; both locales build — e2fbaf3
 
 ### Phase 5: Fetch market data (admin panel)
 
 #### Automated
 
-- [x] 5.1 `npm run typecheck`, `npm run lint`, `npm run test:ci`, `npm run build` pass
+- [x] 5.1 `npm run typecheck`, `npm run lint`, `npm run test:ci`, `npm run build` pass — c42385d
 
 #### Manual
 
-- [ ] 5.2 Admin fetch page: picker empty at start, button gated by instrument + dates, fetch works
+- [x] 5.2 Admin fetch page: picker empty at start, button gated by instrument + dates, fetch works — c42385d
