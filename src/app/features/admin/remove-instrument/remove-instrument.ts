@@ -3,13 +3,11 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminService, RemovedInstrument } from '../admin-panel.service';
-import { INSTRUMENT_TYPE_LABELS } from '../../instruments/instrument-types';
-import { Instrument, InstrumentsService } from '../../instruments/instruments.service';
+import { InstrumentPicker } from '../../instruments/instrument-picker/instrument-picker';
+import { InstrumentsService } from '../../instruments/instruments.service';
 import { RemoveInstrumentConfirm, RemoveInstrumentConfirmData } from '../remove-instrument-confirm/remove-instrument-confirm';
 
 // Backend returns a fixed set of machine-readable codes shared by both the
@@ -26,8 +24,7 @@ const SNACKBAR_DURATION_MS = 5000;
 @Component({
   selector: 'app-remove-instrument',
   imports: [
-    MatFormFieldModule,
-    MatSelectModule,
+    InstrumentPicker,
     MatButtonModule,
     MatCardModule,
     MatSnackBarModule,
@@ -43,16 +40,6 @@ export class RemoveInstrument {
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
 
-  protected readonly instrumentTypes = computed(() =>
-    [...this.instrumentsService.types()].sort((a, b) => this.instrumentTypeLabel(a).localeCompare(this.instrumentTypeLabel(b))),
-  );
-  protected readonly selectedInstrumentType = signal('');
-  protected readonly instrumentOptions = computed(() =>
-    this.instrumentsService
-      .instruments()
-      .filter((i: Instrument) => i.type === this.selectedInstrumentType())
-      .sort((a, b) => a.name.localeCompare(b.name)),
-  );
   protected readonly selectedTicker = signal('');
 
   protected readonly submitting = signal(false);
@@ -69,20 +56,10 @@ export class RemoveInstrument {
         this.loading.set(false);
       },
       next: () => {
-        this.resetPickerToFirst();
+        this.selectedTicker.set('');
         this.loading.set(false);
       },
     });
-  }
-
-  protected instrumentTypeLabel(type: string): string {
-    return INSTRUMENT_TYPE_LABELS[type] ?? type;
-  }
-
-  protected onTypeChange(type: string): void {
-    this.selectedInstrumentType.set(type);
-    const firstMatch = this.instrumentOptions()[0];
-    this.selectedTicker.set(firstMatch ? firstMatch.ticker : '');
   }
 
   protected onTickerChange(ticker: string): void {
@@ -126,7 +103,7 @@ export class RemoveInstrument {
         this.loading.set(true);
         this.instrumentsService.reload().subscribe({
           next: () => {
-            this.resetPickerToFirst();
+            this.selectedTicker.set('');
             this.loading.set(false);
           },
           error: () => this.loading.set(false),
@@ -138,16 +115,6 @@ export class RemoveInstrument {
         this.showError(err);
       },
     });
-  }
-
-  private resetPickerToFirst(): void {
-    const firstType = this.instrumentTypes()[0];
-    if (firstType) {
-      this.onTypeChange(firstType);
-    } else {
-      this.selectedInstrumentType.set('');
-      this.selectedTicker.set('');
-    }
   }
 
   private showResult(result: RemovedInstrument): void {

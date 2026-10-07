@@ -14,6 +14,9 @@ const INSTRUMENTS: Instrument[] = [
 async function renderRemoveInstrument(options?: {
   getInstrumentImpact?: () => ReturnType<AdminService['getInstrumentImpact']>;
   removeInstrument?: ReturnType<typeof vi.fn>;
+  // Nothing is selected on load; most tests are about the flow after a choice,
+  // so they start with ^NDX picked. Pass '' to keep the picker empty.
+  initialTicker?: string;
 }) {
   const dialogSubject = new Subject<boolean | undefined>();
   const dialogOpen = vi.fn(() => ({ afterClosed: () => dialogSubject.asObservable() }));
@@ -50,11 +53,15 @@ async function renderRemoveInstrument(options?: {
     importOverrides: [{ replace: MatDialogModule, with: [] }],
   });
   const component = result.fixture.componentInstance as unknown as {
-    onTypeChange: (type: string) => void;
     onTickerChange: (ticker: string) => void;
     onSubmit: () => void;
     submitting: () => boolean;
   };
+  const initialTicker = options?.initialTicker ?? '^NDX';
+  if (initialTicker) {
+    component.onTickerChange(initialTicker);
+    result.fixture.detectChanges();
+  }
   return {
     ...result,
     component,
@@ -67,13 +74,26 @@ async function renderRemoveInstrument(options?: {
 }
 
 describe('RemoveInstrument', () => {
-  it('narrows the instrument picker to the selected type', async () => {
-    const { fixture, component } = await renderRemoveInstrument();
-
-    component.onTypeChange('pl_stock');
+  it('starts with nothing selected and the remove button disabled', async () => {
+    const { fixture, getInstrumentImpact } = await renderRemoveInstrument({ initialTicker: '' });
     fixture.detectChanges();
 
-    expect(await screen.findByText('CD Projekt')).toBeTruthy();
+    expect((screen.getByRole('combobox', { name: 'Instrument' }) as HTMLInputElement).value).toBe('');
+    expect((screen.getByRole('button', { name: 'Remove instrument' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(getInstrumentImpact).not.toHaveBeenCalled();
+  });
+
+  it('enables the remove button once an instrument is chosen in the picker', async () => {
+    const { fixture } = await renderRemoveInstrument({ initialTicker: '' });
+    const input = screen.getByRole('combobox', { name: 'Instrument' }) as HTMLInputElement;
+
+    input.focus();
+    fireEvent.input(input, { target: { value: 'cdr' } });
+    fixture.detectChanges();
+    fireEvent.click(await screen.findByRole('option', { name: 'CDR — CD Projekt' }));
+    fixture.detectChanges();
+
+    expect((screen.getByRole('button', { name: 'Remove instrument' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('previews impact, opens the confirm dialog with that data, and removes the instrument on confirm', async () => {
@@ -202,7 +222,7 @@ describe('RemoveInstrument', () => {
     expect(component.submitting()).toBe(false);
   });
 
-  it('re-enables submit after a successful delete', async () => {
+  it('stops submitting and clears the selection after a successful delete', async () => {
     const { fixture, component, dialogSubject } = await renderRemoveInstrument();
     const submitButton = () =>
       screen.getByRole('button', { name: 'Remove instrument' }) as HTMLButtonElement;
@@ -212,8 +232,11 @@ describe('RemoveInstrument', () => {
     dialogSubject.next(true);
     fixture.detectChanges();
 
-    expect(submitButton().disabled).toBe(false);
+    // The removed instrument is gone, so nothing is selected and the button
+    // stays disabled until the next deliberate choice.
     expect(component.submitting()).toBe(false);
+    expect(submitButton().disabled).toBe(true);
+    expect((screen.getByRole('combobox', { name: 'Instrument' }) as HTMLInputElement).value).toBe('');
   });
 
   it('keeps submit disabled and onSubmit inert when no ticker is selected', async () => {
