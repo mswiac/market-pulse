@@ -13,23 +13,7 @@
         Failed to load instruments. Please close this dialog and try again.
       </p>
     } @else {
-      <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
-        <mat-label i18n="@@alertForm.instrumentType.label">Type</mat-label>
-        <mat-select formControlName="instrumentType">
-          @for (type of instrumentTypes(); track type) {
-            <mat-option [value]="type">{{ instrumentTypeLabel(type) }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
-        <mat-label i18n="@@alertForm.instrument.label">Instrument</mat-label>
-        <mat-select formControlName="ticker">
-          @for (instrument of instrumentOptions(); track instrument.ticker) {
-            <mat-option [value]="instrument.ticker">{{ instrument.name }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <app-instrument-picker class="full-width" formControlName="ticker" />
     }
 
     <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">

@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -7,7 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { AuthService } from '../../../core/auth/auth.service';
-import { INSTRUMENT_TYPE_LABELS } from '../../instruments/instrument-types';
+import { InstrumentPicker } from '../../instruments/instrument-picker/instrument-picker';
 import { InstrumentsService } from '../../instruments/instruments.service';
 import { Alert, AlertsService } from '../alerts.service';
 
@@ -29,7 +29,15 @@ function priceValidators(): ValidatorFn[] {
 
 @Component({
   selector: 'app-alert-form',
-  imports: [ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatSelectModule, MatInputModule, MatButtonModule],
+  imports: [
+    ReactiveFormsModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatSelectModule,
+    MatInputModule,
+    MatButtonModule,
+    InstrumentPicker,
+  ],
   templateUrl: './alert-form.html',
   styleUrl: './alert-form.scss',
 })
@@ -43,15 +51,6 @@ export class AlertForm {
 
   protected readonly isEditMode = !!this.data?.alert;
 
-  // Tracks the type select's current value reactively — a computed() can't
-  // read a FormControl directly. Initialized synchronously (same as the
-  // instrumentType control below), so it's already correct in edit mode
-  // before the instruments cache has even loaded.
-  protected readonly selectedInstrumentType = signal(this.data?.alert?.instrumentType ?? '');
-  protected readonly instrumentTypes = this.instrumentsService.types;
-  protected readonly instrumentOptions = computed(() =>
-    this.instrumentsService.instruments().filter((i) => i.type === this.selectedInstrumentType()),
-  );
   protected readonly loadError = signal(false);
 
   // Initial values (including the threshold validators matching the edited
@@ -59,7 +58,6 @@ export class AlertForm {
   // before the constructor wires the reset-on-change subscriptions below, so
   // pre-filling an edit never triggers them and never wipes the values.
   protected readonly form = this.fb.nonNullable.group({
-    instrumentType: [this.data?.alert?.instrumentType ?? '', Validators.required],
     ticker: [this.data?.alert?.ticker ?? '', Validators.required],
     alertType: [this.data?.alert?.alertType ?? 'PRICE', Validators.required],
     threshold: this.fb.control<number | null>(this.data?.alert?.threshold ?? null, [
@@ -77,22 +75,12 @@ export class AlertForm {
   protected readonly formError = signal<string | null>(null);
 
   constructor() {
-    // These valueChanges subscriptions must be wired up before calling
+    // The valueChanges subscriptions must be wired up before calling
     // ensureLoaded() below: once the instruments cache is warm (any dialog
-    // open after the first), ensureLoaded() emits synchronously, and a
-    // setValue() triggered before a listener exists is silently dropped —
-    // the type→ticker cascade would never fire and the ticker control
-    // would stay empty (and invalid) on every subsequent form open.
-    this.form.controls.instrumentType.valueChanges.subscribe((type) => {
-      this.selectedInstrumentType.set(type);
-      const firstMatch = this.instrumentOptions()[0];
-      if (firstMatch) {
-        this.form.controls.ticker.setValue(firstMatch.ticker);
-      }
-    });
-
+    // open after the first), ensureLoaded() can emit synchronously, and a
+    // setValue() triggered before a listener exists is silently dropped.
     this.form.controls.ticker.valueChanges.subscribe((ticker) => {
-      const instrument = this.instrumentOptions().find((i) => i.ticker === ticker);
+      const instrument = this.instrumentsService.instruments().find((i) => i.ticker === ticker);
       if (instrument && !instrument.rsiEligible && this.form.controls.alertType.value === 'RSI') {
         this.form.controls.alertType.setValue('PRICE');
       }
@@ -110,28 +98,21 @@ export class AlertForm {
       thresholdControl.reset(null);
     });
 
-    this.instrumentsService.ensureLoaded().subscribe({
-      error: () => this.loadError.set(true),
-      next: () => {
-        if (!this.isEditMode && !this.form.controls.instrumentType.value) {
-          this.form.controls.instrumentType.setValue(this.instrumentTypes()[0]);
-        }
-      },
-    });
+    this.instrumentsService.ensureLoaded().subscribe({ error: () => this.loadError.set(true) });
   }
 
-  protected instrumentTypeLabel(type: string): string {
-    return INSTRUMENT_TYPE_LABELS[type] ?? type;
+  private selectedInstrument() {
+    return this.instrumentsService.instruments().find((i) => i.ticker === this.form.controls.ticker.value);
   }
 
   protected showRsiOption(): boolean {
-    return !!this.instrumentOptions().find((i) => i.ticker === this.form.controls.ticker.value)?.rsiEligible;
+    return !!this.selectedInstrument()?.rsiEligible;
   }
 
   // Read-only, informational only — not part of the threshold control's value
   // and never submitted as part of the form payload.
   protected selectedInstrumentCurrency(): string {
-    return this.instrumentOptions().find((i) => i.ticker === this.form.controls.ticker.value)?.currency ?? '';
+    return this.selectedInstrument()?.currency ?? '';
   }
 
   protected onThresholdBlur(event: FocusEvent): void {
