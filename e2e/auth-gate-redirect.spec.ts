@@ -74,19 +74,20 @@ test.describe('auth-gate redirect (test-plan.md §3 Phase 6 — client-side auth
       });
     });
 
-    // Opening the alert dialog fires the first in-session GET /api/instruments;
+    // Navigating in-app to the triggered-alerts page fires GET /api/trigger-events;
     // it 401s → session-expired.interceptor → navigateByUrl('/login').
-    await page.getByRole('button', { name: 'Nowy alert' }).click();
+    // The History group starts collapsed on `/`; one click expands it.
+    const historyToggle = page.getByRole('button', { name: 'Historia' });
+    await expect(historyToggle).toHaveAttribute('aria-expanded', 'false');
+    await historyToggle.click();
+    await page.getByRole('link', { name: 'Uruchomione alerty' }).click();
 
     await page.waitForURL('**/login');
     await expect(page.getByRole('button', { name: 'Zaloguj się' })).toBeVisible();
     await expect(page.getByLabel('Hasło')).toBeVisible();
 
     // "without crashing": we left the protected shell, the login form is
-    // interactive, and no uncaught exception reached the browser. The alert
-    // dialog that fired the request is not asserted on — MatDialog doesn't
-    // reliably auto-close on this client-side navigation, and a lingering
-    // overlay is a cosmetic nit, not part of this risk.
+    // interactive, and no uncaught exception reached the browser.
     await expect(page.getByRole('heading', { name: 'Twoje alerty' })).toBeHidden();
     expect(pageErrors).toEqual([]);
   });

@@ -36,7 +36,7 @@ test('alert created through the form persists after a page reload', async ({ pag
   await expect(page.getByRole('heading', { name: 'Nowy alert' })).toBeVisible();
 
   // Searchable picker: nothing is preselected, so type to find the instrument.
-  await page.getByRole('combobox', { name: 'Instrument' }).fill('NASDAQ');
+  await page.getByRole('dialog').getByRole('combobox', { name: 'Instrument' }).fill('NASDAQ');
   await page.getByRole('option', { name: /NASDAQ-100/ }).click();
 
   await page.getByRole('spinbutton', { name: 'Próg' }).fill(threshold);
