@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
-import { resolveFiringValue } from '../lib/alert-evaluation';
+import { STALE_AFTER_SECONDS, resolveFiringValue } from '../lib/alert-evaluation';
 import { EMAIL_PATTERN, normalizeEmail } from '../lib/email';
 import type { InstrumentRow } from '../lib/instruments';
 import { sessionMiddleware } from '../lib/session';
+import { refreshInstruments } from '../scheduled';
 
 const VALID_ALERT_TYPES = ['PRICE', 'RSI'] as const;
 const VALID_DIRECTIONS = ['up', 'down'] as const;
@@ -121,6 +122,23 @@ interface CurrentMarketValue {
   low: number | null;
 }
 
+// The cron only refreshes tickers that already have an alert, so a ticker
+// getting its first alert can hold a stale (or no) market_data row — and the
+// initial armed state below would be computed against an old price. Refresh
+// it first. A failed refresh must never block saving the alert: it falls back
+// to whatever market_data holds, exactly as before.
+async function ensureFreshMarketData(env: Env, instrument: InstrumentRow): Promise<void> {
+  try {
+    const row = await env.DB.prepare('SELECT updated_at FROM market_data WHERE ticker = ?')
+      .bind(instrument.ticker)
+      .first<{ updated_at: number }>();
+    if (row && Math.floor(Date.now() / 1000) - row.updated_at <= STALE_AFTER_SECONDS) return;
+    await refreshInstruments(env, [instrument], { retryAttempts: 1, fullWindow: true });
+  } catch (err) {
+    console.error(`alerts: failed to refresh market data for ${instrument.ticker}`, err);
+  }
+}
+
 // Computed server-side from the ticker's current market_data row, never
 // trusted from the request — an alert starts disarmed if the direction's
 // condition is already true against today's value (so it doesn't fire
@@ -193,6 +211,7 @@ alertsRoutes.post('/', async (c) => {
   const { instrument, alertType, threshold, notificationEmail, direction } = validation;
 
   const userId = c.get('userId');
+  await ensureFreshMarketData(c.env, instrument);
   const armed = await computeArmed(c.env.DB, instrument.ticker, alertType, threshold, direction);
 
   try {
@@ -255,6 +274,7 @@ alertsRoutes.put('/:id', async (c) => {
   const { instrument, alertType, threshold, notificationEmail, direction } = validation;
 
   const userId = c.get('userId');
+  await ensureFreshMarketData(c.env, instrument);
   const armed = await computeArmed(c.env.DB, instrument.ticker, alertType, threshold, direction);
 
   try {

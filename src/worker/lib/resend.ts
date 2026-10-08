@@ -44,7 +44,17 @@ export async function sendAlertEmailBatch(env: Env, inputs: SendEmailInput[]): P
   return results;
 }
 
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 async function postBatch(env: Env, inputs: SendEmailInput[]): Promise<SendEmailResult> {
+  // Resend validates a batch strictly: one invalid message fails the whole
+  // request. Not reachable while the sandbox only accepts the verified
+  // address (filtered above); revisit once a custom domain is verified.
+  const body = JSON.stringify(inputs.map(({ to, subject, text }) => ({ from: RESEND_FROM_ADDRESS, to, subject, text })));
+
   let response: Response;
   try {
     response = await fetch('https://api.resend.com/emails/batch', {
@@ -52,8 +62,13 @@ async function postBatch(env: Env, inputs: SendEmailInput[]): Promise<SendEmailR
       headers: {
         Authorization: `Bearer ${env.RESEND_API_KEY}`,
         'Content-Type': 'application/json',
+        // Derived from the payload (which carries the trigger date and
+        // values) so re-sending the same batch within Resend's 24h window —
+        // after a failed D1 write, or a network error after Resend already
+        // accepted it — is deduplicated instead of mailing everyone twice.
+        'Idempotency-Key': `alert-batch-${await sha256Hex(body)}`,
       },
-      body: JSON.stringify(inputs.map(({ to, subject, text }) => ({ from: RESEND_FROM_ADDRESS, to, subject, text }))),
+      body,
     });
   } catch (err) {
     // A rejecting fetch (network/DNS/timeout) is retry-worthy, unlike a
@@ -75,7 +90,11 @@ async function postBatch(env: Env, inputs: SendEmailInput[]): Promise<SendEmailR
     // A 5xx is Resend's own server failing, not a rejection of this
     // specific request — retry-worthy like a network-level throw, unlike a
     // 4xx (bad request/unverified recipient), which won't change on retry.
-    return { ok: false, error: message, transient: response.status >= 500 };
+    // 429 (rate limit) and 408 (timeout) are 4xx but say nothing about the
+    // request itself, so they retry too — and a batch loses up to 100 alerts
+    // at once if they are wrongly treated as permanent.
+    const transient = response.status >= 500 || response.status === 429 || response.status === 408;
+    return { ok: false, error: message, transient };
   }
 
   return { ok: true };

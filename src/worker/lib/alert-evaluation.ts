@@ -7,7 +7,7 @@ const RSI_RE_ARM_MARGIN_POINTS = 10;
 // Market data older than this is not evaluated. Evaluation runs in its own
 // cron invocation with no ordering guarantee against the fetch, so a failed
 // or late fetch must not make yesterday's quote fire (or re-arm) an alert.
-const STALE_AFTER_SECONDS = 12 * 60 * 60;
+export const STALE_AFTER_SECONDS = 12 * 60 * 60;
 // trigger_events rows bind 12 values each; 8 rows stay under D1's
 // 100-parameter statement cap. Id lists bind one value per id.
 const TRIGGER_EVENT_ROWS_PER_STATEMENT = 8;

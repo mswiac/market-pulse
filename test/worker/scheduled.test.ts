@@ -13,6 +13,7 @@ import worker from '../../src/worker/index';
 // directly instead of going through worker.scheduled(...).
 import { EVALUATE_CRON, FETCH_CRON, handleCron, handleScheduled } from '../../src/worker/scheduled';
 import { calculateRSI } from '../../src/worker/lib/rsi';
+import wranglerToml from '../../wrangler.toml?raw';
 
 function yahooBody(
   timestamps: number[],
@@ -545,6 +546,111 @@ describe('alert-scoped, history-backed fetch phase', () => {
     expect(summary.tickers).toHaveLength(17);
     expect(summary.tickers.every((t) => t.status === 'error')).toBe(true);
     expect(summary.tickers.some((t) => t.error?.includes('budget exhausted'))).toBe(true);
+    // The ticker that was cut off mid-retry keeps the provider's own error.
+    expect(summary.tickers.some((t) => t.error?.includes('budget exhausted') && t.error.includes('last error:'))).toBe(true);
+  });
+});
+
+describe('fetch phase failure handling', () => {
+  it('marks every fetched ticker as error when the bulk write is rejected, storing nothing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS)))),
+    );
+    const batchSpy = vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('batch boom'));
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      const summary = await handleScheduled(env);
+
+      expect(summary.tickers).toHaveLength(2);
+      for (const result of summary.tickers) {
+        expect(result.status).toBe('error');
+        expect(result.error).toContain('batch boom');
+      }
+      const marketData = await env.DB.prepare('SELECT * FROM market_data').all();
+      expect(marketData.results).toHaveLength(0);
+    } finally {
+      batchSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    }
+  });
+
+  it('falls back to the long Yahoo window when stored history cannot be read', async () => {
+    // 15 stored closes would normally allow the short window.
+    await env.DB.batch(
+      Array.from({ length: 15 }, (_, i) =>
+        env.DB.prepare('INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, NULL, NULL)').bind(
+          '^NDX',
+          isoDate(utcDaysAgo(16 - i)),
+          100 + i,
+        ),
+      ),
+    );
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))));
+    vi.stubGlobal('fetch', fetchMock);
+    const originalPrepare = env.DB.prepare.bind(env.DB);
+    const prepareSpy = vi.spyOn(env.DB, 'prepare').mockImplementation((sql: string) => {
+      if (sql.includes('FROM price_history') && sql.includes('IN (')) throw new Error('history read failed');
+      return originalPrepare(sql);
+    });
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      await handleScheduled(env);
+
+      const ndxCall = fetchMock.mock.calls.find((call) => (call[0] as string).includes(encodeURIComponent('^NDX')));
+      const url = new URL(ndxCall?.[0] as string);
+      expect(Number(url.searchParams.get('period2')) - Number(url.searchParams.get('period1'))).toBe(31 * DAY);
+      const row = await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?').bind('^NDX').first();
+      expect(row).not.toBeNull();
+    } finally {
+      prepareSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    }
+  });
+});
+
+describe('currency correction logging', () => {
+  it('logs the correction only after the write succeeded', async () => {
+    await insertSuffixInstrument('USD');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) =>
+        Promise.resolve(
+          jsonResponse(
+            200,
+            url.includes(encodeURIComponent('TEST.WA'))
+              ? yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS, 'PLN')
+              : yahooBody(TIMESTAMPS, RISING_CLOSES),
+          ),
+        ),
+      ),
+    );
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const batchSpy = vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('batch boom'));
+
+    try {
+      await handleScheduled(env);
+      expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('corrected currency'));
+
+      batchSpy.mockRestore();
+      await handleScheduled(env);
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('corrected currency for TEST: USD -> PLN'));
+    } finally {
+      batchSpy.mockRestore();
+      logSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    }
+  });
+});
+
+describe('cron expressions', () => {
+  it('match the schedules declared in wrangler.toml', () => {
+    const declared = [...(/crons\s*=\s*\[([^\]]*)\]/.exec(wranglerToml)?.[1] ?? '').matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+
+    expect(declared).toEqual([FETCH_CRON, EVALUATE_CRON]);
   });
 });
 

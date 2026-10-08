@@ -37,6 +37,20 @@ describe('sendAlertEmailBatch', () => {
     expect(body).toEqual([{ from: 'onboarding@resend.dev', to: VERIFIED_EMAIL, subject: INPUT.subject, text: INPUT.text }]);
   });
 
+  it('sends a deterministic Idempotency-Key that changes with the payload', async () => {
+    const fetchSpy = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, { data: [] })));
+    vi.stubGlobal('fetch', fetchSpy);
+
+    await sendOne();
+    await sendOne();
+    await sendOne({ ...INPUT, text: 'Different body' });
+
+    const keys = fetchSpy.mock.calls.map((call) => (call[1] as RequestInit & { headers: Record<string, string> }).headers['Idempotency-Key']);
+    expect(keys[0]).toMatch(/^alert-batch-[0-9a-f]{64}$/);
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).not.toBe(keys[0]);
+  });
+
   it('rejects a recipient that is not the Resend-verified address, without calling fetch', async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
@@ -111,6 +125,12 @@ describe('sendAlertEmailBatch', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 500 })));
 
     expect(await sendOne()).toMatchObject({ transient: true });
+  });
+
+  it.each([429, 408])('marks a %i status as transient, since it says nothing about the request itself', async (status) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(status, { message: 'slow down' })));
+
+    expect(await sendOne()).toEqual({ ok: false, error: 'slow down', transient: true });
   });
 
   it('falls back to statusText for a non-ok response with a non-JSON body, marked transient (5xx)', async () => {

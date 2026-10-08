@@ -1,5 +1,5 @@
 import { env, exports } from 'cloudflare:workers';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const BASE_URL = 'https://example.com';
 const PASSWORD = 'correct horse battery staple';
@@ -66,6 +66,97 @@ describe('alerts endpoints', () => {
   // later insert for the same ticker collides.
   beforeEach(async () => {
     await env.DB.prepare('DELETE FROM market_data').run();
+    // Creating/editing an alert on a ticker with missing or stale market_data
+    // refreshes it from Yahoo; default to a failing Yahoo so no test touches
+    // the real network, and let individual tests override it.
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(new Response('{}', { status: 500 }))));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function stubYahooClose(close: number): ReturnType<typeof vi.fn> {
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            chart: {
+              result: [
+                {
+                  timestamp: [Math.floor(Date.now() / 1000) - 3600],
+                  indicators: { quote: [{ close: [close], high: [close + 1], low: [close - 1] }] },
+                },
+              ],
+              error: null,
+            },
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  async function seedMarketData(ticker: string, price: number, ageSeconds: number): Promise<void> {
+    await env.DB.prepare('INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, NULL, unixepoch() - ?)')
+      .bind(ticker, price, ageSeconds)
+      .run();
+  }
+
+  it('refreshes stale market data before computing the initial armed state', async () => {
+    const cookie = await registerAndLogIn('stale-refresh@example.com');
+    // The week-old price (25) already meets the threshold; the live price (15) does not.
+    await seedMarketData('^VIX', 25, 7 * 24 * 60 * 60);
+    const fetchMock = stubYahooClose(15);
+
+    const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'up' });
+
+    expect(response.status).toBe(201);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await expect(response.json()).resolves.toMatchObject({ active: true, currentPrice: 15 });
+    // The full 30-day window (plus the extra day on `to`), so RSI is computed
+    // from a gap-free series even if the ticker was not refreshed for weeks.
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(Number(url.searchParams.get('period2')) - Number(url.searchParams.get('period1'))).toBe(31 * 24 * 60 * 60);
+  });
+
+  it('does not call Yahoo when market data is fresh', async () => {
+    const cookie = await registerAndLogIn('fresh-no-refresh@example.com');
+    await seedMarketData('^VIX', 15, 60);
+    const fetchMock = stubYahooClose(99);
+
+    const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'up' });
+
+    expect(response.status).toBe(201);
+    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(response.json()).resolves.toMatchObject({ currentPrice: 15 });
+  });
+
+  it('still creates the alert from the stale data when the refresh fails', async () => {
+    const cookie = await registerAndLogIn('stale-refresh-fails@example.com');
+    await seedMarketData('^VIX', 25, 7 * 24 * 60 * 60);
+
+    const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'up' });
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({ active: false, currentPrice: 25 });
+  });
+
+  it('refreshes stale market data when an alert is edited too', async () => {
+    const cookie = await registerAndLogIn('stale-refresh-edit@example.com');
+    const created = (await (await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 30, direction: 'up' })).json()) as {
+      id: number;
+    };
+    await seedMarketData('^VIX', 25, 7 * 24 * 60 * 60);
+    const fetchMock = stubYahooClose(15);
+
+    const response = await updateAlert(cookie, created.id, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'up' });
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await expect(response.json()).resolves.toMatchObject({ active: true, currentPrice: 15 });
   });
 
   it('creates then lists a VIX/PRICE alert, including matching createdAt/updatedAt', async () => {

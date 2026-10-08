@@ -237,6 +237,19 @@ No schema change. Deploy order does not matter: the new evaluation trigger is ad
 - Issue: #161; follow-up #162.
 - Code: `src/worker/scheduled.ts`, `src/worker/lib/alert-evaluation.ts`, `src/worker/lib/resend.ts`, `src/worker/lib/market-data.ts`, `src/worker/index.ts`, `src/worker/routes/admin.ts`, `wrangler.toml`.
 
+## Review Addendum
+
+Differences between this plan and the code, found in the implementation review (`reviews/impl-review.md`):
+
+- **No `runEvaluationPhase`.** Phase 3 names it, but evaluation is called directly as `evaluateAlerts(env)` from `handleCron` and `handleScheduled`; behaviour is identical.
+- **`handleCron` router and `FetchPhaseResult.loadError`** are additions: the router maps `controller.cron` to a phase (unknown expressions are logged and ignored), and `loadError` lets `handleScheduled` keep its old "registry failed, skip evaluation" early return.
+- **`refreshInstruments(env, instruments, { retryAttempts })`** is split out of `runFetchPhase` so that other callers can refresh a given set of instruments with a single attempt.
+- **Alert create/edit refreshes stale market data** (`src/worker/routes/alerts.ts`, `ensureFreshMarketData`). Because instruments without an alert are no longer refreshed by the cron (user decision), the first alert on such an instrument would have its initial `armed` state computed from an old price. Data older than the 12-hour limit (or missing) is now refreshed with one Yahoo attempt before `computeArmed`; a failed refresh falls back to the stored data. This touches a user-facing route that the original plan listed under "not doing" for the frontend only, not the API.
+- **Resend `Idempotency-Key`** is sent with every batch (SHA-256 of the payload), so a re-sent batch within 24 hours is not mailed twice if the D1 write after sending fails.
+- **HTTP 429 and 408** from Resend are classified as transient, so a rate-limited batch stays armed and is retried.
+- **`context/foundation/infrastructure.md` was not updated** on purpose: it records platform-choice reasoning, not the cron schedule.
+- **Tracked elsewhere:** the Force data refresh page fetching all instruments through per-market requests and a separate evaluation request (#170), per-market cron triggers (#162), admin email on cron failure (#172).
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles. See `references/progress-format.md`.

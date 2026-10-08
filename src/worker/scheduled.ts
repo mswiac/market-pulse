@@ -1,6 +1,6 @@
 import type { Env } from './index';
 import { evaluateAlerts, type AlertEvaluationSummary } from './lib/alert-evaluation';
-import { ALL_INSTRUMENT_TYPES, selectAlertInstruments } from './lib/instruments';
+import { ALL_INSTRUMENT_TYPES, selectAlertInstruments, type InstrumentRow } from './lib/instruments';
 import {
   buildCurrencyCorrection,
   buildMarketDataUpserts,
@@ -48,7 +48,7 @@ interface FetchBudget {
   attempts: number;
 }
 
-async function fetchWithRetry(symbol: string, lookbackDays: number, budget: FetchBudget): Promise<DailyClosesResult> {
+async function fetchWithRetry(symbol: string, lookbackDays: number, budget: FetchBudget, retryAttempts: number): Promise<DailyClosesResult> {
   // `to` must be TOMORROW's date, not today's. Yahoo's period2 bound is UTC
   // midnight of that date (the START of it), while a daily bar is stamped
   // later in the day (e.g. GPW closes are stamped ~07:00 UTC) — using
@@ -59,16 +59,22 @@ async function fetchWithRetry(symbol: string, lookbackDays: number, budget: Fetc
   const from = daysAgo(lookbackDays);
 
   let lastError: unknown;
-  for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= retryAttempts; attempt++) {
     if (budget.attempts >= MAX_FETCH_ATTEMPTS_PER_RUN) {
-      throw new Error('fetch attempt budget exhausted for this run');
+      // Keep the provider's own error when this ticker already failed at
+      // least once, so the run summary shows the real cause.
+      throw new Error(
+        lastError === undefined
+          ? 'fetch attempt budget exhausted for this run'
+          : `fetch attempt budget exhausted for this run (last error: ${String(lastError)})`,
+      );
     }
     budget.attempts++;
     try {
       return await fetchDailyCloses(symbol, from, to);
     } catch (err) {
       lastError = err;
-      if (attempt < RETRY_ATTEMPTS) {
+      if (attempt < retryAttempts) {
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
       }
     }
@@ -121,7 +127,7 @@ export interface FetchPhaseResult {
 }
 
 export async function runFetchPhase(env: Env, types: string[] = ALL_INSTRUMENT_TYPES): Promise<FetchPhaseResult> {
-  let instruments;
+  let instruments: InstrumentRow[];
   try {
     instruments = await selectAlertInstruments(env.DB, types);
   } catch (err) {
@@ -129,16 +135,31 @@ export async function runFetchPhase(env: Env, types: string[] = ALL_INSTRUMENT_T
     return { tickers: [], loadError: String(err) };
   }
 
+  return refreshInstruments(env, instruments);
+}
+
+// Also used outside the cron (alert create/edit refreshes a stale ticker on
+// demand), where a single attempt keeps the user's request fast and
+// `fullWindow` fetches the whole 30 days: a ticker that was not refreshed for
+// weeks has a gap in its stored history that the short window would not fill.
+export async function refreshInstruments(
+  env: Env,
+  instruments: InstrumentRow[],
+  { retryAttempts = RETRY_ATTEMPTS, fullWindow = false }: { retryAttempts?: number; fullWindow?: boolean } = {},
+): Promise<FetchPhaseResult> {
   const tickers: CronRunSummary['tickers'] = [];
   const budget: FetchBudget = { attempts: 0 };
-  const stored = await loadStoredCloses(
-    env.DB,
-    instruments.filter((i) => i.rsi_eligible).map((i) => i.ticker),
-  );
+  const stored = fullWindow
+    ? new Map<string, Map<string, number>>()
+    : await loadStoredCloses(
+        env.DB,
+        instruments.filter((i) => i.rsi_eligible).map((i) => i.ticker),
+      );
 
   const priceRows: PriceHistoryRow[] = [];
   const marketRows: MarketDataUpsertRow[] = [];
   const corrections: D1PreparedStatement[] = [];
+  const correctionLogs: string[] = [];
   const pending: string[] = [];
 
   for (const { ticker, rsi_eligible, suffix, currency } of instruments) {
@@ -147,11 +168,11 @@ export async function runFetchPhase(env: Env, types: string[] = ALL_INSTRUMENT_T
       // A ticker with too little stored history cannot seed RSI from a short
       // window, so it gets the long window once and fills its own history.
       const lookbackDays =
-        rsi_eligible && (storedCloses?.size ?? 0) < MIN_CLOSES_FOR_RSI ? LONG_LOOKBACK_DAYS : SHORT_LOOKBACK_DAYS;
+        fullWindow || (rsi_eligible && (storedCloses?.size ?? 0) < MIN_CLOSES_FOR_RSI) ? LONG_LOOKBACK_DAYS : SHORT_LOOKBACK_DAYS;
 
       // `ticker + suffix` is the Yahoo query symbol only — every DB write
       // below stays keyed on the bare `ticker` (see market-data.ts).
-      const { closes, currency: fetchedCurrency } = await fetchWithRetry(ticker + suffix, lookbackDays, budget);
+      const { closes, currency: fetchedCurrency } = await fetchWithRetry(ticker + suffix, lookbackDays, budget, retryAttempts);
       if (closes.length === 0) {
         // Unreachable in practice — the window always spans trading days —
         // but fetchDailyCloses's contract allows an empty result (see
@@ -177,7 +198,7 @@ export async function runFetchPhase(env: Env, types: string[] = ALL_INSTRUMENT_T
       const correction = buildCurrencyCorrection(env.DB, ticker, currency, fetchedCurrency);
       if (correction) {
         corrections.push(correction);
-        console.log(`market-data-pipeline: correcting currency for ${ticker}: ${currency} -> ${fetchedCurrency}`);
+        correctionLogs.push(`market-data-pipeline: corrected currency for ${ticker}: ${currency} -> ${fetchedCurrency}`);
       }
       pending.push(ticker);
     } catch (err) {
@@ -194,6 +215,7 @@ export async function runFetchPhase(env: Env, types: string[] = ALL_INSTRUMENT_T
   if (statements.length > 0) {
     try {
       await env.DB.batch(statements);
+      for (const message of correctionLogs) console.log(message);
       for (const ticker of pending) tickers.push({ ticker, status: 'ok' });
     } catch (err) {
       // D1 batches are transactional, so a failed write means none of the
