@@ -1,0 +1,102 @@
+:host {
+  display: block;
+  padding: 2rem;
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+}
+
+.welcome-card {
+  margin-bottom: 1.5rem;
+}
+
+h2 {
+  font: var(--mat-sys-title-medium);
+  margin: 0 0 1rem;
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.filter-picker {
+  flex: 1 1 24rem;
+}
+
+.clear-filters {
+  // Match the 56px outline form fields it sits next to.
+  height: 3.5rem;
+}
+
+.dashboard-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+table {
+  width: 100%;
+}
+
+th.numeric-cell,
+td.numeric-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+th.numeric-cell .sort-col {
+  margin-left: auto;
+}
+
+// Matches the alert list's accordion header color for visual consistency.
+tr.mat-mdc-header-row {
+  background-color: var(--mat-sys-secondary-container);
+}
+
+th.mat-mdc-header-cell {
+  color: var(--mat-sys-on-secondary-container);
+}
+
+.sort-col {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.sort-icon {
+  font-size: 1rem;
+  width: 1rem;
+  height: 1rem;
+}
+
+.instrument-name {
+  display: block;
+}
+
+.instrument-ticker {
+  display: block;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.empty-state {
+  padding: 1.5rem;
+  text-align: center;
+  opacity: 0.8;
+}
+
+.form-error {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background-color: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}

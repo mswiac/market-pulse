@@ -233,10 +233,10 @@ No schema change. Bookmarks to `/` that used to show alerts now show the Pulpit;
 
 #### Automated
 
-- [x] 1.1 Worker tests pass, including new latest-endpoint cases
-- [x] 1.2 Existing history endpoint tests still pass unchanged
-- [x] 1.3 Linting passes
-- [x] 1.4 Build passes
+- [x] 1.1 Worker tests pass, including new latest-endpoint cases — de289ed
+- [x] 1.2 Existing history endpoint tests still pass unchanged — de289ed
+- [x] 1.3 Linting passes — de289ed
+- [x] 1.4 Build passes — de289ed
 
 #### Manual
 
@@ -246,9 +246,9 @@ No schema change. Bookmarks to `/` that used to show alerts now show the Pulpit;
 
 #### Automated
 
-- [ ] 2.1 Component and filter-helper tests pass
-- [ ] 2.2 Linting passes
-- [ ] 2.3 Production build passes (translations valid)
+- [x] 2.1 Component and filter-helper tests pass
+- [x] 2.2 Linting passes
+- [x] 2.3 Production build passes (translations valid)
 
 #### Manual
 

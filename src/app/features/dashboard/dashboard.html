@@ -1,0 +1,139 @@
+<div class="dashboard-page">
+  <mat-card class="welcome-card">
+    <mat-card-header>
+      <mat-card-title i18n="@@dashboard.welcomeTitle">Welcome back</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      @if (user(); as currentUser) {
+        <p><span i18n="@@dashboard.loggedInAs">Logged in as:</span>&nbsp;<strong>{{ currentUser.email }}</strong>.</p>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <h2 i18n="@@dashboard.title">Dashboard</h2>
+
+  @if (loadError()) {
+    <p class="form-error" i18n="@@dashboard.loadError">Failed to load the dashboard. Please refresh the page and try again.</p>
+  } @else {
+    @if (rows().length > 0) {
+      <div class="filter-bar">
+        <app-instrument-picker class="filter-picker" [(ticker)]="filterTicker" [(type)]="filterType" />
+        @if (hasActiveFilters()) {
+          <button mat-stroked-button class="clear-filters" type="button" (click)="clearFilters()" i18n="@@dashboard.filter.clear">
+            Clear filters
+          </button>
+        }
+      </div>
+    }
+
+    <mat-card class="dashboard-card" appearance="outlined">
+      <table mat-table [dataSource]="sortedRows()">
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>
+            <button type="button" class="sort-col" (click)="toggleSort('name')">
+              <span i18n="@@dashboard.column.instrument">Instrument</span>
+              @if (sortBy() === 'name') {
+                <mat-icon class="sort-icon">{{ sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+              }
+            </button>
+          </th>
+          <td mat-cell *matCellDef="let row">
+            <span class="instrument-name">{{ row.name }}</span>
+            <span class="instrument-ticker">{{ row.ticker }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="date">
+          <th mat-header-cell *matHeaderCellDef>
+            <button type="button" class="sort-col" (click)="toggleSort('date')">
+              <span i18n="@@dashboard.column.date">Date</span>
+              @if (sortBy() === 'date') {
+                <mat-icon class="sort-icon">{{ sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+              }
+            </button>
+          </th>
+          <td mat-cell *matCellDef="let row">{{ row.date ?? '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="close">
+          <th mat-header-cell *matHeaderCellDef class="numeric-cell">
+            <button type="button" class="sort-col" (click)="toggleSort('close')">
+              <span i18n="@@dashboard.column.close">Close</span>
+              @if (sortBy() === 'close') {
+                <mat-icon class="sort-icon">{{ sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+              }
+            </button>
+          </th>
+          <td mat-cell *matCellDef="let row" class="numeric-cell">
+            @if (row.close !== null) {
+              {{ row.close | number: '1.2-2' }} {{ row.currency }}
+            } @else {
+              —
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="high">
+          <th mat-header-cell *matHeaderCellDef class="numeric-cell">
+            <button type="button" class="sort-col" (click)="toggleSort('high')">
+              <span i18n="@@dashboard.column.high">High</span>
+              @if (sortBy() === 'high') {
+                <mat-icon class="sort-icon">{{ sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+              }
+            </button>
+          </th>
+          <td mat-cell *matCellDef="let row" class="numeric-cell">
+            @if (row.high !== null) {
+              {{ row.high | number: '1.2-2' }} {{ row.currency }}
+            } @else {
+              —
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="low">
+          <th mat-header-cell *matHeaderCellDef class="numeric-cell">
+            <button type="button" class="sort-col" (click)="toggleSort('low')">
+              <span i18n="@@dashboard.column.low">Low</span>
+              @if (sortBy() === 'low') {
+                <mat-icon class="sort-icon">{{ sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+              }
+            </button>
+          </th>
+          <td mat-cell *matCellDef="let row" class="numeric-cell">
+            @if (row.low !== null) {
+              {{ row.low | number: '1.2-2' }} {{ row.currency }}
+            } @else {
+              —
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="rsi">
+          <th mat-header-cell *matHeaderCellDef class="numeric-cell">
+            <button type="button" class="sort-col" (click)="toggleSort('rsi')">
+              <span i18n="@@dashboard.column.rsi">RSI</span>
+              @if (sortBy() === 'rsi') {
+                <mat-icon class="sort-icon">{{ sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+              }
+            </button>
+          </th>
+          <td mat-cell *matCellDef="let row" class="numeric-cell">
+            {{ row.rsi !== null ? (row.rsi | number: '1.2-2') : '—' }}
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+
+      @if (sortedRows().length === 0) {
+        @if (rows().length > 0) {
+          <p class="empty-state" i18n="@@dashboard.noMatches">No instruments match the selected filters.</p>
+        } @else {
+          <p class="empty-state" i18n="@@dashboard.empty">No instruments in the system yet.</p>
+        }
+      }
+    </mat-card>
+  }
+</div>

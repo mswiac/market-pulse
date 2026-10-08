@@ -8,7 +8,8 @@ export const routes: Routes = [
     loadComponent: () => import('./core/shell/shell').then((m) => m.Shell),
     canActivate: [authGuard],
     children: [
-      { path: '', loadComponent: () => import('./features/home/home').then((m) => m.Home) },
+      { path: '', loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.Dashboard) },
+      { path: 'alerts', loadComponent: () => import('./features/home/home').then((m) => m.Home) },
       {
         path: 'history',
         loadComponent: () => import('./features/instrument-history/instrument-history').then((m) => m.InstrumentHistory),
