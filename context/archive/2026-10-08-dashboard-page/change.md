@@ -1,10 +1,10 @@
 ---
 change_id: dashboard-page
 title: Add Dashboard page with latest close of all instruments
-status: impl_reviewed
+status: archived
 created: 2026-10-08
 updated: 2026-10-08
-archived_at: null
+archived_at: 2026-10-08T17:35:05Z
 ---
 
 ## Notes
