@@ -240,7 +240,7 @@ No schema change. Bookmarks to `/` that used to show alerts now show the Pulpit;
 
 #### Manual
 
-- [ ] 1.5 Local `GET /api/instruments/latest` returns plausible latest values for the seeded instruments
+- [x] 1.5 Local `GET /api/instruments/latest` returns plausible latest values for the seeded instruments
 
 ### Phase 2: Dashboard page, routing and menu
 
@@ -252,19 +252,19 @@ No schema change. Bookmarks to `/` that used to show alerts now show the Pulpit;
 
 #### Manual
 
-- [ ] 2.4 Login lands on Pulpit; menu order and highlighting are correct
-- [ ] 2.5 Table rows match the newest row of Instrument history (incl. RSI)
-- [ ] 2.6 Filters, clear, no-match message and sorting behave as described
-- [ ] 2.7 `/alerts` shows alerts and the "Nowy alert" button; welcome card only on Pulpit
+- [x] 2.4 Login lands on Pulpit; menu order and highlighting are correct
+- [x] 2.5 Table rows match the newest row of Instrument history (incl. RSI)
+- [x] 2.6 Filters, clear, no-match message and sorting behave as described
+- [x] 2.7 `/alerts` shows alerts and the "Nowy alert" button; welcome card only on Pulpit
 
 ### Phase 3: E2E and documentation
 
 #### Automated
 
-- [x] 3.1 Full Playwright suite passes
-- [x] 3.2 Unit and worker tests still pass
-- [x] 3.3 Linting passes
+- [x] 3.1 Full Playwright suite passes — 1380b2f
+- [x] 3.2 Unit and worker tests still pass — 1380b2f
+- [x] 3.3 Linting passes — 1380b2f
 
 #### Manual
 
-- [ ] 3.4 README matches the real routes and pages
+- [x] 3.4 README matches the real routes and pages
