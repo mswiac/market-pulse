@@ -1,10 +1,10 @@
 ---
 change_id: alerts-ux-polish
 title: Fix instrument picker layout and add current value to alerts list
-status: impl_reviewed
+status: archived
 created: 2026-10-08
 updated: 2026-10-08
-archived_at: null
+archived_at: 2026-10-08T21:46:05Z
 ---
 
 ## Notes
