@@ -246,9 +246,9 @@ No schema change. Bookmarks to `/` that used to show alerts now show the Pulpit;
 
 #### Automated
 
-- [x] 2.1 Component and filter-helper tests pass
-- [x] 2.2 Linting passes
-- [x] 2.3 Production build passes (translations valid)
+- [x] 2.1 Component and filter-helper tests pass — 90d2d64
+- [x] 2.2 Linting passes — 90d2d64
+- [x] 2.3 Production build passes (translations valid) — 90d2d64
 
 #### Manual
 
@@ -261,9 +261,9 @@ No schema change. Bookmarks to `/` that used to show alerts now show the Pulpit;
 
 #### Automated
 
-- [ ] 3.1 Full Playwright suite passes
-- [ ] 3.2 Unit and worker tests still pass
-- [ ] 3.3 Linting passes
+- [x] 3.1 Full Playwright suite passes
+- [x] 3.2 Unit and worker tests still pass
+- [x] 3.3 Linting passes
 
 #### Manual
 

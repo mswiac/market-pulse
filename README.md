@@ -2,6 +2,12 @@
 
 MarketPulse is a stock market alert web app. Users set price- or RSI-based alerts and get an email notification when a threshold is crossed. The instrument registry ships seeded with the VIX and NASDAQ-100 indices, but an admin can add more instruments through the admin panel — US stocks and GPW-listed Polish stocks (fetched via a ticker + `.WA` suffix) are both supported. Market data for every registered instrument is fetched once a day from Yahoo Finance via a Cloudflare Cron Trigger, which also calculates RSI and evaluates every active alert.
 
+## Pages
+
+- **Dashboard** (`/`, the landing page after login) — one row per instrument from its latest close (date, close, high, low, RSI), filterable by type and instrument and sortable by column. Backed by `GET /api/instruments/latest`.
+- **Alerts** (`/alerts`) — the user's alerts with filters, and the "New alert" action.
+- **History** — triggered alerts (`/history/triggers`) and per-instrument price history (`/history`).
+
 ## Admin panel
 
 Users whose email is listed in `ADMIN_EMAILS` get an "Admin" section in the app. Access is enforced both client-side (`adminGuard`) and server-side (`adminMiddleware`), which re-derives admin status from the `users` table on every request rather than trusting anything the client claims. It exposes:

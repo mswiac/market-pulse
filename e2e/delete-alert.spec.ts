@@ -31,7 +31,7 @@ async function createPriceAlert(page: Page): Promise<{ thresholdText: RegExp; pa
   createdThresholds.add(threshold);
   const thresholdText = new RegExp(`NASDAQ-100.*${threshold.replace('.', '[.,]')}`);
 
-  await page.goto('/');
+  await page.goto('/alerts');
   await page.getByRole('button', { name: 'Nowy alert' }).click();
   await expect(page.getByRole('heading', { name: 'Nowy alert' })).toBeVisible();
 
