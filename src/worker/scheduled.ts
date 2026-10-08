@@ -1,6 +1,6 @@
 import type { Env } from './index';
 import { evaluateAlerts, type AlertEvaluationSummary } from './lib/alert-evaluation';
-import { ALL_INSTRUMENT_TYPES, selectAlertInstruments, type InstrumentRow } from './lib/instruments';
+import { ALL_INSTRUMENT_TYPES, MARKET_TYPES, selectAlertInstruments, selectInstruments, type InstrumentRow } from './lib/instruments';
 import { refreshInstruments, type FetchPhaseResult, type TickerResult } from './lib/market-refresh';
 
 export interface CronRunSummary {
@@ -10,10 +10,16 @@ export interface CronRunSummary {
   errors: string[];
 }
 
-export async function runFetchPhase(env: Env, types: string[] = ALL_INSTRUMENT_TYPES): Promise<FetchPhaseResult> {
+// `alerts` (cron) refreshes only instruments that have an alert; `all` (manual
+// admin refresh) refreshes the whole catalogue of the given types.
+export async function runFetchPhase(
+  env: Env,
+  types: string[] = ALL_INSTRUMENT_TYPES,
+  scope: 'alerts' | 'all' = 'alerts',
+): Promise<FetchPhaseResult> {
   let instruments: InstrumentRow[];
   try {
-    instruments = await selectAlertInstruments(env.DB, types);
+    instruments = scope === 'all' ? await selectInstruments(env.DB, types) : await selectAlertInstruments(env.DB, types);
   } catch (err) {
     console.error('market-data-pipeline: failed to load instruments registry', err);
     return { tickers: [], loadError: String(err) };
@@ -34,8 +40,8 @@ export const US_FETCH_CRON = '0 23 * * 1-5';
 export const EVALUATE_CRON = '15 23 * * 1-5';
 
 export const FETCH_CRON_TYPES: Record<string, string[]> = {
-  [PL_FETCH_CRON]: ['pl_stock'],
-  [US_FETCH_CRON]: ['us_stock', 'index'],
+  [PL_FETCH_CRON]: [...MARKET_TYPES.pl],
+  [US_FETCH_CRON]: [...MARKET_TYPES.other],
 };
 
 export async function handleCron(cron: string, env: Env): Promise<void> {
@@ -47,21 +53,4 @@ export async function handleCron(cron: string, env: Env): Promise<void> {
   } else {
     console.error(`scheduled: no handler for cron expression "${cron}"`);
   }
-}
-
-// Manual full run (admin "Force data refresh"): both phases back to back.
-export async function handleScheduled(env: Env): Promise<CronRunSummary> {
-  const { tickers, loadError } = await runFetchPhase(env);
-  if (loadError) {
-    return { tickers: [], alertsEvaluated: 0, emails: [], errors: [loadError] };
-  }
-
-  const alertSummary = await evaluateAlerts(env);
-
-  return {
-    tickers,
-    alertsEvaluated: alertSummary.alertsEvaluated,
-    emails: alertSummary.emails,
-    errors: alertSummary.errors,
-  };
 }

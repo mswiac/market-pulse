@@ -1125,10 +1125,13 @@ interface CronRunSummaryBody {
   errors: string[];
 }
 
-async function runCronRoute(cookie: string | null): Promise<Response> {
+async function runCronRoute(cookie: string | null, body?: unknown): Promise<Response> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (cookie) headers['Cookie'] = cookie;
   return exports.default.fetch(`${BASE_URL}/api/admin/cron/run`, {
     method: 'POST',
-    headers: cookie ? { Cookie: cookie } : {},
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
 }
 
@@ -1151,6 +1154,12 @@ function stubFetchForCronRun(options: { failTicker?: string; resendFails?: boole
   );
 }
 
+async function insertPolishInstrument(): Promise<void> {
+  await env.DB.prepare(
+    "INSERT INTO instruments (ticker, name, type, rsi_eligible, provider, currency, suffix) VALUES ('CRONPL', 'Cron PL', 'pl_stock', 0, 'yahoo', 'PLN', '.WA')",
+  ).run();
+}
+
 describe('POST /api/admin/cron/run', () => {
   beforeEach(async () => {
     // Default instruments (^VIX, ^NDX) always exist — clear what the
@@ -1166,60 +1175,117 @@ describe('POST /api/admin/cron/run', () => {
   afterEach(async () => {
     vi.unstubAllGlobals();
     await env.DB.prepare("DELETE FROM users WHERE email LIKE 'cron-run-%'").run();
+    await env.DB.prepare("DELETE FROM instruments WHERE ticker = 'CRONPL'").run();
   });
 
   it('returns 401 with no session', async () => {
-    const response = await runCronRoute(null);
+    const response = await runCronRoute(null, { phase: 'evaluate' });
     expect(response.status).toBe(401);
   });
 
   it('returns 403 with code forbidden for a logged-in non-admin', async () => {
     const cookie = await registerAndLogIn('cron-run-not-admin@example.com');
 
-    const response = await runCronRoute(cookie);
+    const response = await runCronRoute(cookie, { phase: 'evaluate' });
 
     expect(response.status).toBe(403);
     const json = (await response.json()) as { code: string };
     expect(json.code).toBe('forbidden');
   });
 
-  it('returns 200 with a well-formed summary and no fired emails when nothing crosses', async () => {
+  it.each([
+    ['no body', undefined],
+    ['an unknown phase', { phase: 'everything' }],
+    ['no phase', { market: 'pl' }],
+  ])('returns 400 with code invalid_phase for %s', async (_label, body) => {
+    const cookie = await logInAsAdmin();
+
+    const response = await runCronRoute(cookie, body);
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('invalid_phase');
+  });
+
+  it.each([
+    ['a missing market', { phase: 'fetch' }],
+    ['an unknown market', { phase: 'fetch', market: 'asia' }],
+    ['an inherited object key as market', { phase: 'fetch', market: 'toString' }],
+  ])('returns 400 with code invalid_market for a fetch with %s', async (_label, body) => {
+    const cookie = await logInAsAdmin();
+
+    const response = await runCronRoute(cookie, body);
+
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { code: string };
+    expect(json.code).toBe('invalid_market');
+  });
+
+  it('fetches every instrument of the "other" market without needing an alert, and leaves pl_stock alone', async () => {
     stubFetchForCronRun();
     const cookie = await logInAsAdmin();
-    // The cron only fetches instruments that have an alert.
-    const adminId = await getUserId(ADMIN_EMAIL);
-    await insertAlert('^VIX', adminId);
-    await insertAlert('^NDX', adminId);
+    await insertPolishInstrument();
 
-    const response = await runCronRoute(cookie);
+    const response = await runCronRoute(cookie, { phase: 'fetch', market: 'other' });
 
     expect(response.status).toBe(200);
     const json = (await response.json()) as CronRunSummaryBody;
     expect(json.errors).toEqual([]);
+    expect(json.alertsEvaluated).toBe(0);
     expect(json.emails).toEqual([]);
+    expect(json.tickers).toHaveLength(2);
     expect(json.tickers).toEqual(
       expect.arrayContaining([
         { ticker: '^VIX', status: 'ok' },
         { ticker: '^NDX', status: 'ok' },
       ]),
     );
+    const stored = await env.DB.prepare('SELECT ticker FROM market_data').all<{ ticker: string }>();
+    expect(stored.results.map((r) => r.ticker).sort()).toEqual(['^NDX', '^VIX']);
+  });
+
+  it('fetches only pl_stock instruments for the "pl" market', async () => {
+    stubFetchForCronRun();
+    const cookie = await logInAsAdmin();
+    await insertPolishInstrument();
+
+    const response = await runCronRoute(cookie, { phase: 'fetch', market: 'pl' });
+
+    expect(response.status).toBe(200);
+    const json = (await response.json()) as CronRunSummaryBody;
+    expect(json.tickers).toEqual([{ ticker: 'CRONPL', status: 'ok' }]);
   });
 
   it('returns 207 when a ticker fetch fails, with that ticker marked error', async () => {
     stubFetchForCronRun({ failTicker: '^VIX' });
     const cookie = await logInAsAdmin();
-    const adminId = await getUserId(ADMIN_EMAIL);
-    await insertAlert('^VIX', adminId);
-    await insertAlert('^NDX', adminId);
 
-    const response = await runCronRoute(cookie);
+    const response = await runCronRoute(cookie, { phase: 'fetch', market: 'other' });
 
     expect(response.status).toBe(207);
     const json = (await response.json()) as CronRunSummaryBody;
-    const vixResult = json.tickers.find((t) => t.ticker === '^VIX');
-    expect(vixResult?.status).toBe('error');
-    const ndxResult = json.tickers.find((t) => t.ticker === '^NDX');
-    expect(ndxResult?.status).toBe('ok');
+    expect(json.tickers.find((t) => t.ticker === '^VIX')?.status).toBe('error');
+    expect(json.tickers.find((t) => t.ticker === '^NDX')?.status).toBe('ok');
+  });
+
+  it('evaluates alerts without fetching anything and reports no tickers', async () => {
+    stubFetchForCronRun();
+    const cookie = await logInAsAdmin();
+    const adminId = await getUserId(ADMIN_EMAIL);
+    await insertAlert('^VIX', adminId);
+    await runCronRoute(cookie, { phase: 'fetch', market: 'other' });
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockClear();
+
+    const response = await runCronRoute(cookie, { phase: 'evaluate' });
+
+    expect(response.status).toBe(200);
+    const json = (await response.json()) as CronRunSummaryBody;
+    expect(json.tickers).toEqual([]);
+    expect(json.alertsEvaluated).toBe(1);
+    expect(json.emails).toEqual([]);
+    expect(json.errors).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('fires an email for a crossing alert and records a trigger_events row', async () => {
@@ -1232,8 +1298,9 @@ describe('POST /api/admin/cron/run', () => {
       .bind(adminId, CRON_RUN_VERIFIED_EMAIL)
       .run();
     const alertId = insertResult.meta.last_row_id as number;
+    await runCronRoute(cookie, { phase: 'fetch', market: 'other' });
 
-    const response = await runCronRoute(cookie);
+    const response = await runCronRoute(cookie, { phase: 'evaluate' });
 
     expect(response.status).toBe(200);
     const json = (await response.json()) as CronRunSummaryBody;
@@ -1253,8 +1320,9 @@ describe('POST /api/admin/cron/run', () => {
       .bind(adminId, CRON_RUN_VERIFIED_EMAIL)
       .run();
     const alertId = insertResult.meta.last_row_id as number;
+    await runCronRoute(cookie, { phase: 'fetch', market: 'other' });
 
-    const response = await runCronRoute(cookie);
+    const response = await runCronRoute(cookie, { phase: 'evaluate' });
 
     expect(response.status).toBe(207);
     const json = (await response.json()) as CronRunSummaryBody;

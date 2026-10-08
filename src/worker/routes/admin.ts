@@ -3,7 +3,9 @@ import type { Env } from '../index';
 import { adminMiddleware } from '../lib/admin';
 import { MarketDataFetchError, buildCurrencyCorrection, fetchDailyCloses, upsertPriceHistory } from '../lib/market-data';
 import { sessionMiddleware } from '../lib/session';
-import { handleScheduled } from '../scheduled';
+import { evaluateAlerts } from '../lib/alert-evaluation';
+import { MARKET_TYPES, type Market } from '../lib/instruments';
+import { runFetchPhase, type CronRunSummary } from '../scheduled';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_RANGE_DAYS = 730;
@@ -100,14 +102,39 @@ adminRoutes.post('/market-data', async (c) => {
   return c.json({ ticker, from: fromIso, to: toIso, daysWritten: closes.length }, 200);
 });
 
-// Manually re-runs the full daily pipeline (fetch closes -> RSI -> evaluate
-// alerts -> send emails) on demand — see GitHub issue #150. This sends real
-// Resend emails and mutates real alert state if any threshold is crossed,
-// which is why it stays behind adminMiddleware like every other route here.
+// Manual "Force data refresh" (GitHub issue #150, split per phase by #170).
+// The page drives one fetch request per market and then one evaluation
+// request, each with its own subrequest budget. Evaluation sends real Resend
+// emails and mutates real alert state if a threshold is crossed, which is why
+// the route stays behind adminMiddleware like every other route here. A single
+// evaluation request is also what keeps two requests from mailing the same
+// armed alert twice.
 adminRoutes.post('/cron/run', async (c) => {
-  let summary;
+  let body: { phase?: unknown; market?: unknown } | null;
   try {
-    summary = await handleScheduled(c.env);
+    body = (await c.req.json()) as { phase?: unknown; market?: unknown } | null;
+  } catch {
+    body = null;
+  }
+
+  const phase = body?.phase;
+  if (phase !== 'fetch' && phase !== 'evaluate') {
+    return c.json({ error: 'phase must be "fetch" or "evaluate"', code: 'invalid_phase' }, 400);
+  }
+
+  let summary: CronRunSummary;
+  try {
+    if (phase === 'fetch') {
+      const market = body?.market;
+      if (typeof market !== 'string' || !Object.hasOwn(MARKET_TYPES, market)) {
+        return c.json({ error: 'market must be "pl" or "other"', code: 'invalid_market' }, 400);
+      }
+      const { tickers, loadError } = await runFetchPhase(c.env, [...MARKET_TYPES[market as Market]], 'all');
+      summary = { tickers, alertsEvaluated: 0, emails: [], errors: loadError ? [loadError] : [] };
+    } else {
+      const { alertsEvaluated, emails, errors } = await evaluateAlerts(c.env);
+      summary = { tickers: [], alertsEvaluated, emails, errors };
+    }
   } catch {
     return c.json({ error: 'cron run failed', code: 'cron_run_failed' }, 500);
   }

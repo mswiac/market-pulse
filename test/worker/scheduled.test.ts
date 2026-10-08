@@ -8,11 +8,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // structured-cloneable across the exports RPC boundary. Do not "fix" this
 // back to the exports.default pattern.
 import worker from '../../src/worker/index';
-// The exported `scheduled` handler discards handleScheduled's return value
-// (see src/worker/index.ts) — the summary tests below call handleScheduled
+// The exported `scheduled` handler discards runFetchPhase's return value
+// (see src/worker/index.ts) — the result tests below call runFetchPhase
 // directly instead of going through worker.scheduled(...).
 import { refreshInstruments } from '../../src/worker/lib/market-refresh';
-import { EVALUATE_CRON, handleCron, handleScheduled, PL_FETCH_CRON, US_FETCH_CRON } from '../../src/worker/scheduled';
+import { EVALUATE_CRON, handleCron, PL_FETCH_CRON, runFetchPhase, US_FETCH_CRON } from '../../src/worker/scheduled';
 import { calculateRSI } from '../../src/worker/lib/rsi';
 import wranglerToml from '../../wrangler.toml?raw';
 
@@ -365,7 +365,25 @@ describe('scheduled handler', () => {
   });
 });
 
-describe('handleScheduled summary', () => {
+describe('runFetchPhase result', () => {
+  it('fetches instruments without an alert only in the all scope', async () => {
+    await env.DB.prepare("INSERT INTO instruments (ticker, name, type, rsi_eligible, provider) VALUES ('NOALERT', 'No alert', 'us_stock', 0, 'yahoo')").run();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES)))),
+    );
+
+    try {
+      const alertScoped = await runFetchPhase(env, ['us_stock', 'index']);
+      expect(alertScoped.tickers.map((t) => t.ticker)).not.toContain('NOALERT');
+
+      const everything = await runFetchPhase(env, ['us_stock', 'index'], 'all');
+      expect(everything.tickers.map((t) => t.ticker)).toEqual(expect.arrayContaining(['NOALERT', '^VIX', '^NDX']));
+    } finally {
+      await env.DB.prepare("DELETE FROM instruments WHERE ticker = 'NOALERT'").run();
+    }
+  });
+
   it('marks every ticker ok and reports no errors when the whole run succeeds', async () => {
     vi.stubGlobal(
       'fetch',
@@ -376,9 +394,9 @@ describe('handleScheduled summary', () => {
         ),
     );
 
-    const summary = await handleScheduled(env);
+    const summary = await runFetchPhase(env);
 
-    expect(summary.errors).toEqual([]);
+    expect(summary.loadError).toBeNull();
     expect(summary.tickers).toEqual(
       expect.arrayContaining([
         { ticker: '^VIX', status: 'ok' },
@@ -386,8 +404,6 @@ describe('handleScheduled summary', () => {
       ]),
     );
     expect(summary.tickers).toHaveLength(2);
-    expect(typeof summary.alertsEvaluated).toBe('number');
-    expect(summary.emails).toEqual([]);
   });
 
   it('marks a failing ticker as status error with a message, without affecting the other ticker', async () => {
@@ -401,7 +417,7 @@ describe('handleScheduled summary', () => {
       }),
     );
 
-    const summary = await handleScheduled(env);
+    const summary = await runFetchPhase(env);
 
     const vixResult = summary.tickers.find((t) => t.ticker === '^VIX');
     expect(vixResult?.status).toBe('error');
@@ -410,16 +426,14 @@ describe('handleScheduled summary', () => {
     expect(ndxResult?.status).toBe('ok');
   });
 
-  it('returns zero tickers and a populated errors array when the instruments registry query fails', async () => {
+  it('returns zero tickers and a loadError when the instruments registry query fails', async () => {
     await env.DB.exec('DROP TABLE instruments');
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     try {
-      const summary = await handleScheduled(env);
+      const summary = await runFetchPhase(env);
       expect(summary.tickers).toEqual([]);
-      expect(summary.alertsEvaluated).toBe(0);
-      expect(summary.emails).toEqual([]);
-      expect(summary.errors).toHaveLength(1);
+      expect(typeof summary.loadError).toBe('string');
     } finally {
       consoleErrorSpy.mockRestore();
       // Same restore snippet as the "logs and returns" test above — this
@@ -545,7 +559,7 @@ describe('alert-scoped, history-backed fetch phase', () => {
     const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(500, {})));
     vi.stubGlobal('fetch', fetchMock);
 
-    const summary = await handleScheduled(env);
+    const summary = await runFetchPhase(env);
 
     expect(fetchMock).toHaveBeenCalledTimes(40);
     expect(summary.tickers).toHaveLength(17);
@@ -566,7 +580,7 @@ describe('fetch phase failure handling', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     try {
-      const summary = await handleScheduled(env);
+      const summary = await runFetchPhase(env);
 
       expect(summary.tickers).toHaveLength(2);
       for (const result of summary.tickers) {
@@ -602,7 +616,7 @@ describe('fetch phase failure handling', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     try {
-      await handleScheduled(env);
+      await runFetchPhase(env);
 
       const ndxCall = fetchMock.mock.calls.find((call) => (call[0] as string).includes(encodeURIComponent('^NDX')));
       const url = new URL(ndxCall?.[0] as string);
@@ -637,11 +651,11 @@ describe('currency correction logging', () => {
     const batchSpy = vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('batch boom'));
 
     try {
-      await handleScheduled(env);
+      await runFetchPhase(env);
       expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('corrected currency'));
 
       batchSpy.mockRestore();
-      await handleScheduled(env);
+      await runFetchPhase(env);
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('corrected currency for TEST: USD -> PLN'));
     } finally {
       batchSpy.mockRestore();
@@ -741,25 +755,5 @@ describe('cron routing', () => {
     } finally {
       errorSpy.mockRestore();
     }
-  });
-
-  it('runs both phases, fetch first, for the manual full run', async () => {
-    const order: string[] = [];
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockImplementation((url: string) => {
-        order.push(url.includes('api.resend.com') ? 'resend' : 'yahoo');
-        return Promise.resolve(
-          url.includes('api.resend.com') ? jsonResponse(200, { data: [] }) : jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES)),
-        );
-      }),
-    );
-    // Rising closes end at 114; an alert with threshold 100 fires once the fetch has written market_data.
-    await env.DB.prepare("UPDATE alerts SET threshold = 100 WHERE ticker = '^NDX'").run();
-
-    const summary = await handleScheduled(env);
-
-    expect(order.indexOf('yahoo')).toBeLessThan(order.indexOf('resend'));
-    expect(summary.emails).toEqual([expect.objectContaining({ ticker: '^NDX', status: 'sent' })]);
   });
 });
