@@ -148,8 +148,8 @@ Show the current RSI or price at a glance in the collapsed row.
 
 #### Automated
 
-- [x] 1.1 Angular tests pass (npm run test:ci)
-- [x] 1.2 Production build passes (npm run build)
+- [x] 1.1 Angular tests pass (npm run test:ci) — 6ef67d5
+- [x] 1.2 Production build passes (npm run build) — 6ef67d5
 
 #### Manual
 
@@ -160,8 +160,8 @@ Show the current RSI or price at a glance in the collapsed row.
 
 #### Automated
 
-- [ ] 2.1 Angular tests pass (npm run test:ci)
-- [ ] 2.2 Production build with strict i18n passes (npm run build)
+- [x] 2.1 Angular tests pass (npm run test:ci)
+- [x] 2.2 Production build with strict i18n passes (npm run build)
 
 #### Manual
 

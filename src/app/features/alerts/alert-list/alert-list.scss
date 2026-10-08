@@ -52,7 +52,7 @@ mat-expansion-panel-header {
 
 .list-header {
   display: grid;
-  grid-template-columns: 36rem 9.5rem 1fr;
+  grid-template-columns: 36rem 9.5rem 9rem 1fr;
   column-gap: 1.5rem;
   padding: 0.5rem 1.5rem;
   margin-bottom: 0.5rem;
@@ -89,7 +89,7 @@ button.sort-col:hover {
 
 .alert-summary {
   display: grid;
-  grid-template-columns: 36rem 9.5rem 1fr;
+  grid-template-columns: 36rem 9.5rem 9rem 1fr;
   column-gap: 1.5rem;
   row-gap: 0.25rem;
   width: 100%;

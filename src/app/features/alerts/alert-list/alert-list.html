@@ -39,6 +39,7 @@
           <mat-icon class="sort-icon">{{ sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
         }
       </button>
+      <span i18n="@@alertList.header.currentValue">Current value</span>
     </div>
   }
 
@@ -50,6 +51,19 @@
             <span>{{ alert.instrumentName }}</span>
             <span>{{ alertTypeLabel(alert.alertType) }}</span>
             <span>{{ alert.threshold | number: '1.2-2' }} @if (!showCurrentRsi(alert.alertType)) { {{ alert.currency }} }</span>
+            <span>
+              @if (showCurrentRsi(alert.alertType)) {
+                @if (alert.currentRsi !== null) {
+                  {{ alert.currentRsi | number: '1.2-2' }}
+                } @else {
+                  —
+                }
+              } @else if (alert.currentPrice !== null) {
+                {{ alert.currentPrice | number: '1.2-2' }} {{ alert.currency }}
+              } @else {
+                —
+              }
+            </span>
           </mat-panel-title>
         </mat-expansion-panel-header>
 
