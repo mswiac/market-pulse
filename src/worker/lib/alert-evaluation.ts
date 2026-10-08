@@ -1,8 +1,17 @@
 import type { Env } from '../index';
-import { sendAlertEmail } from './resend';
+import { chunk } from './market-data';
+import { sendAlertEmailBatch, type SendEmailInput } from './resend';
 
 const PRICE_RE_ARM_MARGIN_FRACTION = 0.1;
 const RSI_RE_ARM_MARGIN_POINTS = 10;
+// Market data older than this is not evaluated. Evaluation runs in its own
+// cron invocation with no ordering guarantee against the fetch, so a failed
+// or late fetch must not make yesterday's quote fire (or re-arm) an alert.
+const STALE_AFTER_SECONDS = 12 * 60 * 60;
+// trigger_events rows bind 12 values each; 8 rows stay under D1's
+// 100-parameter statement cap. Id lists bind one value per id.
+const TRIGGER_EVENT_ROWS_PER_STATEMENT = 8;
+const IDS_PER_UPDATE_STATEMENT = 90;
 
 interface AlertEvalRow {
   id: number;
@@ -19,6 +28,11 @@ interface AlertEvalRow {
   rsi: number | null;
   high: number | null;
   low: number | null;
+}
+
+// updated_at is evaluation-only (freshness check), not part of what buildEmail reads.
+interface LoadedAlertRow extends AlertEvalRow {
+  updated_at: number;
 }
 
 const ALERT_TYPE_LABELS: Record<string, string> = {
@@ -102,16 +116,28 @@ export interface AlertEvaluationSummary {
   errors: string[];
 }
 
+interface PendingSend {
+  alert: AlertEvalRow;
+  value: number;
+  input: SendEmailInput;
+}
+
+function updateByIds(db: D1Database, armed: 0 | 1, ids: number[]): D1PreparedStatement[] {
+  return chunk(ids, IDS_PER_UPDATE_STATEMENT).map((group) =>
+    db.prepare(`UPDATE alerts SET armed = ${armed} WHERE id IN (${group.map(() => '?').join(', ')})`).bind(...group),
+  );
+}
+
 export async function evaluateAlerts(env: Env): Promise<AlertEvaluationSummary> {
-  let alerts: AlertEvalRow[];
+  let alerts: LoadedAlertRow[];
   try {
     const { results } = await env.DB.prepare(
       `SELECT a.id, a.user_id, a.ticker, a.alert_type, a.threshold, a.direction, a.armed, a.notification_email,
-              i.name AS instrumentName, i.currency, m.price, m.rsi, m.high, m.low
+              i.name AS instrumentName, i.currency, m.price, m.rsi, m.high, m.low, m.updated_at
        FROM alerts a
        JOIN instruments i ON i.ticker = a.ticker
        JOIN market_data m ON m.ticker = a.ticker`,
-    ).all<AlertEvalRow>();
+    ).all<LoadedAlertRow>();
     alerts = results;
   } catch (err) {
     console.error('alert-notifications: failed to load alerts for evaluation', err);
@@ -120,13 +146,19 @@ export async function evaluateAlerts(env: Env): Promise<AlertEvaluationSummary> 
 
   const emails: AlertEvaluationSummary['emails'] = [];
   const errors: string[] = [];
+  const pendingSends: PendingSend[] = [];
+  const rearmIds: number[] = [];
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const staleAges = new Map<string, number>();
 
   for (const alert of alerts) {
-    // Set right before the sendAlertEmail call below — the catch block uses
-    // this to tell an email-send failure apart from an exception in the
-    // not-armed/re-arm branch, which never touched sendAlertEmail at all.
-    let reachedSend = false;
     try {
+      const ageSeconds = nowSeconds - alert.updated_at;
+      if (ageSeconds > STALE_AFTER_SECONDS) {
+        staleAges.set(alert.ticker, ageSeconds);
+        continue;
+      }
+
       const value = alert.alert_type === 'RSI' ? alert.rsi : alert.price;
       if (value === null) continue;
 
@@ -141,58 +173,84 @@ export async function evaluateAlerts(env: Env): Promise<AlertEvaluationSummary> 
         if (firingValue === null || !conditionMet(alert.direction, firingValue, alert.threshold)) continue;
 
         const { subject, text } = buildEmail(alert, value);
-        reachedSend = true;
-        const sendResult = await sendAlertEmail(env, { to: alert.notification_email, subject, text });
-
-        // A transient send failure (network-level, not a permanent
-        // rejection like an unverified recipient) leaves the alert armed
-        // so tomorrow's cron run retries the notification naturally,
-        // instead of requiring a full re-arm-then-re-cross cycle.
-        const isTransientFailure = !sendResult.ok && sendResult.transient === true;
-
-        const statements = [
-          env.DB.prepare(
-            `INSERT INTO trigger_events
-               (user_id, alert_id, ticker, alert_type, direction, threshold, value_at_trigger, high_at_trigger, low_at_trigger, notification_email, email_status, email_error)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          ).bind(
-            alert.user_id,
-            alert.id,
-            alert.ticker,
-            alert.alert_type,
-            alert.direction,
-            alert.threshold,
-            value,
-            alert.alert_type === 'PRICE' ? alert.high : null,
-            alert.alert_type === 'PRICE' ? alert.low : null,
-            alert.notification_email,
-            sendResult.ok ? 'sent' : 'failed',
-            sendResult.ok ? null : sendResult.error,
-          ),
-        ];
-        if (!isTransientFailure) {
-          statements.push(env.DB.prepare('UPDATE alerts SET armed = 0 WHERE id = ?').bind(alert.id));
-        }
-        await env.DB.batch(statements);
-
-        emails.push(
-          sendResult.ok
-            ? { alertId: alert.id, ticker: alert.ticker, status: 'sent' }
-            : { alertId: alert.id, ticker: alert.ticker, status: 'failed', error: sendResult.error },
-        );
-      } else {
-        if (hasRetreatedPastMargin(alert.direction, value, alert.threshold, margin)) {
-          await env.DB.prepare('UPDATE alerts SET armed = 1 WHERE id = ?').bind(alert.id).run();
-        }
+        pendingSends.push({ alert, value, input: { to: alert.notification_email, subject, text } });
+      } else if (hasRetreatedPastMargin(alert.direction, value, alert.threshold, margin)) {
+        rearmIds.push(alert.id);
       }
     } catch (err) {
       console.error(`alert-notifications: failed to evaluate alert ${alert.id}`, err);
-      if (reachedSend) {
-        emails.push({ alertId: alert.id, ticker: alert.ticker, status: 'failed', error: String(err) });
-      } else {
-        errors.push(`alert ${alert.id}: ${String(err)}`);
-      }
+      errors.push(`alert ${alert.id}: ${String(err)}`);
     }
+  }
+
+  for (const [ticker, ageSeconds] of staleAges) {
+    console.warn(
+      `alert-notifications: skipping alerts for ${ticker}: market data is ${Math.round(ageSeconds / 3600)}h old (limit ${STALE_AFTER_SECONDS / 3600}h)`,
+    );
+  }
+
+  const sendResults = pendingSends.length > 0 ? await sendAlertEmailBatch(env, pendingSends.map((p) => p.input)) : [];
+
+  // A transient send failure (network-level, not a permanent rejection like
+  // an unverified recipient) leaves the alert armed so tomorrow's cron run
+  // retries the notification naturally, instead of requiring a full
+  // re-arm-then-re-cross cycle.
+  const disarmIds: number[] = [];
+  const eventRows = pendingSends.map(({ alert, value }, i) => {
+    const result = sendResults[i];
+    if (!(!result.ok && result.transient === true)) disarmIds.push(alert.id);
+    return [
+      alert.user_id,
+      alert.id,
+      alert.ticker,
+      alert.alert_type,
+      alert.direction,
+      alert.threshold,
+      value,
+      alert.alert_type === 'PRICE' ? alert.high : null,
+      alert.alert_type === 'PRICE' ? alert.low : null,
+      alert.notification_email,
+      result.ok ? 'sent' : 'failed',
+      result.ok ? null : result.error,
+    ];
+  });
+
+  const statements: D1PreparedStatement[] = [
+    ...chunk(eventRows, TRIGGER_EVENT_ROWS_PER_STATEMENT).map((group) =>
+      env.DB.prepare(
+        `INSERT INTO trigger_events
+           (user_id, alert_id, ticker, alert_type, direction, threshold, value_at_trigger, high_at_trigger, low_at_trigger, notification_email, email_status, email_error)
+         VALUES ${group.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ')}`,
+      ).bind(...group.flat()),
+    ),
+    ...updateByIds(env.DB, 0, disarmIds),
+    ...updateByIds(env.DB, 1, rearmIds),
+  ];
+
+  let writeError: unknown = null;
+  if (statements.length > 0) {
+    try {
+      await env.DB.batch(statements);
+    } catch (err) {
+      writeError = err;
+      console.error('alert-notifications: failed to write alert evaluation results', err);
+    }
+  }
+
+  pendingSends.forEach(({ alert }, i) => {
+    const result = sendResults[i];
+    if (writeError !== null) {
+      // The mail may already have gone out, but its record and the disarm
+      // did not land — report it as failed, as a single failed write always has.
+      emails.push({ alertId: alert.id, ticker: alert.ticker, status: 'failed', error: String(writeError) });
+    } else if (result.ok) {
+      emails.push({ alertId: alert.id, ticker: alert.ticker, status: 'sent' });
+    } else {
+      emails.push({ alertId: alert.id, ticker: alert.ticker, status: 'failed', error: result.error });
+    }
+  });
+  if (writeError !== null) {
+    for (const id of rearmIds) errors.push(`alert ${id}: ${String(writeError)}`);
   }
 
   return { alertsEvaluated: alerts.length, emails, errors };

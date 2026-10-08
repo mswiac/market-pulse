@@ -245,10 +245,10 @@ No schema change. Deploy order does not matter: the new evaluation trigger is ad
 
 #### Automated
 
-- [x] 1.1 Typecheck passes: `npm run typecheck`
-- [x] 1.2 Worker tests pass: `npm run test:worker`
-- [x] 1.3 Lint passes: `npm run lint`
-- [x] 1.4 Worker tests cover alert-scoped selection, RSI merge, thin-history fallback, chunking and attempt cap
+- [x] 1.1 Typecheck passes: `npm run typecheck` — aa8a064
+- [x] 1.2 Worker tests pass: `npm run test:worker` — aa8a064
+- [x] 1.3 Lint passes: `npm run lint` — aa8a064
+- [x] 1.4 Worker tests cover alert-scoped selection, RSI merge, thin-history fallback, chunking and attempt cap — aa8a064
 
 #### Manual
 
@@ -259,8 +259,8 @@ No schema change. Deploy order does not matter: the new evaluation trigger is ad
 
 #### Automated
 
-- [ ] 2.1 Typecheck, lint and `npm run test:worker` pass
-- [ ] 2.2 Tests cover single Resend request, unverified recipient, 5xx keeps alerts armed, single D1 batch, stale skip, 100-email chunking
+- [x] 2.1 Typecheck, lint and `npm run test:worker` pass
+- [x] 2.2 Tests cover single Resend request, unverified recipient, 5xx keeps alerts armed, single D1 batch, stale skip, 100-email chunking
 
 #### Manual
 
