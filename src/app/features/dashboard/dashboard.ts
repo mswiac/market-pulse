@@ -1,4 +1,4 @@
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -11,11 +11,21 @@ import { filterLatest } from './dashboard-filter';
 import { DashboardService, LatestInstrument } from './dashboard.service';
 
 type SortableColumn = 'name' | 'date' | 'close' | 'high' | 'low' | 'rsi';
+type MoneyColumn = 'close' | 'high' | 'low';
+
+const COLUMN_LABELS: Record<SortableColumn, string> = {
+  name: $localize`:@@dashboard.column.instrument:Instrument`,
+  date: $localize`:@@dashboard.column.date:Date`,
+  close: $localize`:@@dashboard.column.close:Close`,
+  high: $localize`:@@dashboard.column.high:High`,
+  low: $localize`:@@dashboard.column.low:Low`,
+  rsi: 'RSI',
+};
 type SortDirection = 'asc' | 'desc';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [InstrumentPicker, MatTableModule, MatCardModule, MatButtonModule, MatIconModule, DecimalPipe],
+  imports: [InstrumentPicker, MatTableModule, MatCardModule, MatButtonModule, MatIconModule, DecimalPipe, NgTemplateOutlet],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
@@ -25,9 +35,11 @@ export class Dashboard {
 
   protected readonly user = inject(AuthService).currentUser;
   protected readonly displayedColumns: SortableColumn[] = ['name', 'date', 'close', 'high', 'low', 'rsi'];
+  protected readonly moneyColumns: MoneyColumn[] = ['close', 'high', 'low'];
 
   protected readonly rows = signal<LatestInstrument[]>([]);
   protected readonly loadError = signal(false);
+  protected readonly loaded = signal(false);
 
   protected readonly filterType = signal('');
   protected readonly filterTicker = signal('');
@@ -56,7 +68,10 @@ export class Dashboard {
     // A catalogue load failure only leaves the picker without options; the table still works.
     this.instrumentsService.ensureLoaded().subscribe({ error: () => undefined });
     this.dashboardService.getLatest().subscribe({
-      next: (rows) => this.rows.set(rows),
+      next: (rows) => {
+        this.rows.set(rows);
+        this.loaded.set(true);
+      },
       error: () => this.loadError.set(true),
     });
   }
@@ -64,6 +79,15 @@ export class Dashboard {
   protected clearFilters(): void {
     this.filterType.set('');
     this.filterTicker.set('');
+  }
+
+  protected columnLabel(column: SortableColumn): string {
+    return COLUMN_LABELS[column];
+  }
+
+  protected ariaSort(column: SortableColumn): 'ascending' | 'descending' | 'none' {
+    if (this.sortBy() !== column) return 'none';
+    return this.sortDirection() === 'asc' ? 'ascending' : 'descending';
   }
 
   protected toggleSort(column: SortableColumn): void {

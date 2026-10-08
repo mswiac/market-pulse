@@ -32,20 +32,22 @@ instrumentsRoutes.get('/', async (c) => {
   return c.json(instruments, 200);
 });
 
-// Registered above `/:ticker/history`; the two never collide (different
-// segment counts) but the static route reads first.
 instrumentsRoutes.get('/latest', async (c) => {
   const { results: instruments } = await c.env.DB.prepare(
     'SELECT ticker, name, type, currency, rsi_eligible AS rsiEligible FROM instruments',
   ).all<{ ticker: string; name: string; type: string; currency: string; rsiEligible: number }>();
 
   // One query for every ticker (a per-instrument loop would burn the Workers
-  // Free subrequest budget): the newest LOOKBACK_DAYS rows per ticker.
+  // Free subrequest budget): the newest LOOKBACK_DAYS rows per ticker. The date
+  // floor (LOOKBACK_DAYS trading days fit well inside 70 calendar days) keeps the
+  // window function from scanning the whole table; an instrument whose last close
+  // is older than the floor shows no data.
   const { results: rows } = await c.env.DB.prepare(
     `SELECT ticker, date, close, high, low FROM (
        SELECT ticker, date, close, high, low,
               ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY date DESC) AS rn
        FROM price_history
+       WHERE date >= (SELECT date(MAX(date), '-70 days') FROM price_history)
      ) WHERE rn <= ?
      ORDER BY ticker, date DESC`,
   )

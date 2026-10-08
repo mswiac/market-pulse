@@ -29,7 +29,7 @@ test('dashboard: landing page lists instruments and filtering narrows the table'
 
 test('dashboard: the Alerty menu item opens the alerts page', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Alerty' }).click();
+  await page.getByRole('link', { name: 'Alerty', exact: true }).click();
 
   await page.waitForURL('**/alerts');
   await expect(page.getByRole('heading', { name: 'Twoje alerty' })).toBeVisible();

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/angular/zoneless';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { Instrument, InstrumentsService } from '../instruments/instruments.service';
 import { DashboardService, LatestInstrument } from './dashboard.service';
@@ -44,6 +44,7 @@ async function renderDashboard(getLatest = () => of(ROWS)) {
 // Data rows only (the header row has no instrument name).
 const dataRows = () => screen.getAllByRole('row').slice(1);
 const rowNames = () => dataRows().map((r) => r.textContent ?? '');
+const instrumentOrder = () => dataRows().map((r) => r.querySelector('.instrument-name')?.textContent?.trim());
 
 describe('Dashboard', () => {
   it('shows one row per instrument, alphabetical by name by default', async () => {
@@ -102,11 +103,11 @@ describe('Dashboard', () => {
     const { settle } = await renderDashboard();
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     await settle();
-    expect(rowNames().map((r) => r.slice(0, 3))).toEqual(['VIX', 'NAS', 'CD ']);
+    expect(instrumentOrder()).toEqual(['VIX', 'NASDAQ-100', 'CD Projekt']);
 
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     await settle();
-    expect(rowNames().map((r) => r.slice(0, 3))).toEqual(['NAS', 'VIX', 'CD ']);
+    expect(instrumentOrder()).toEqual(['NASDAQ-100', 'VIX', 'CD Projekt']);
   });
 
   it('shows an error message when loading fails', async () => {
@@ -118,5 +119,22 @@ describe('Dashboard', () => {
     await renderDashboard(() => of([]));
     expect(screen.getByText('No instruments in the system yet.')).toBeTruthy();
     expect(screen.queryByRole('combobox', { name: 'Instrument' })).toBeNull();
+  });
+
+  it('does not show the empty-catalogue message while the data is still loading', async () => {
+    await renderDashboard(() => new Subject<LatestInstrument[]>());
+    expect(screen.queryByText('No instruments in the system yet.')).toBeNull();
+  });
+
+  it('exposes the sort state on the column headers', async () => {
+    const { settle } = await renderDashboard();
+    const header = (name: string) => screen.getByRole('columnheader', { name });
+    expect(header('Instrument').getAttribute('aria-sort')).toBe('ascending');
+    expect(header('Close').getAttribute('aria-sort')).toBe('none');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    await settle();
+    expect(header('Close').getAttribute('aria-sort')).toBe('ascending');
+    expect(header('Instrument').getAttribute('aria-sort')).toBe('none');
   });
 });

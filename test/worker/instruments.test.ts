@@ -259,4 +259,14 @@ describe('latest instruments endpoint', () => {
     expect(typeof latest.rsi).toBe('number');
     expect({ date: latest.date, close: latest.close, high: latest.high, low: latest.low, rsi: latest.rsi }).toEqual(newest);
   });
+
+  it('shows no data for an instrument whose last close is older than the scan floor', async () => {
+    const cookie = await registerAndLogIn('latest-stale@example.com');
+    await seedPriceHistory('^NDX', [4000, 4010]);
+    await env.DB.prepare('INSERT INTO price_history (ticker, date, close) VALUES (?, ?, ?)').bind('^VIX', '2019-06-01', 20).run();
+
+    const body = (await (await getLatest(cookie)).json()) as Latest[];
+    expect(body.find((row) => row.ticker === '^NDX')!.close).toBe(4010);
+    expect(body.find((row) => row.ticker === '^VIX')).toMatchObject({ date: null, close: null });
+  });
 });
