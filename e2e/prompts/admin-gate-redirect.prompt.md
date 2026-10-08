@@ -24,7 +24,7 @@ UNauthenticated case (parent authGuard).
 Business scenario (one observable behavior that must stay true after this flow):
 A logged-in non-admin who navigates to /admin, /admin/add-instrument,
 /admin/remove-instrument, or /admin/remove-user ends up on / (the home shell,
-"Twoje alerty" heading) and the "Administrator" nav group is not rendered.
+"Pulpit" heading) and the "Administrator" nav group is not rendered.
 
 Real boundaries (do not mock — the risk hides here):
 storageState (a non-admin session), GET /api/me (isAdmin: false), adminGuard,

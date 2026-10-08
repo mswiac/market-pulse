@@ -192,3 +192,81 @@ describe('instrument history endpoint', () => {
     expect(body.history.slice(14).every((day) => typeof day.rsi === 'number')).toBe(true);
   });
 });
+
+describe('latest instruments endpoint', () => {
+  beforeEach(async () => {
+    await env.DB.prepare('DELETE FROM price_history').run();
+  });
+
+  async function getLatest(cookie?: string): Promise<Response> {
+    return exports.default.fetch(`${BASE_URL}/api/instruments/latest`, {
+      headers: cookie ? { Cookie: cookie } : {},
+    });
+  }
+
+  type Latest = {
+    ticker: string;
+    rsiEligible: boolean;
+    currency: string;
+    date: string | null;
+    close: number | null;
+    high: number | null;
+    low: number | null;
+    rsi: number | null;
+  };
+
+  it('rejects a request without a session cookie', async () => {
+    const response = await getLatest();
+    expect(response.status).toBe(401);
+  });
+
+  it('returns one row per instrument with the newest close, and nulls when there are no prices', async () => {
+    const cookie = await registerAndLogIn('latest-basic@example.com');
+    await seedPriceHistory('^NDX', [4000, 4010, 4020], [4005, 4015, 4025], [3995, 4005, 4015]);
+
+    const response = await getLatest(cookie);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as Latest[];
+
+    expect(body).toHaveLength(2);
+    const ndx = body.find((row) => row.ticker === '^NDX')!;
+    expect(ndx).toMatchObject({ date: '2020-01-03', close: 4020, high: 4025, low: 4015, currency: 'USD', rsiEligible: true });
+    expect(ndx.rsi).toBeNull(); // only 3 closes, RSI needs 15
+    const vix = body.find((row) => row.ticker === '^VIX')!;
+    expect(vix).toMatchObject({ date: null, close: null, high: null, low: null, rsi: null });
+  });
+
+  it('returns rsi null for an RSI-ineligible instrument even with plenty of history', async () => {
+    const cookie = await registerAndLogIn('latest-vix@example.com');
+    await seedPriceHistory('^VIX', Array.from({ length: 30 }, (_, i) => 20 + i));
+
+    const body = (await (await getLatest(cookie)).json()) as Latest[];
+    const vix = body.find((row) => row.ticker === '^VIX')!;
+    expect(vix.close).toBe(49);
+    expect(vix.rsi).toBeNull();
+  });
+
+  it('matches the newest entry of the history endpoint, including rsi', async () => {
+    const cookie = await registerAndLogIn('latest-parity@example.com');
+    await seedPriceHistory('^NDX', Array.from({ length: 60 }, (_, i) => 4000 + (i % 7) * 13 + i));
+
+    const latest = ((await (await getLatest(cookie)).json()) as Latest[]).find((row) => row.ticker === '^NDX')!;
+    const history = (await (await getHistory('^NDX', cookie)).json()) as {
+      history: { date: string; close: number; high: number | null; low: number | null; rsi: number | null }[];
+    };
+    const newest = history.history[history.history.length - 1];
+
+    expect(typeof latest.rsi).toBe('number');
+    expect({ date: latest.date, close: latest.close, high: latest.high, low: latest.low, rsi: latest.rsi }).toEqual(newest);
+  });
+
+  it('shows no data for an instrument whose last close is older than the scan floor', async () => {
+    const cookie = await registerAndLogIn('latest-stale@example.com');
+    await seedPriceHistory('^NDX', [4000, 4010]);
+    await env.DB.prepare('INSERT INTO price_history (ticker, date, close) VALUES (?, ?, ?)').bind('^VIX', '2019-06-01', 20).run();
+
+    const body = (await (await getLatest(cookie)).json()) as Latest[];
+    expect(body.find((row) => row.ticker === '^NDX')!.close).toBe(4010);
+    expect(body.find((row) => row.ticker === '^VIX')).toMatchObject({ date: null, close: null });
+  });
+});

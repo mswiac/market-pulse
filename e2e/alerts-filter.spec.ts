@@ -61,7 +61,7 @@ test.describe('alerts list filtering (issue #159)', () => {
     const priceThreshold = randomThreshold(10, 89_000);
     const rsiThreshold = randomThreshold(1, 9_800);
 
-    await page.goto('/');
+    await page.goto('/alerts');
     await createNdxAlert(page, 'Cena', priceThreshold);
     await createNdxAlert(page, 'RSI', rsiThreshold);
 

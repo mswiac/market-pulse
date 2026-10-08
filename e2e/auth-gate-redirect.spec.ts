@@ -25,7 +25,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const PROTECTED_ROUTES = ['/', '/history', '/admin'] as const;
+const PROTECTED_ROUTES = ['/', '/alerts', '/history', '/admin'] as const;
 
 test.describe('auth-gate redirect (test-plan.md §3 Phase 6 — client-side auth boundary)', () => {
   test.describe('logged-out browser is sent to /login by authGuard', () => {
@@ -61,7 +61,7 @@ test.describe('auth-gate redirect (test-plan.md §3 Phase 6 — client-side auth
     const alertsLoaded = page.waitForResponse(
       (r) => r.url().includes('/api/alerts') && r.request().method() === 'GET',
     );
-    await page.goto('/');
+    await page.goto('/alerts');
     await alertsLoaded;
     await expect(page.getByRole('heading', { name: 'Twoje alerty' })).toBeVisible();
 
@@ -76,7 +76,7 @@ test.describe('auth-gate redirect (test-plan.md §3 Phase 6 — client-side auth
 
     // Navigating in-app to the triggered-alerts page fires GET /api/trigger-events;
     // it 401s → session-expired.interceptor → navigateByUrl('/login').
-    // The History group starts collapsed on `/`; one click expands it.
+    // The History group starts collapsed on `/alerts`; one click expands it.
     const historyToggle = page.getByRole('button', { name: 'Historia' });
     await expect(historyToggle).toHaveAttribute('aria-expanded', 'false');
     await historyToggle.click();

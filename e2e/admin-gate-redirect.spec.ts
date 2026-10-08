@@ -37,7 +37,7 @@ test.describe('admin-gate redirect (test-plan.md §3 Phase 6 — Risk #6, admin 
       // adminGuard -> createUrlTree(['/']): we land on the home shell, not the
       // admin panel.
       await page.waitForURL('/');
-      await expect(page.getByRole('heading', { name: 'Twoje alerty' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Pulpit' })).toBeVisible();
 
       // The admin nav group must not render for a non-admin.
       await expect(page.getByRole('button', { name: 'Administrator' })).toBeHidden();

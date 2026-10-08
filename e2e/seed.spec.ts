@@ -29,7 +29,7 @@ test('alert created through the form persists after a page reload', async ({ pag
   const threshold = ((Date.now() % 90_000) / 100 + 10).toFixed(2);
   const thresholdText = new RegExp(`NASDAQ-100.*${threshold.replace('.', '[.,]')}`);
 
-  await page.goto('/');
+  await page.goto('/alerts');
 
   // --- Create the alert -----------------------------------------------------
   await page.getByRole('button', { name: 'Nowy alert' }).click();

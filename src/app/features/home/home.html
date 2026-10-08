@@ -1,15 +1,4 @@
 <div class="home-content">
-  <mat-card class="welcome-card">
-    <mat-card-header>
-      <mat-card-title i18n="@@home.welcomeTitle">Welcome back</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      @if (user(); as currentUser) {
-        <p><span i18n="@@home.loggedInAs">Logged in as:</span>&nbsp;<strong>{{ currentUser.email }}</strong>.</p>
-      }
-    </mat-card-content>
-  </mat-card>
-
   <section class="alerts-section">
     <h2 i18n="@@home.alertsSectionTitle">Your alerts</h2>
     <app-alert-list />

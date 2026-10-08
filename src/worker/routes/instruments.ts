@@ -2,17 +2,11 @@ import { Hono } from 'hono';
 import type { Env } from '../index';
 import type { InstrumentRow } from '../lib/instruments';
 import { sessionMiddleware } from '../lib/session';
-import { calculateRSISeries } from '../lib/rsi';
+import { buildHistory, LOOKBACK_DAYS, type PriceRow } from '../lib/price-history';
 
 type Variables = { userId: number };
 
 const instrumentsRoutes = new Hono<{ Bindings: Env; Variables: Variables }>();
-
-const HISTORY_DAYS = 30;
-const RSI_PERIOD = 14;
-// Extra days beyond the display window so the earliest displayed day can
-// still have an RSI value — RSI at any index needs `period` prior closes.
-const LOOKBACK_DAYS = HISTORY_DAYS + RSI_PERIOD;
 
 instrumentsRoutes.use('*', sessionMiddleware);
 
@@ -38,6 +32,55 @@ instrumentsRoutes.get('/', async (c) => {
   return c.json(instruments, 200);
 });
 
+instrumentsRoutes.get('/latest', async (c) => {
+  const { results: instruments } = await c.env.DB.prepare(
+    'SELECT ticker, name, type, currency, rsi_eligible AS rsiEligible FROM instruments',
+  ).all<{ ticker: string; name: string; type: string; currency: string; rsiEligible: number }>();
+
+  // One query for every ticker (a per-instrument loop would burn the Workers
+  // Free subrequest budget): the newest LOOKBACK_DAYS rows per ticker. The date
+  // floor (LOOKBACK_DAYS trading days fit well inside 70 calendar days) keeps the
+  // window function from scanning the whole table; an instrument whose last close
+  // is older than the floor shows no data.
+  const { results: rows } = await c.env.DB.prepare(
+    `SELECT ticker, date, close, high, low FROM (
+       SELECT ticker, date, close, high, low,
+              ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY date DESC) AS rn
+       FROM price_history
+       WHERE date >= (SELECT date(MAX(date), '-70 days') FROM price_history)
+     ) WHERE rn <= ?
+     ORDER BY ticker, date DESC`,
+  )
+    .bind(LOOKBACK_DAYS)
+    .all<PriceRow & { ticker: string }>();
+
+  const byTicker = new Map<string, PriceRow[]>();
+  for (const { ticker, ...row } of rows) {
+    const list = byTicker.get(ticker);
+    if (list) list.push(row);
+    else byTicker.set(ticker, [row]);
+  }
+
+  const latest = instruments.map((instrument) => {
+    const rsiEligible = !!instrument.rsiEligible;
+    const newest = buildHistory(byTicker.get(instrument.ticker) ?? [], rsiEligible).at(-1);
+    return {
+      ticker: instrument.ticker,
+      name: instrument.name,
+      type: instrument.type,
+      currency: instrument.currency,
+      rsiEligible,
+      date: newest?.date ?? null,
+      close: newest?.close ?? null,
+      high: newest?.high ?? null,
+      low: newest?.low ?? null,
+      rsi: newest?.rsi ?? null,
+    };
+  });
+
+  return c.json(latest, 200);
+});
+
 instrumentsRoutes.get('/:ticker/history', async (c) => {
   const ticker = c.req.param('ticker');
 
@@ -53,19 +96,10 @@ instrumentsRoutes.get('/:ticker/history', async (c) => {
     'SELECT date, close, high, low FROM price_history WHERE ticker = ? ORDER BY date DESC LIMIT ?',
   )
     .bind(ticker, LOOKBACK_DAYS)
-    .all<{ date: string; close: number; high: number | null; low: number | null }>();
+    .all<PriceRow>();
 
-  // Rows come back newest-first (for the LIMIT to keep the most recent days);
-  // RSI smoothing must run oldest-to-newest, so reverse before computing.
-  const chronological = [...results].reverse();
   const rsiEligible = !!instrument.rsi_eligible;
-  const rsiSeries = rsiEligible
-    ? calculateRSISeries(chronological.map((row) => row.close), RSI_PERIOD)
-    : chronological.map(() => null);
-
-  const history = chronological
-    .map((row, i) => ({ date: row.date, close: row.close, high: row.high, low: row.low, rsi: rsiSeries[i] }))
-    .slice(-HISTORY_DAYS);
+  const history = buildHistory(results, rsiEligible);
 
   return c.json({ ticker, rsiEligible, currency: instrument.currency, history }, 200);
 });

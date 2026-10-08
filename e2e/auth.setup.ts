@@ -28,7 +28,7 @@ setup('authenticate', async ({ page }) => {
 
   // Successful login navigates to '/' and renders the authenticated shell.
   await page.waitForURL('/');
-  await expect(page.getByRole('heading', { name: 'Twoje alerty' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pulpit' })).toBeVisible();
 
   await page.context().storageState({ path: authFile });
 });
