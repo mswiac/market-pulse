@@ -22,16 +22,26 @@ export async function runFetchPhase(env: Env, types: string[] = ALL_INSTRUMENT_T
   return refreshInstruments(env, instruments);
 }
 
-// Must match the `crons` entries in wrangler.toml. Evaluation runs a few
-// minutes after the fetch, in its own invocation with its own subrequest
-// budget; Cloudflare gives no ordering guarantee between the two, which is
-// why evaluateAlerts checks market_data freshness itself.
-export const FETCH_CRON = '0 23 * * 1-5';
+// Must match the `crons` entries in wrangler.toml. Each fetch trigger gets its
+// own subrequest budget and owns a set of instrument types. The UTC times are
+// fixed on purpose: each falls after the local market close in both DST
+// states (GPW closes 17:00 Warsaw time, US markets 16:00 ET), so no timezone
+// handling is needed. Evaluation runs once, a few minutes after the last
+// fetch, in its own invocation; Cloudflare gives no ordering guarantee between
+// invocations, which is why evaluateAlerts checks market_data freshness itself.
+export const PL_FETCH_CRON = '30 16 * * 1-5';
+export const US_FETCH_CRON = '0 23 * * 1-5';
 export const EVALUATE_CRON = '15 23 * * 1-5';
 
+export const FETCH_CRON_TYPES: Record<string, string[]> = {
+  [PL_FETCH_CRON]: ['pl_stock'],
+  [US_FETCH_CRON]: ['us_stock', 'index'],
+};
+
 export async function handleCron(cron: string, env: Env): Promise<void> {
-  if (cron === FETCH_CRON) {
-    await runFetchPhase(env);
+  const fetchTypes = FETCH_CRON_TYPES[cron];
+  if (fetchTypes) {
+    await runFetchPhase(env, fetchTypes);
   } else if (cron === EVALUATE_CRON) {
     await evaluateAlerts(env);
   } else {
