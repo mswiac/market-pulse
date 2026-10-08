@@ -125,10 +125,10 @@ No database migration. Cron Triggers can take up to 15 minutes to propagate afte
 
 #### Automated
 
-- [x] 1.1 Worker tests pass: `npm run test:worker`
-- [x] 1.2 Typecheck passes: `npm run typecheck`
-- [x] 1.3 GPW cron fetches only pl_stock, US cron only us_stock and index
-- [x] 1.4 Declared crons in wrangler.toml match the constants
+- [x] 1.1 Worker tests pass: `npm run test:worker` — 8385772
+- [x] 1.2 Typecheck passes: `npm run typecheck` — 8385772
+- [x] 1.3 GPW cron fetches only pl_stock, US cron only us_stock and index — 8385772
+- [x] 1.4 Declared crons in wrangler.toml match the constants — 8385772
 
 #### Manual
 

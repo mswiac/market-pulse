@@ -1,7 +1,7 @@
 ---
 change_id: per-market-cron-triggers
 title: Split market-data fetching into per-market cron triggers
-status: implementing
+status: implemented
 created: 2026-10-08
 updated: 2026-10-09
 archived_at: null
