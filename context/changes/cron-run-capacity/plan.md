@@ -259,8 +259,8 @@ No schema change. Deploy order does not matter: the new evaluation trigger is ad
 
 #### Automated
 
-- [x] 2.1 Typecheck, lint and `npm run test:worker` pass
-- [x] 2.2 Tests cover single Resend request, unverified recipient, 5xx keeps alerts armed, single D1 batch, stale skip, 100-email chunking
+- [x] 2.1 Typecheck, lint and `npm run test:worker` pass — 12de856
+- [x] 2.2 Tests cover single Resend request, unverified recipient, 5xx keeps alerts armed, single D1 batch, stale skip, 100-email chunking — 12de856
 
 #### Manual
 
@@ -270,9 +270,9 @@ No schema change. Deploy order does not matter: the new evaluation trigger is ad
 
 #### Automated
 
-- [ ] 3.1 Typecheck, lint and `npm run test:worker` pass
-- [ ] 3.2 Tests cover per-expression phase routing, unknown expression, and admin endpoint running both phases
-- [ ] 3.5 Production build with strict i18n passes: `npm run build`
+- [x] 3.1 Typecheck, lint and `npm run test:worker` pass
+- [x] 3.2 Tests cover per-expression phase routing, unknown expression, and admin endpoint running both phases
+- [x] 3.5 Production build with strict i18n passes: `npm run build`
 
 #### Manual
 

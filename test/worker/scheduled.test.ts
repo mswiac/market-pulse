@@ -11,7 +11,7 @@ import worker from '../../src/worker/index';
 // The exported `scheduled` handler discards handleScheduled's return value
 // (see src/worker/index.ts) — the summary tests below call handleScheduled
 // directly instead of going through worker.scheduled(...).
-import { handleScheduled } from '../../src/worker/scheduled';
+import { EVALUATE_CRON, FETCH_CRON, handleCron, handleScheduled } from '../../src/worker/scheduled';
 import { calculateRSI } from '../../src/worker/lib/rsi';
 
 function yahooBody(
@@ -55,7 +55,7 @@ const RISING_HIGHS = RISING_CLOSES.map((c) => c + 1);
 const RISING_LOWS = RISING_CLOSES.map((c) => c - 1);
 
 async function runScheduled(): Promise<void> {
-  const controller = createScheduledController();
+  const controller = createScheduledController({ cron: FETCH_CRON });
   const ctx = createExecutionContext();
   await worker.scheduled(controller, env, ctx);
   await waitOnExecutionContext(ctx);
@@ -545,5 +545,61 @@ describe('alert-scoped, history-backed fetch phase', () => {
     expect(summary.tickers).toHaveLength(17);
     expect(summary.tickers.every((t) => t.status === 'error')).toBe(true);
     expect(summary.tickers.some((t) => t.error?.includes('budget exhausted'))).toBe(true);
+  });
+});
+
+describe('cron routing', () => {
+  it('runs only the fetch phase for the fetch expression', async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await handleCron(FETCH_CRON, env);
+
+    expect(fetchMock.mock.calls.some((call) => (call[0] as string).includes('finance/chart'))).toBe(true);
+    expect(fetchMock.mock.calls.some((call) => (call[0] as string).includes('api.resend.com'))).toBe(false);
+  });
+
+  it('runs only the evaluation phase for the evaluation expression', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await handleCron(EVALUATE_CRON, env);
+
+    // No Yahoo fetch and nothing to email: evaluation alone never hits the network without a firing alert.
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('ignores and logs an unknown cron expression', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      await handleCron('* * * * *', env);
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('* * * * *'));
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('runs both phases, fetch first, for the manual full run', async () => {
+    const order: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) => {
+        order.push(url.includes('api.resend.com') ? 'resend' : 'yahoo');
+        return Promise.resolve(
+          url.includes('api.resend.com') ? jsonResponse(200, { data: [] }) : jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES)),
+        );
+      }),
+    );
+    // Rising closes end at 114; an alert with threshold 100 fires once the fetch has written market_data.
+    await env.DB.prepare("UPDATE alerts SET threshold = 100 WHERE ticker = '^NDX'").run();
+
+    const summary = await handleScheduled(env);
+
+    expect(order.indexOf('yahoo')).toBeLessThan(order.indexOf('resend'));
+    expect(summary.emails).toEqual([expect.objectContaining({ ticker: '^NDX', status: 'sent' })]);
   });
 });
