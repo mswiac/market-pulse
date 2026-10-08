@@ -140,6 +140,11 @@ Show the current RSI or price at a glance in the collapsed row.
 - `src/app/features/instruments/instrument-picker/instrument-picker.scss`
 - `src/app/features/alerts/alert-list/alert-list.html`
 
+## Review Addendum
+
+- **List grid (impl-review F1)**: manual testing showed the fixed `36rem` instrument column pushed the value under the expansion arrow. The final grid is `minmax(10rem, 1fr) 9.5rem 9rem 9.5rem` (one shared `--alert-grid-columns` variable) with extra right padding on the header for the arrow.
+- **Narrow screens (impl-review F3)**: originally out of scope; added at the user's request. Below 48rem the header becomes a plain sort bar (the non-sortable "Current value" label is hidden) and each row shows the instrument on its own line above the other cells.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles. See `references/progress-format.md`.
