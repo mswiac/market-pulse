@@ -153,18 +153,18 @@ Show the current RSI or price at a glance in the collapsed row.
 
 #### Manual
 
-- [ ] 1.3 Alert dialog shows the instrument under the type dropdown with the full ticker and name
-- [ ] 1.4 Other picker usages (filters, dashboard, history, admin) look unchanged
+- [x] 1.3 Alert dialog shows the instrument under the type dropdown with the full ticker and name
+- [x] 1.4 Other picker usages (filters, dashboard, history, admin) look unchanged
 
 ### Phase 2: Current value column in the alerts list
 
 #### Automated
 
-- [x] 2.1 Angular tests pass (npm run test:ci)
-- [x] 2.2 Production build with strict i18n passes (npm run build)
+- [x] 2.1 Angular tests pass (npm run test:ci) — a1f4b94
+- [x] 2.2 Production build with strict i18n passes (npm run build) — a1f4b94
 
 #### Manual
 
-- [ ] 2.3 Header shows "Current value" (Polish: "Bieżąca wartość") aligned with the row cells
-- [ ] 2.4 PRICE alert shows price with currency, RSI alert shows RSI, no data shows "—"
-- [ ] 2.5 Sorting, expanding, filters, edit and delete still work
+- [x] 2.3 Header shows "Current value" (Polish: "Bieżąca wartość") aligned with the row cells
+- [x] 2.4 PRICE alert shows price with currency, RSI alert shows RSI, no data shows "—"
+- [x] 2.5 Sorting, expanding, filters, edit and delete still work
