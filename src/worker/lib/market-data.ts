@@ -43,7 +43,12 @@ function toUnixSeconds(isoDate: string): number {
   return Date.parse(`${isoDate}T00:00:00Z`) / 1000;
 }
 
-export async function fetchDailyCloses(symbol: string, from: string, to: string): Promise<DailyClosesResult> {
+export async function fetchDailyCloses(
+  symbol: string,
+  from: string,
+  to: string,
+  signal?: AbortSignal,
+): Promise<DailyClosesResult> {
   const period1 = toUnixSeconds(from);
   const period2 = toUnixSeconds(to);
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=1d`;
@@ -53,6 +58,7 @@ export async function fetchDailyCloses(symbol: string, from: string, to: string)
       'User-Agent':
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
     },
+    signal,
   });
 
   if (!response.ok) {
@@ -154,5 +160,53 @@ export function upsertPriceHistory(db: D1Database, ticker: string, closes: Daily
          ON CONFLICT (ticker, date) DO UPDATE SET close = excluded.close, high = excluded.high, low = excluded.low`,
       )
       .bind(ticker, date, close, high, low),
+  );
+}
+
+// D1 caps a statement at 100 bound parameters; both upserts below bind 5
+// values per row, so 16 rows (80 params) leaves headroom under the cap.
+export const ROWS_PER_STATEMENT = 16;
+
+export function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+export interface PriceHistoryRow extends DailyClose {
+  ticker: string;
+}
+
+export interface MarketDataUpsertRow {
+  ticker: string;
+  price: number;
+  rsi: number | null;
+  high: number | null;
+  low: number | null;
+}
+
+// Multi-row counterpart of upsertPriceHistory, used by the cron so the whole
+// run's rows cost a handful of statements instead of one per row.
+export function buildPriceHistoryUpserts(db: D1Database, rows: PriceHistoryRow[]): D1PreparedStatement[] {
+  return chunk(rows, ROWS_PER_STATEMENT).map((group) =>
+    db
+      .prepare(
+        `INSERT INTO price_history (ticker, date, close, high, low) VALUES ${group.map(() => '(?, ?, ?, ?, ?)').join(', ')}
+         ON CONFLICT (ticker, date) DO UPDATE SET close = excluded.close, high = excluded.high, low = excluded.low`,
+      )
+      .bind(...group.flatMap((r) => [r.ticker, r.date, r.close, r.high, r.low])),
+  );
+}
+
+export function buildMarketDataUpserts(db: D1Database, rows: MarketDataUpsertRow[]): D1PreparedStatement[] {
+  return chunk(rows, ROWS_PER_STATEMENT).map((group) =>
+    db
+      .prepare(
+        `INSERT INTO market_data (ticker, price, rsi, high, low, updated_at) VALUES ${group.map(() => '(?, ?, ?, ?, ?, unixepoch())').join(', ')}
+         ON CONFLICT (ticker) DO UPDATE SET price = excluded.price, rsi = excluded.rsi, high = excluded.high, low = excluded.low, updated_at = excluded.updated_at`,
+      )
+      .bind(...group.flatMap((r) => [r.ticker, r.price, r.rsi, r.high, r.low])),
   );
 }

@@ -1,102 +1,49 @@
 import type { Env } from './index';
 import { evaluateAlerts, type AlertEvaluationSummary } from './lib/alert-evaluation';
-import type { InstrumentRow } from './lib/instruments';
-import { buildCurrencyCorrection, fetchDailyCloses, upsertPriceHistory, type DailyClosesResult } from './lib/market-data';
-import { calculateRSI } from './lib/rsi';
-
-const RETRY_ATTEMPTS = 3;
-// Fixed delay, no backoff — deliberate simplification at current volume (2 tickers/day).
-const RETRY_DELAY_MS = 300;
-// Cron's fixed lookback window, expressed as explicit dates now that
-// fetchDailyCloses takes a date range instead of an implicit default.
-const CRON_LOOKBACK_DAYS = 30;
-
-function dateToIsoDateString(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-async function fetchWithRetry(symbol: string): Promise<DailyClosesResult> {
-  // `to` must be TOMORROW's date, not today's. Yahoo's period2 bound is UTC
-  // midnight of that date (the START of it), while a daily bar is stamped
-  // later in the day (e.g. GPW closes are stamped ~07:00 UTC) — using
-  // today's date here excludes today's own close from every single run,
-  // no matter what time the cron actually fires. Confirmed empirically
-  // against the live Yahoo endpoint (see plan.md history for this fix).
-  const to = dateToIsoDateString(new Date(Date.now() + 24 * 60 * 60 * 1000));
-  const from = dateToIsoDateString(new Date(Date.now() - CRON_LOOKBACK_DAYS * 24 * 60 * 60 * 1000));
-
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
-    try {
-      return await fetchDailyCloses(symbol, from, to);
-    } catch (err) {
-      lastError = err;
-      if (attempt < RETRY_ATTEMPTS) {
-        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
-      }
-    }
-  }
-  throw lastError;
-}
+import { ALL_INSTRUMENT_TYPES, selectAlertInstruments, type InstrumentRow } from './lib/instruments';
+import { refreshInstruments, type FetchPhaseResult, type TickerResult } from './lib/market-refresh';
 
 export interface CronRunSummary {
-  tickers: Array<{ ticker: string; status: 'ok' | 'error'; error?: string }>;
+  tickers: TickerResult[];
   alertsEvaluated: number;
   emails: AlertEvaluationSummary['emails'];
   errors: string[];
 }
 
-export async function handleScheduled(env: Env): Promise<CronRunSummary> {
+export async function runFetchPhase(env: Env, types: string[] = ALL_INSTRUMENT_TYPES): Promise<FetchPhaseResult> {
   let instruments: InstrumentRow[];
   try {
-    const { results } = await env.DB.prepare(`SELECT ticker, rsi_eligible, suffix, currency FROM instruments`).all<InstrumentRow>();
-    instruments = results;
+    instruments = await selectAlertInstruments(env.DB, types);
   } catch (err) {
     console.error('market-data-pipeline: failed to load instruments registry', err);
-    return { tickers: [], alertsEvaluated: 0, emails: [], errors: [String(err)] };
+    return { tickers: [], loadError: String(err) };
   }
 
-  const tickers: CronRunSummary['tickers'] = [];
+  return refreshInstruments(env, instruments);
+}
 
-  for (const { ticker, rsi_eligible, suffix, currency } of instruments) {
-    try {
-      // `ticker + suffix` is the Yahoo query symbol only — every DB write
-      // below stays keyed on the bare `ticker` (see market-data.ts).
-      const { closes, currency: fetchedCurrency } = await fetchWithRetry(ticker + suffix);
-      if (closes.length === 0) {
-        // Unreachable in practice — the cron's 30-day window always spans
-        // trading days — but fetchDailyCloses's contract now allows an empty
-        // result (see market-data.ts), so guard rather than write undefined
-        // fields from a missing `latest`.
-        tickers.push({ ticker, status: 'ok' });
-        continue;
-      }
-      const rsi = rsi_eligible ? calculateRSI(closes.map((c) => c.close)) : null;
-      const latest = closes[closes.length - 1];
+// Must match the `crons` entries in wrangler.toml. Evaluation runs a few
+// minutes after the fetch, in its own invocation with its own subrequest
+// budget; Cloudflare gives no ordering guarantee between the two, which is
+// why evaluateAlerts checks market_data freshness itself.
+export const FETCH_CRON = '0 23 * * 1-5';
+export const EVALUATE_CRON = '15 23 * * 1-5';
 
-      const statements = upsertPriceHistory(env.DB, ticker, closes);
+export async function handleCron(cron: string, env: Env): Promise<void> {
+  if (cron === FETCH_CRON) {
+    await runFetchPhase(env);
+  } else if (cron === EVALUATE_CRON) {
+    await evaluateAlerts(env);
+  } else {
+    console.error(`scheduled: no handler for cron expression "${cron}"`);
+  }
+}
 
-      statements.push(
-        env.DB.prepare(
-          `INSERT INTO market_data (ticker, price, rsi, high, low, updated_at) VALUES (?, ?, ?, ?, ?, unixepoch())
-           ON CONFLICT (ticker) DO UPDATE SET price = excluded.price, rsi = excluded.rsi, high = excluded.high, low = excluded.low, updated_at = excluded.updated_at`,
-        ).bind(ticker, latest.close, rsi, latest.high, latest.low),
-      );
-
-      const currencyCorrection = buildCurrencyCorrection(env.DB, ticker, currency, fetchedCurrency);
-      if (currencyCorrection) {
-        statements.push(currencyCorrection);
-      }
-
-      await env.DB.batch(statements);
-      if (currencyCorrection) {
-        console.log(`market-data-pipeline: corrected currency for ${ticker}: ${currency} -> ${fetchedCurrency}`);
-      }
-      tickers.push({ ticker, status: 'ok' });
-    } catch (err) {
-      console.error(`market-data-pipeline: failed to process ${ticker}`, err);
-      tickers.push({ ticker, status: 'error', error: String(err) });
-    }
+// Manual full run (admin "Force data refresh"): both phases back to back.
+export async function handleScheduled(env: Env): Promise<CronRunSummary> {
+  const { tickers, loadError } = await runFetchPhase(env);
+  if (loadError) {
+    return { tickers: [], alertsEvaluated: 0, emails: [], errors: [loadError] };
   }
 
   const alertSummary = await evaluateAlerts(env);

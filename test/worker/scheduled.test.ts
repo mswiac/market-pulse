@@ -11,7 +11,10 @@ import worker from '../../src/worker/index';
 // The exported `scheduled` handler discards handleScheduled's return value
 // (see src/worker/index.ts) — the summary tests below call handleScheduled
 // directly instead of going through worker.scheduled(...).
-import { handleScheduled } from '../../src/worker/scheduled';
+import { refreshInstruments } from '../../src/worker/lib/market-refresh';
+import { EVALUATE_CRON, FETCH_CRON, handleCron, handleScheduled } from '../../src/worker/scheduled';
+import { calculateRSI } from '../../src/worker/lib/rsi';
+import wranglerToml from '../../wrangler.toml?raw';
 
 function yahooBody(
   timestamps: number[],
@@ -54,10 +57,22 @@ const RISING_HIGHS = RISING_CLOSES.map((c) => c + 1);
 const RISING_LOWS = RISING_CLOSES.map((c) => c - 1);
 
 async function runScheduled(): Promise<void> {
-  const controller = createScheduledController();
+  const controller = createScheduledController({ cron: FETCH_CRON });
   const ctx = createExecutionContext();
   await worker.scheduled(controller, env, ctx);
   await waitOnExecutionContext(ctx);
+}
+
+// The cron only fetches instruments that have at least one alert, so every
+// test that expects a ticker to be fetched must seed one for it first.
+let seededUserId: number;
+
+async function seedAlert(ticker: string, armed = 1): Promise<void> {
+  await env.DB.prepare(
+    'INSERT INTO alerts (user_id, ticker, alert_type, threshold, notification_email, direction, armed) VALUES (?, ?, ?, ?, ?, ?, ?)',
+  )
+    .bind(seededUserId, ticker, 'PRICE', 1_000_000 + Math.floor(Math.random() * 1_000_000), 'verified@example.com', 'up', armed)
+    .run();
 }
 
 async function insertSuffixInstrument(currency = 'PLN'): Promise<void> {
@@ -66,13 +81,23 @@ async function insertSuffixInstrument(currency = 'PLN'): Promise<void> {
   )
     .bind('TEST', 'Test SA', 'pl_stock', 0, 'yahoo', currency, '.WA')
     .run();
+  await seedAlert('TEST');
 }
 
 beforeEach(async () => {
   // This project's D1 test binding isn't isolated per test (see other suites'
   // use of unique emails for the same reason) — clear both tables explicitly
   // so one test's writes can't leak into the next.
-  await env.DB.batch([env.DB.prepare('DELETE FROM market_data'), env.DB.prepare('DELETE FROM price_history')]);
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM market_data'),
+    env.DB.prepare('DELETE FROM price_history'),
+    env.DB.prepare('DELETE FROM alerts'),
+  ]);
+  const email = `cron-${crypto.randomUUID()}@example.com`;
+  const user = await env.DB.prepare('INSERT INTO users (email, password_hash) VALUES (?, ?)').bind(email, 'irrelevant-hash').run();
+  seededUserId = user.meta.last_row_id as number;
+  await seedAlert('^VIX');
+  await seedAlert('^NDX');
 });
 
 afterEach(async () => {
@@ -80,7 +105,8 @@ afterEach(async () => {
   // The cron now fetches every instrument (no more `provider='yahoo'`
   // filter) — a leftover test-added row would otherwise leak into the next
   // test's fetch-call/result-count assertions.
-  await env.DB.prepare("DELETE FROM instruments WHERE ticker = 'TEST'").run();
+  await env.DB.prepare("DELETE FROM instruments WHERE ticker = 'TEST' OR ticker LIKE 'CAP%'").run();
+  await env.DB.prepare('DELETE FROM users WHERE id = ?').bind(seededUserId).run();
 });
 
 describe('scheduled handler', () => {
@@ -273,7 +299,7 @@ describe('scheduled handler', () => {
     expect(wrongKeyRow).toBeNull();
   });
 
-  it('requests a 30-day lookback window ending tomorrow (UTC midnight), so today\'s own close is included', async () => {
+  it('requests a short lookback window ending tomorrow (UTC midnight), so today\'s own close is included', async () => {
     // Yahoo's period2 bound is the START of that UTC day, while a daily bar
     // is stamped later in the day — period2 must be tomorrow's midnight for
     // today's bar to fall inside the range at all. Confirmed empirically
@@ -285,14 +311,16 @@ describe('scheduled handler', () => {
 
     await runScheduled();
 
-    const calledUrl = new URL(fetchMock.mock.calls[0]?.[0] as string);
+    const vixCall = fetchMock.mock.calls.find((call) => (call[0] as string).includes(encodeURIComponent('^VIX')));
+    const calledUrl = new URL(vixCall?.[0] as string);
     const period1 = Number(calledUrl.searchParams.get('period1'));
     const period2 = Number(calledUrl.searchParams.get('period2'));
 
     expect(Number.isFinite(period1)).toBe(true);
     expect(Number.isFinite(period2)).toBe(true);
-    // 30-day lookback (`from`) plus the one extra day pushed onto `to`.
-    expect(period2 - period1).toBe(31 * 24 * 60 * 60);
+    // 7-day lookback (`from`) plus the one extra day pushed onto `to`.
+    // ^VIX is not RSI-eligible, so it never needs the long window.
+    expect(period2 - period1).toBe(8 * 24 * 60 * 60);
 
     const tomorrowUtcMidnight = Math.floor(Date.now() / 1000 / 86400) * 86400 + 24 * 60 * 60;
     expect(period2).toBe(tomorrowUtcMidnight);
@@ -397,5 +425,318 @@ describe('handleScheduled summary', () => {
           "INSERT INTO instruments (ticker, name, type, rsi_eligible, provider) VALUES ('^VIX', 'VIX', 'index', 0, 'yahoo'), ('^NDX', 'NASDAQ-100', 'index', 1, 'yahoo');",
       );
     }
+  });
+});
+
+const DAY = 24 * 60 * 60;
+
+function utcDaysAgo(days: number): number {
+  return Math.floor(Date.now() / 1000 / DAY) * DAY - days * DAY + 13 * 60 * 60;
+}
+
+function isoDate(unixSeconds: number): string {
+  return new Date(unixSeconds * 1000).toISOString().slice(0, 10);
+}
+
+describe('alert-scoped, history-backed fetch phase', () => {
+  it('does not fetch an instrument that has no alert', async () => {
+    await insertSuffixInstrument();
+    await env.DB.prepare("DELETE FROM alerts WHERE ticker = 'TEST'").run();
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await runScheduled();
+
+    const calledUrls = fetchMock.mock.calls.map((call) => call[0] as string);
+    expect(calledUrls.some((url) => url.includes(encodeURIComponent('TEST.WA')))).toBe(false);
+    const row = await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?').bind('TEST').first();
+    expect(row).toBeNull();
+  });
+
+  it('still fetches an instrument whose only alert is disarmed, so it can re-arm', async () => {
+    await insertSuffixInstrument();
+    await env.DB.prepare("UPDATE alerts SET armed = 0 WHERE ticker = 'TEST'").run();
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await runScheduled();
+
+    const calledUrls = fetchMock.mock.calls.map((call) => call[0] as string);
+    expect(calledUrls.some((url) => url.includes(encodeURIComponent('TEST.WA')))).toBe(true);
+  });
+
+  it('computes RSI from stored history plus a short Yahoo window', async () => {
+    // 15 stored days (enough that no long-window fallback is needed) + 1 fresh day.
+    const storedCloses = Array.from({ length: 15 }, (_, i) => 100 + (i % 3 === 0 ? -2 : 3) + i);
+    await env.DB.batch(
+      storedCloses.map((close, i) =>
+        env.DB.prepare('INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, NULL, NULL)').bind(
+          '^NDX',
+          isoDate(utcDaysAgo(16 - i)),
+          close,
+        ),
+      ),
+    );
+    const freshClose = 140;
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(jsonResponse(200, yahooBody([utcDaysAgo(1)], [freshClose], [freshClose + 1], [freshClose - 1]))),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await runScheduled();
+
+    const row = await env.DB.prepare('SELECT rsi, price FROM market_data WHERE ticker = ?')
+      .bind('^NDX')
+      .first<{ rsi: number; price: number }>();
+    expect(row?.price).toBe(freshClose);
+    expect(row?.rsi).toBeCloseTo(calculateRSI([...storedCloses, freshClose]) as number, 10);
+
+    const ndxCall = fetchMock.mock.calls.find((call) => (call[0] as string).includes(encodeURIComponent('^NDX')));
+    const url = new URL(ndxCall?.[0] as string);
+    expect(Number(url.searchParams.get('period2')) - Number(url.searchParams.get('period1'))).toBe(8 * DAY);
+  });
+
+  it('falls back to the long window for an RSI-eligible ticker with thin stored history', async () => {
+    await env.DB.prepare('INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, NULL, NULL)')
+      .bind('^NDX', isoDate(utcDaysAgo(5)), 100)
+      .run();
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await runScheduled();
+
+    const ndxCall = fetchMock.mock.calls.find((call) => (call[0] as string).includes(encodeURIComponent('^NDX')));
+    const url = new URL(ndxCall?.[0] as string);
+    expect(Number(url.searchParams.get('period2')) - Number(url.searchParams.get('period1'))).toBe(31 * DAY);
+  });
+
+  it('writes every row when a run produces more rows than fit in one statement', async () => {
+    const timestamps = Array.from({ length: 40 }, (_, i) => utcDaysAgo(40 - i));
+    const closes = timestamps.map((_, i) => 100 + i);
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(timestamps, closes)))));
+
+    await runScheduled();
+
+    const count = await env.DB.prepare('SELECT COUNT(*) as count FROM price_history WHERE ticker = ?')
+      .bind('^NDX')
+      .first<{ count: number }>();
+    expect(count?.count).toBe(40);
+  });
+
+  it('stops fetching once the per-run attempt cap is reached, reporting the rest as errors', async () => {
+    const extra = Array.from({ length: 15 }, (_, i) => `CAP${i + 1}`);
+    for (const ticker of extra) {
+      await env.DB.prepare(
+        `INSERT INTO instruments (ticker, name, type, rsi_eligible, provider, currency, suffix) VALUES (?, ?, 'us_stock', 0, 'yahoo', 'USD', '')`,
+      )
+        .bind(ticker, ticker)
+        .run();
+      await seedAlert(ticker);
+    }
+    // Skip the real retry delay: 17 failing tickers would otherwise sleep for seconds.
+    vi.stubGlobal('setTimeout', (fn: () => void) => {
+      fn();
+      return 0;
+    });
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(500, {})));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const summary = await handleScheduled(env);
+
+    expect(fetchMock).toHaveBeenCalledTimes(40);
+    expect(summary.tickers).toHaveLength(17);
+    expect(summary.tickers.every((t) => t.status === 'error')).toBe(true);
+    expect(summary.tickers.some((t) => t.error?.includes('budget exhausted'))).toBe(true);
+    // The ticker that was cut off mid-retry keeps the provider's own error.
+    expect(summary.tickers.some((t) => t.error?.includes('budget exhausted') && t.error.includes('last error:'))).toBe(true);
+  });
+});
+
+describe('fetch phase failure handling', () => {
+  it('marks every fetched ticker as error when the bulk write is rejected, storing nothing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS)))),
+    );
+    const batchSpy = vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('batch boom'));
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      const summary = await handleScheduled(env);
+
+      expect(summary.tickers).toHaveLength(2);
+      for (const result of summary.tickers) {
+        expect(result.status).toBe('error');
+        expect(result.error).toContain('batch boom');
+      }
+      const marketData = await env.DB.prepare('SELECT * FROM market_data').all();
+      expect(marketData.results).toHaveLength(0);
+    } finally {
+      batchSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    }
+  });
+
+  it('falls back to the long Yahoo window when stored history cannot be read', async () => {
+    // 15 stored closes would normally allow the short window.
+    await env.DB.batch(
+      Array.from({ length: 15 }, (_, i) =>
+        env.DB.prepare('INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, NULL, NULL)').bind(
+          '^NDX',
+          isoDate(utcDaysAgo(16 - i)),
+          100 + i,
+        ),
+      ),
+    );
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))));
+    vi.stubGlobal('fetch', fetchMock);
+    const originalPrepare = env.DB.prepare.bind(env.DB);
+    const prepareSpy = vi.spyOn(env.DB, 'prepare').mockImplementation((sql: string) => {
+      if (sql.includes('FROM price_history') && sql.includes('IN (')) throw new Error('history read failed');
+      return originalPrepare(sql);
+    });
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      await handleScheduled(env);
+
+      const ndxCall = fetchMock.mock.calls.find((call) => (call[0] as string).includes(encodeURIComponent('^NDX')));
+      const url = new URL(ndxCall?.[0] as string);
+      expect(Number(url.searchParams.get('period2')) - Number(url.searchParams.get('period1'))).toBe(31 * DAY);
+      const row = await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?').bind('^NDX').first();
+      expect(row).not.toBeNull();
+    } finally {
+      prepareSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    }
+  });
+});
+
+describe('currency correction logging', () => {
+  it('logs the correction only after the write succeeded', async () => {
+    await insertSuffixInstrument('USD');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) =>
+        Promise.resolve(
+          jsonResponse(
+            200,
+            url.includes(encodeURIComponent('TEST.WA'))
+              ? yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS, 'PLN')
+              : yahooBody(TIMESTAMPS, RISING_CLOSES),
+          ),
+        ),
+      ),
+    );
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const batchSpy = vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('batch boom'));
+
+    try {
+      await handleScheduled(env);
+      expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('corrected currency'));
+
+      batchSpy.mockRestore();
+      await handleScheduled(env);
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('corrected currency for TEST: USD -> PLN'));
+    } finally {
+      batchSpy.mockRestore();
+      logSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    }
+  });
+});
+
+describe('refreshInstruments timeout', () => {
+  it('abandons a fetch that does not answer within timeoutMs, reporting the ticker as an error', async () => {
+    // A fetch that only ever settles when its abort signal fires.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(
+        (_url: string, init?: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => reject(init.signal?.reason));
+          }),
+      ),
+    );
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      const result = await refreshInstruments(
+        env,
+        [{ ticker: '^VIX', rsi_eligible: 0, currency: 'USD', suffix: '' }],
+        { retryAttempts: 1, timeoutMs: 20 },
+      );
+
+      expect(result.tickers).toEqual([{ ticker: '^VIX', status: 'error', error: expect.any(String) }]);
+      const row = await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?').bind('^VIX').first();
+      expect(row).toBeNull();
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
+  });
+});
+
+describe('cron expressions', () => {
+  it('match the schedules declared in wrangler.toml', () => {
+    const declared = [...(/crons\s*=\s*\[([^\]]*)\]/.exec(wranglerToml)?.[1] ?? '').matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+
+    expect(declared).toEqual([FETCH_CRON, EVALUATE_CRON]);
+  });
+});
+
+describe('cron routing', () => {
+  it('runs only the fetch phase for the fetch expression', async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await handleCron(FETCH_CRON, env);
+
+    expect(fetchMock.mock.calls.some((call) => (call[0] as string).includes('finance/chart'))).toBe(true);
+    expect(fetchMock.mock.calls.some((call) => (call[0] as string).includes('api.resend.com'))).toBe(false);
+  });
+
+  it('runs only the evaluation phase for the evaluation expression', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await handleCron(EVALUATE_CRON, env);
+
+    // No Yahoo fetch and nothing to email: evaluation alone never hits the network without a firing alert.
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('ignores and logs an unknown cron expression', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      await handleCron('* * * * *', env);
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('* * * * *'));
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('runs both phases, fetch first, for the manual full run', async () => {
+    const order: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) => {
+        order.push(url.includes('api.resend.com') ? 'resend' : 'yahoo');
+        return Promise.resolve(
+          url.includes('api.resend.com') ? jsonResponse(200, { data: [] }) : jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES)),
+        );
+      }),
+    );
+    // Rising closes end at 114; an alert with threshold 100 fires once the fetch has written market_data.
+    await env.DB.prepare("UPDATE alerts SET threshold = 100 WHERE ticker = '^NDX'").run();
+
+    const summary = await handleScheduled(env);
+
+    expect(order.indexOf('yahoo')).toBeLessThan(order.indexOf('resend'));
+    expect(summary.emails).toEqual([expect.objectContaining({ ticker: '^NDX', status: 'sent' })]);
   });
 });

@@ -4,7 +4,7 @@ import alertsRoutes from './routes/alerts';
 import authRoutes from './routes/auth';
 import instrumentsRoutes from './routes/instruments';
 import triggerEventsRoutes from './routes/trigger-events';
-import { handleScheduled } from './scheduled';
+import { handleCron } from './scheduled';
 
 export interface Env {
   DB: D1Database;
@@ -33,7 +33,7 @@ app.get('*', (c) => c.env.ASSETS.fetch(c.req.raw));
 
 export default {
   fetch: app.fetch,
-  scheduled: async (_controller: ScheduledController, env: Env, _ctx: ExecutionContext) => {
-    await handleScheduled(env);
+  scheduled: async (controller: ScheduledController, env: Env, _ctx: ExecutionContext) => {
+    await handleCron(controller.cron, env);
   },
 };

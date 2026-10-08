@@ -44,12 +44,13 @@ async function seedMarketData(
   rsi: number | null = null,
   high: number | null = null,
   low: number | null = null,
+  ageSeconds = 0,
 ): Promise<void> {
   await env.DB.prepare(
-    `INSERT INTO market_data (ticker, price, rsi, high, low, updated_at) VALUES (?, ?, ?, ?, ?, unixepoch())
+    `INSERT INTO market_data (ticker, price, rsi, high, low, updated_at) VALUES (?, ?, ?, ?, ?, unixepoch() - ?)
      ON CONFLICT (ticker) DO UPDATE SET price = excluded.price, rsi = excluded.rsi, high = excluded.high, low = excluded.low, updated_at = excluded.updated_at`,
   )
-    .bind(ticker, price, rsi, high, low)
+    .bind(ticker, price, rsi, high, low, ageSeconds)
     .run();
 }
 
@@ -77,24 +78,6 @@ async function triggerEventsFor(alertId: number): Promise<TriggerEventRow[]> {
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status });
-}
-
-// Fails only for a request whose body mentions the marker ticker — everything
-// else succeeds. Used to simulate one alert's send blowing up without
-// affecting the others in the same run. Matches on the email body (not the
-// "to" address) so both the failing and healthy alert can share the same
-// Resend-verified recipient and actually reach the fetch call.
-function stubFetchThrowingFor(markerTicker: string): void {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse((init?.body as string) ?? '{}');
-      if (typeof body.text === 'string' && body.text.includes(markerTicker)) {
-        throw new Error('simulated network failure');
-      }
-      return jsonResponse(200, { id: 'fake-resend-id' });
-    }),
-  );
 }
 
 function stubFetchAlwaysSucceeds(): void {
@@ -248,46 +231,152 @@ describe('evaluateAlerts', () => {
     expect((await getAlert(alertId)).armed).toBe(0); // still disarms — the crossing itself is real
   });
 
-  it('records a failed trigger event without disarming when the send throws mid-run, but still evaluates other alerts', async () => {
-    // Both alerts target the Resend-verified recipient (so both actually
-    // reach the fetch call, past the pre-flight check) but differ by ticker,
-    // which the stub uses to fail only one of them.
-    stubFetchThrowingFor('^VIX');
-    const userIdA = await seedUser('throwing-alert@example.com');
-    const userIdB = await seedUser('healthy-alert@example.com');
-    const brokenId = await seedAlert(userIdA, {
-      ticker: '^VIX',
-      threshold: 20,
-      direction: 'up',
-      armed: 1,
-      notificationEmail: VERIFIED_EMAIL,
-    });
-    const healthyId = await seedAlert(userIdB, {
-      ticker: '^NDX',
-      alertType: 'PRICE',
-      threshold: 20,
-      direction: 'up',
-      armed: 1,
-      notificationEmail: VERIFIED_EMAIL,
-    });
+  it('records failed trigger events without disarming when the batch send throws', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('simulated network failure')));
+    const userIdA = await seedUser('throwing-alert-a@example.com');
+    const userIdB = await seedUser('throwing-alert-b@example.com');
+    const alertA = await seedAlert(userIdA, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    const alertB = await seedAlert(userIdB, { ticker: '^NDX', threshold: 20, direction: 'up', armed: 1 });
     await seedMarketData('^VIX', 25);
     await seedMarketData('^NDX', 25);
 
     await evaluateAlerts(env);
 
-    // The broken alert's send threw — resend.ts catches it as a transient
-    // failure, so a "failed" trigger event is recorded but the alert stays
-    // armed (tomorrow's cron retries naturally). The healthy alert still
-    // fires and disarms normally.
-    expect((await getAlert(brokenId)).armed).toBe(1);
-    const brokenEvents = await triggerEventsFor(brokenId);
-    expect(brokenEvents).toHaveLength(1);
-    expect(brokenEvents[0]).toMatchObject({
-      email_status: 'failed',
-      email_error: expect.stringContaining('network error'),
+    // A network-level failure is transient (resend.ts): "failed" events are
+    // recorded but both alerts stay armed, so tomorrow's cron retries.
+    for (const alertId of [alertA, alertB]) {
+      expect((await getAlert(alertId)).armed).toBe(1);
+      const events = await triggerEventsFor(alertId);
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({ email_status: 'failed', email_error: expect.stringContaining('network error') });
+    }
+  });
+
+  it('sends every firing alert in a single Resend request and writes the results in a single D1 batch', async () => {
+    const fetchSpy = vi.fn().mockImplementation(async () => jsonResponse(200, { data: [] }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const userId = await seedUser('single-request@example.com');
+    const alertIds = [
+      await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 }),
+      await seedAlert(userId, { ticker: '^VIX', threshold: 21, direction: 'up', armed: 1 }),
+      await seedAlert(userId, { ticker: '^NDX', threshold: 20, direction: 'up', armed: 1 }),
+    ];
+    const rearmId = await seedAlert(userId, { ticker: '^NDX', threshold: 90, direction: 'up', armed: 0 });
+    await seedMarketData('^VIX', 25);
+    await seedMarketData('^NDX', 25);
+    const batchSpy = vi.spyOn(env.DB, 'batch');
+
+    try {
+      const summary = await evaluateAlerts(env);
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)).toHaveLength(3);
+      expect(batchSpy).toHaveBeenCalledTimes(1);
+      expect(summary.emails.map((e) => e.status)).toEqual(['sent', 'sent', 'sent']);
+      for (const id of alertIds) expect((await getAlert(id)).armed).toBe(0);
+      expect((await getAlert(rearmId)).armed).toBe(1);
+    } finally {
+      batchSpy.mockRestore();
+    }
+  });
+
+  it('does not let an unverified recipient block the emails of the others in the same run', async () => {
+    const fetchSpy = vi.fn().mockImplementation(async () => jsonResponse(200, { data: [] }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const userId = await seedUser('mixed-recipients@example.com');
+    const unverified = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+      notificationEmail: 'someone-else@example.com',
     });
-    expect((await getAlert(healthyId)).armed).toBe(0);
-    expect(await triggerEventsFor(healthyId)).toHaveLength(1);
+    const verified = await seedAlert(userId, { ticker: '^NDX', threshold: 20, direction: 'up', armed: 1 });
+    await seedMarketData('^VIX', 25);
+    await seedMarketData('^NDX', 25);
+
+    const summary = await evaluateAlerts(env);
+
+    expect(JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)).toHaveLength(1);
+    expect(summary.emails).toEqual(
+      expect.arrayContaining([
+        { alertId: unverified, ticker: '^VIX', status: 'failed', error: 'recipient not verified in Resend sandbox' },
+        { alertId: verified, ticker: '^NDX', status: 'sent' },
+      ]),
+    );
+    expect((await getAlert(unverified)).armed).toBe(0);
+    expect((await getAlert(verified)).armed).toBe(0);
+  });
+
+  it('keeps every alert of the batch armed when Resend answers with a 5xx', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(503, { message: 'resend down' })));
+    const userId = await seedUser('batch-5xx@example.com');
+    const alertA = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    const alertB = await seedAlert(userId, { ticker: '^NDX', threshold: 20, direction: 'up', armed: 1 });
+    await seedMarketData('^VIX', 25);
+    await seedMarketData('^NDX', 25);
+
+    await evaluateAlerts(env);
+
+    for (const alertId of [alertA, alertB]) {
+      expect((await getAlert(alertId)).armed).toBe(1);
+      expect((await triggerEventsFor(alertId))[0]).toMatchObject({ email_status: 'failed', email_error: 'resend down' });
+    }
+  });
+
+  it('chunks more than 100 firing alerts into several Resend requests', async () => {
+    const fetchSpy = vi.fn().mockImplementation(async () => jsonResponse(200, { data: [] }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const userId = await seedUser('many-alerts@example.com');
+    const alertIds: number[] = [];
+    for (let threshold = 1; threshold <= 101; threshold++) {
+      alertIds.push(await seedAlert(userId, { ticker: '^VIX', threshold, direction: 'up', armed: 1 }));
+    }
+    await seedMarketData('^VIX', 500);
+
+    const summary = await evaluateAlerts(env);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(summary.emails).toHaveLength(101);
+    expect(summary.emails.every((e) => e.status === 'sent')).toBe(true);
+    const events = await env.DB.prepare('SELECT COUNT(*) as count FROM trigger_events').first<{ count: number }>();
+    expect(events?.count).toBe(101);
+    expect((await getAlert(alertIds[100])).armed).toBe(0);
+  });
+
+  it('skips alerts whose market data is older than 12 hours: no email, no state change', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    const userId = await seedUser('stale-data@example.com');
+    const firing = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    const rearming = await seedAlert(userId, { ticker: '^VIX', threshold: 30, direction: 'up', armed: 0 });
+    await seedMarketData('^VIX', 25, null, null, null, 13 * 60 * 60);
+    // On fresh data the first alert would fire (25 >= 20) and the second would re-arm (25 <= 30 - 3); stale data does neither.
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const summary = await evaluateAlerts(env);
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(summary.emails).toEqual([]);
+      expect((await getAlert(firing)).armed).toBe(1);
+      expect((await getAlert(rearming)).armed).toBe(0);
+      expect(await triggerEventsFor(firing)).toHaveLength(0);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('^VIX'));
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('still evaluates data that is only slightly old (within 12 hours)', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('fresh-enough@example.com');
+    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    await seedMarketData('^VIX', 25, null, null, null, 11 * 60 * 60);
+
+    await evaluateAlerts(env);
+
+    expect((await getAlert(alertId)).armed).toBe(0);
   });
 
   it('skips an RSI alert when rsi is not yet available', async () => {
@@ -514,34 +603,21 @@ describe('evaluateAlerts summary', () => {
     }
   });
 
-  it('records the exception in errors, not emails, when the non-armed re-arm write throws', async () => {
+  it('records the exception in errors, not emails, when the re-arm write throws', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('summary-rearm-throws@example.com');
     // Not armed, value already retreated past the margin — takes the re-arm
-    // branch, which never calls sendAlertEmail at all.
+    // branch, which never sends an email at all.
     const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 0 });
     await seedMarketData('^VIX', 10);
-
-    const originalPrepare = env.DB.prepare.bind(env.DB);
-    const prepareSpy = vi.spyOn(env.DB, 'prepare').mockImplementation((sql: string) => {
-      if (sql.startsWith('UPDATE alerts SET armed = 1')) {
-        return {
-          bind: () => ({
-            run: () => {
-              throw new Error('re-arm write failed');
-            },
-          }),
-        } as unknown as ReturnType<typeof originalPrepare>;
-      }
-      return originalPrepare(sql);
-    });
+    const batchSpy = vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('re-arm write failed'));
 
     try {
       const summary = await evaluateAlerts(env);
       expect(summary.emails).toEqual([]);
       expect(summary.errors).toEqual([expect.stringContaining(`alert ${alertId}`)]);
     } finally {
-      prepareSpy.mockRestore();
+      batchSpy.mockRestore();
     }
   });
 });
