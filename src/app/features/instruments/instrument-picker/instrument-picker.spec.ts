@@ -42,6 +42,12 @@ class FormHost {
 })
 class DisabledHost {}
 
+@Component({
+  imports: [InstrumentPicker],
+  template: `<app-instrument-picker stacked />`,
+})
+class StackedHost {}
+
 const combobox = () => screen.getByRole('combobox', { name: 'Instrument' }) as HTMLInputElement;
 
 function type(text: string) {
@@ -211,5 +217,17 @@ describe('InstrumentPicker', () => {
     fixture.detectChanges();
 
     expect(combobox().disabled).toBe(true);
+  });
+
+  it('marks the host as stacked when asked to', async () => {
+    const { container } = await render(StackedHost, { providers });
+
+    expect(container.querySelector('app-instrument-picker')!.classList.contains('stacked')).toBe(true);
+  });
+
+  it('is not stacked by default', async () => {
+    const { container } = await render(DisabledHost, { providers });
+
+    expect(container.querySelector('app-instrument-picker')!.classList.contains('stacked')).toBe(false);
   });
 });

@@ -1,5 +1,7 @@
 :host {
   display: block;
+  // Shared by the header and the row summary so their columns stay aligned.
+  --alert-grid-columns: minmax(10rem, 1fr) 9.5rem 9rem 9.5rem;
 }
 
 mat-accordion {
@@ -52,9 +54,11 @@ mat-expansion-panel-header {
 
 .list-header {
   display: grid;
-  grid-template-columns: 36rem 9.5rem 1fr;
+  grid-template-columns: var(--alert-grid-columns);
   column-gap: 1.5rem;
-  padding: 0.5rem 1.5rem;
+  // Right padding also covers the expansion arrow each row header reserves
+  // (arrow width + Material header padding, tuned by eye).
+  padding: 0.5rem 4rem 0.5rem 1.5rem;
   margin-bottom: 0.5rem;
   font: var(--mat-sys-label-large);
   color: var(--mat-sys-on-surface-variant);
@@ -89,7 +93,7 @@ button.sort-col:hover {
 
 .alert-summary {
   display: grid;
-  grid-template-columns: 36rem 9.5rem 1fr;
+  grid-template-columns: var(--alert-grid-columns);
   column-gap: 1.5rem;
   row-gap: 0.25rem;
   width: 100%;
@@ -116,4 +120,27 @@ button.sort-col:hover {
 .clear-filters {
   // Match the 56px outline form fields it sits next to.
   height: 3.5rem;
+}
+
+// Below ~680px the four columns no longer fit: the header becomes a plain sort bar
+// and each summary row puts the instrument on its own line above the other cells.
+@media (max-width: 48rem) {
+  .list-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.5rem;
+  }
+
+  .list-header .value-col {
+    display: none;
+  }
+
+  .alert-summary {
+    grid-template-columns: repeat(3, auto);
+    justify-content: start;
+
+    > :first-child {
+      grid-column: 1 / -1;
+    }
+  }
 }

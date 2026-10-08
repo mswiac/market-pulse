@@ -126,6 +126,10 @@
         <source>Threshold</source>
         <target>Próg</target>
       </trans-unit>
+      <trans-unit id="alertList.header.currentValue" datatype="html">
+        <source>Current value</source>
+        <target>Bieżąca wartość</target>
+      </trans-unit>
       <trans-unit id="alertList.detail.currentPrice" datatype="html">
         <source>Current price:</source>
         <target>Aktualna cena:</target>

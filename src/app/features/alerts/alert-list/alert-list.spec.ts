@@ -11,7 +11,7 @@ const INSTRUMENTS: Instrument[] = [
   { ticker: 'CDR', name: 'CD Projekt', type: 'pl_stock', rsiEligible: true, currency: 'PLN' },
 ];
 
-const make = (id: number, ticker: string, alertType: string): Alert => {
+const make = (id: number, ticker: string, alertType: string, current: Partial<Alert> = {}): Alert => {
   const instrument = INSTRUMENTS.find((i) => i.ticker === ticker)!;
   return {
     id,
@@ -30,6 +30,7 @@ const make = (id: number, ticker: string, alertType: string): Alert => {
     currentRsi: null,
     currentHigh: null,
     currentLow: null,
+    ...current,
   };
 };
 
@@ -127,5 +128,31 @@ describe('AlertList filters', () => {
     const rows = screen.getAllByRole('button', { name: /NASDAQ-100/ });
     expect(rows.length).toBe(2);
     expect(rows[0].textContent).toContain('20.00');
+  });
+});
+
+describe('AlertList current value', () => {
+  it('labels the column in the list header', async () => {
+    await renderList();
+    expect(screen.getByText('Current value')).toBeTruthy();
+  });
+
+  it('shows the price with currency for price alerts', async () => {
+    await renderList([make(1, 'CDR', 'PRICE', { currentPrice: 123.456 })]);
+    expect(screen.getByRole('button', { name: /CD Projekt/ }).textContent).toContain('123.46 PLN');
+  });
+
+  it('shows the RSI without currency for RSI alerts', async () => {
+    await renderList([make(1, '^NDX', 'RSI', { currentRsi: 45.2 })]);
+    const row = screen.getByRole('button', { name: /NASDAQ-100/ }).textContent!;
+    expect(row).toContain('45.20');
+    expect(row).not.toContain('45.20 USD');
+  });
+
+  it('shows a dash when there is no data', async () => {
+    await renderList([make(1, 'CDR', 'PRICE'), make(2, '^NDX', 'RSI')]);
+    for (const name of [/CD Projekt/, /NASDAQ-100/]) {
+      expect(screen.getByRole('button', { name }).textContent).toContain('—');
+    }
   });
 });
