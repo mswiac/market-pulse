@@ -252,8 +252,8 @@ No schema change. Deploy order does not matter: the new evaluation trigger is ad
 
 #### Manual
 
-- [ ] 1.5 `POST /api/admin/cron/run` locally writes data for alert-bearing tickers and returns the same summary shape
-- [ ] 1.6 An instrument without an alert is not refreshed by the run
+- [x] 1.5 `POST /api/admin/cron/run` locally writes data for alert-bearing tickers and returns the same summary shape
+- [x] 1.6 An instrument without an alert is not refreshed by the run
 
 ### Phase 2: Batched alert evaluation
 
@@ -264,18 +264,18 @@ No schema change. Deploy order does not matter: the new evaluation trigger is ad
 
 #### Manual
 
-- [ ] 2.3 A crossed threshold sends one email and disarms; a later run past the margin re-arms
+- [x] 2.3 A crossed threshold sends one email and disarms; a later run past the margin re-arms
 
 ### Phase 3: Separate evaluation trigger
 
 #### Automated
 
-- [x] 3.1 Typecheck, lint and `npm run test:worker` pass
-- [x] 3.2 Tests cover per-expression phase routing, unknown expression, and admin endpoint running both phases
-- [x] 3.5 Production build with strict i18n passes: `npm run build`
+- [x] 3.1 Typecheck, lint and `npm run test:worker` pass — ac5d37a
+- [x] 3.2 Tests cover per-expression phase routing, unknown expression, and admin endpoint running both phases — ac5d37a
+- [x] 3.5 Production build with strict i18n passes: `npm run build` — ac5d37a
 
 #### Manual
 
-- [ ] 3.3 Both triggers visible in the Cloudflare dashboard and each scheduled run succeeds
-- [ ] 3.4 Subrequest count and CPU time per invocation recorded in the PR
-- [ ] 3.6 The Force data refresh admin page shows the updated description and lists only alert-bearing tickers
+- [x] 3.3 Both triggers visible in the Cloudflare dashboard and each scheduled run succeeds
+- [x] 3.4 Subrequest count and CPU time per invocation recorded in the PR
+- [x] 3.6 The Force data refresh admin page shows the updated description and lists only alert-bearing tickers
