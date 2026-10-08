@@ -79,7 +79,7 @@
       @if (summary.errors.length > 0) {
         <h3 i18n="@@cronRun.result.errorsHeading">Errors</h3>
         <ul class="errors-list">
-          @for (error of summary.errors; track error) {
+          @for (error of summary.errors; track $index) {
             <li>{{ error }}</li>
           }
         </ul>

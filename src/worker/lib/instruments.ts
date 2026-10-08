@@ -5,10 +5,6 @@ export interface InstrumentRow {
   suffix: string;
 }
 
-// Mirrors the CHECK constraint on instruments.type
-// (migrations/0014_instrument_registry_extended_types.sql).
-export const ALL_INSTRUMENT_TYPES = ['index', 'pl_stock', 'us_stock'];
-
 // The one place that groups instrument types into markets; the cron fetch
 // triggers and the admin per-market refresh both read it. `type` conflates
 // market with instrument kind, so a Polish index would land in `other`.
@@ -17,6 +13,11 @@ export const MARKET_TYPES = {
   other: ['us_stock', 'index'],
 } as const satisfies Record<string, readonly string[]>;
 export type Market = keyof typeof MARKET_TYPES;
+
+// Derived so a type missing from MARKET_TYPES cannot be fetched by one path
+// and not the other. Must cover the CHECK constraint on instruments.type
+// (migrations/0014_instrument_registry_extended_types.sql).
+export const ALL_INSTRUMENT_TYPES: string[] = Object.values(MARKET_TYPES).flat();
 
 // Scoped by the EXISTENCE of an alert row, not by `armed = 1`: a disarmed
 // alert still needs fresh data to re-arm (see hasRetreatedPastMargin in
