@@ -148,13 +148,13 @@ None. The old no-body request shape is removed; the SPA and API deploy together.
 
 #### Automated
 
-- [x] 1.1 Worker tests pass: `npm run test:worker`
-- [x] 1.2 Typecheck passes: `npm run typecheck`
-- [x] 1.3 Angular tests pass: `npm run test:ci`
-- [x] 1.4 Production build succeeds: `npm run build`
+- [x] 1.1 Worker tests pass: `npm run test:worker` — 1d29508
+- [x] 1.2 Typecheck passes: `npm run typecheck` — 1d29508
+- [x] 1.3 Angular tests pass: `npm run test:ci` — 1d29508
+- [x] 1.4 Production build succeeds: `npm run build` — 1d29508
 
 #### Manual
 
-- [ ] 1.5 Force data refresh shows one merged table including instruments without any alert
+- [x] 1.5 Force data refresh shows one merged table including instruments without any alert
 - [ ] 1.6 A failing fetch for one market does not stop the other market or the evaluation, and shows in the results
-- [ ] 1.7 The page description reads correctly in English and Polish
+- [x] 1.7 The page description reads correctly in English and Polish
