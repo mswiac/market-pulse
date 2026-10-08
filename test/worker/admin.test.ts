@@ -1186,6 +1186,10 @@ describe('POST /api/admin/cron/run', () => {
   it('returns 200 with a well-formed summary and no fired emails when nothing crosses', async () => {
     stubFetchForCronRun();
     const cookie = await logInAsAdmin();
+    // The cron only fetches instruments that have an alert.
+    const adminId = await getUserId(ADMIN_EMAIL);
+    await insertAlert('^VIX', adminId);
+    await insertAlert('^NDX', adminId);
 
     const response = await runCronRoute(cookie);
 
@@ -1204,6 +1208,9 @@ describe('POST /api/admin/cron/run', () => {
   it('returns 207 when a ticker fetch fails, with that ticker marked error', async () => {
     stubFetchForCronRun({ failTicker: '^VIX' });
     const cookie = await logInAsAdmin();
+    const adminId = await getUserId(ADMIN_EMAIL);
+    await insertAlert('^VIX', adminId);
+    await insertAlert('^NDX', adminId);
 
     const response = await runCronRoute(cookie);
 
