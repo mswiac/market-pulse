@@ -1,4 +1,4 @@
-import { Component, computed, effect, forwardRef, inject, input, model, signal, untracked } from '@angular/core';
+import { booleanAttribute, Component, computed, effect, forwardRef, inject, input, model, signal, untracked } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
@@ -17,6 +17,7 @@ import { Instrument, InstrumentsService } from '../instruments.service';
   imports: [MatFormFieldModule, MatSelectModule, MatInputModule, MatAutocompleteModule, MatButtonModule, MatIconModule],
   templateUrl: './instrument-picker.html',
   styleUrl: './instrument-picker.scss',
+  host: { '[class.stacked]': 'stacked()' },
   providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => InstrumentPicker), multi: true }],
 })
 export class InstrumentPicker implements ControlValueAccessor {
@@ -26,6 +27,8 @@ export class InstrumentPicker implements ControlValueAccessor {
   readonly ticker = model('');
   readonly type = model('');
   readonly disabled = input(false);
+  // Puts the instrument field under the type field instead of beside it.
+  readonly stacked = input(false, { transform: booleanAttribute });
 
   protected readonly text = signal('');
   protected readonly touched = signal(false);

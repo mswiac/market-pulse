@@ -16,6 +16,21 @@
   flex: 1 1 16rem;
 }
 
+:host(.stacked) {
+  .picker {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+  }
+
+  // The row layout's flex-basis would become a height in a column.
+  .type-field,
+  .search-field {
+    flex: none;
+    width: 100%;
+  }
+}
+
 .invalid-hint {
   color: var(--mat-sys-error);
 }
