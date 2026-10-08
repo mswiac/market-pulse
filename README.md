@@ -147,7 +147,7 @@ Deployment runs through **Cloudflare Workers Builds**, configured in the Cloudfl
 - **Deploy command**: `npx wrangler deploy`
 - **Version command**: `npx wrangler version upload`
 
-`wrangler.toml` defines what ships: the `marketpulse` Worker, the `DB` binding to the `marketpulse-db` D1 database, the daily cron trigger, and the static assets directory (`dist/market-pulse/browser/pl`).
+`wrangler.toml` defines what ships: the `marketpulse` Worker, the `DB` binding to the `marketpulse-db` D1 database, the cron triggers (a GPW fetch at 16:30 UTC, a US and index fetch at 23:00 UTC, and one alert evaluation at 23:15 UTC), and the static assets directory (`dist/market-pulse/browser/pl`).
 
 **D1 migrations are not applied automatically on deploy.** After deploying a change that adds a migration file, apply it to the remote database by hand:
 

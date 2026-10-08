@@ -12,7 +12,7 @@ import worker from '../../src/worker/index';
 // (see src/worker/index.ts) — the summary tests below call handleScheduled
 // directly instead of going through worker.scheduled(...).
 import { refreshInstruments } from '../../src/worker/lib/market-refresh';
-import { EVALUATE_CRON, FETCH_CRON, handleCron, handleScheduled } from '../../src/worker/scheduled';
+import { EVALUATE_CRON, handleCron, handleScheduled, PL_FETCH_CRON, US_FETCH_CRON } from '../../src/worker/scheduled';
 import { calculateRSI } from '../../src/worker/lib/rsi';
 import wranglerToml from '../../wrangler.toml?raw';
 
@@ -56,11 +56,15 @@ const RISING_CLOSES = Array.from({ length: 15 }, (_, i) => 100 + i);
 const RISING_HIGHS = RISING_CLOSES.map((c) => c + 1);
 const RISING_LOWS = RISING_CLOSES.map((c) => c - 1);
 
+// Fires both fetch triggers, so a test sees every instrument type fetched
+// as one run did before the per-market split.
 async function runScheduled(): Promise<void> {
-  const controller = createScheduledController({ cron: FETCH_CRON });
-  const ctx = createExecutionContext();
-  await worker.scheduled(controller, env, ctx);
-  await waitOnExecutionContext(ctx);
+  for (const cron of [PL_FETCH_CRON, US_FETCH_CRON]) {
+    const controller = createScheduledController({ cron });
+    const ctx = createExecutionContext();
+    await worker.scheduled(controller, env, ctx);
+    await waitOnExecutionContext(ctx);
+  }
 }
 
 // The cron only fetches instruments that have at least one alert, so every
@@ -681,19 +685,38 @@ describe('cron expressions', () => {
   it('match the schedules declared in wrangler.toml', () => {
     const declared = [...(/crons\s*=\s*\[([^\]]*)\]/.exec(wranglerToml)?.[1] ?? '').matchAll(/"([^"]+)"/g)].map((m) => m[1]);
 
-    expect(declared).toEqual([FETCH_CRON, EVALUATE_CRON]);
+    expect(declared).toEqual([PL_FETCH_CRON, US_FETCH_CRON, EVALUATE_CRON]);
   });
 });
 
 describe('cron routing', () => {
-  it('runs only the fetch phase for the fetch expression', async () => {
+  it('runs only the fetch phase for a fetch expression', async () => {
     const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))));
     vi.stubGlobal('fetch', fetchMock);
 
-    await handleCron(FETCH_CRON, env);
+    await handleCron(US_FETCH_CRON, env);
 
     expect(fetchMock.mock.calls.some((call) => (call[0] as string).includes('finance/chart'))).toBe(true);
     expect(fetchMock.mock.calls.some((call) => (call[0] as string).includes('api.resend.com'))).toBe(false);
+  });
+
+  it('fetches only the instrument types each fetch trigger owns', async () => {
+    await insertSuffixInstrument();
+    const fetchedSymbols = async (cron: string) => {
+      const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))));
+      vi.stubGlobal('fetch', fetchMock);
+      await handleCron(cron, env);
+      return fetchMock.mock.calls.map((call) => decodeURIComponent(call[0] as string)).filter((url) => url.includes('finance/chart'));
+    };
+
+    const plUrls = await fetchedSymbols(PL_FETCH_CRON);
+    expect(plUrls.some((url) => url.includes('TEST.WA'))).toBe(true);
+    expect(plUrls.some((url) => url.includes('^VIX') || url.includes('^NDX'))).toBe(false);
+
+    const usUrls = await fetchedSymbols(US_FETCH_CRON);
+    expect(usUrls.some((url) => url.includes('^VIX'))).toBe(true);
+    expect(usUrls.some((url) => url.includes('^NDX'))).toBe(true);
+    expect(usUrls.some((url) => url.includes('TEST.WA'))).toBe(false);
   });
 
   it('runs only the evaluation phase for the evaluation expression', async () => {
