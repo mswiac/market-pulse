@@ -1,10 +1,10 @@
 ---
 change_id: admin-per-market-refresh
 title: Force data refresh fetches all instruments via per-market requests
-status: impl_reviewed
+status: archived
 created: 2026-10-09
 updated: 2026-10-09
-archived_at: null
+archived_at: 2026-10-08T23:29:56Z
 ---
 
 ## Notes
