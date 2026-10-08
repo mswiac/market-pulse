@@ -93,7 +93,12 @@ async function postBatch(env: Env, inputs: SendEmailInput[]): Promise<SendEmailR
     // 429 (rate limit) and 408 (timeout) are 4xx but say nothing about the
     // request itself, so they retry too — and a batch loses up to 100 alerts
     // at once if they are wrongly treated as permanent.
-    const transient = response.status >= 500 || response.status === 429 || response.status === 408;
+    // 409 is Resend's answer to an identical batch (same Idempotency-Key)
+    // that is still being processed. The key is a hash of the payload, so the
+    // "same key, different payload" variant cannot occur here: the batch is
+    // either already going out or can safely be retried.
+    const transient =
+      response.status >= 500 || response.status === 429 || response.status === 408 || response.status === 409;
     return { ok: false, error: message, transient };
   }
 

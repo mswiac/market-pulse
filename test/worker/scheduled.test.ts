@@ -11,6 +11,7 @@ import worker from '../../src/worker/index';
 // The exported `scheduled` handler discards handleScheduled's return value
 // (see src/worker/index.ts) — the summary tests below call handleScheduled
 // directly instead of going through worker.scheduled(...).
+import { refreshInstruments } from '../../src/worker/lib/market-refresh';
 import { EVALUATE_CRON, FETCH_CRON, handleCron, handleScheduled } from '../../src/worker/scheduled';
 import { calculateRSI } from '../../src/worker/lib/rsi';
 import wranglerToml from '../../wrangler.toml?raw';
@@ -641,6 +642,36 @@ describe('currency correction logging', () => {
     } finally {
       batchSpy.mockRestore();
       logSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    }
+  });
+});
+
+describe('refreshInstruments timeout', () => {
+  it('abandons a fetch that does not answer within timeoutMs, reporting the ticker as an error', async () => {
+    // A fetch that only ever settles when its abort signal fires.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(
+        (_url: string, init?: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => reject(init.signal?.reason));
+          }),
+      ),
+    );
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      const result = await refreshInstruments(
+        env,
+        [{ ticker: '^VIX', rsi_eligible: 0, currency: 'USD', suffix: '' }],
+        { retryAttempts: 1, timeoutMs: 20 },
+      );
+
+      expect(result.tickers).toEqual([{ ticker: '^VIX', status: 'error', error: expect.any(String) }]);
+      const row = await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?').bind('^VIX').first();
+      expect(row).toBeNull();
+    } finally {
       consoleErrorSpy.mockRestore();
     }
   });

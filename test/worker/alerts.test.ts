@@ -120,6 +120,19 @@ describe('alerts endpoints', () => {
     // from a gap-free series even if the ticker was not refreshed for weeks.
     const url = new URL(fetchMock.mock.calls[0][0] as string);
     expect(Number(url.searchParams.get('period2')) - Number(url.searchParams.get('period1'))).toBe(31 * 24 * 60 * 60);
+    // A slow provider must not hold up saving the alert.
+    expect((fetchMock.mock.calls[0][1] as RequestInit).signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('does not refresh market data when editing an alert that does not exist', async () => {
+    const cookie = await registerAndLogIn('stale-refresh-missing-alert@example.com');
+    await seedMarketData('^VIX', 25, 7 * 24 * 60 * 60);
+    const fetchMock = stubYahooClose(15);
+
+    const response = await updateAlert(cookie, 999999, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'up' });
+
+    expect(response.status).toBe(404);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('does not call Yahoo when market data is fresh', async () => {

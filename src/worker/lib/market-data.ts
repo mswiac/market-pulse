@@ -43,7 +43,12 @@ function toUnixSeconds(isoDate: string): number {
   return Date.parse(`${isoDate}T00:00:00Z`) / 1000;
 }
 
-export async function fetchDailyCloses(symbol: string, from: string, to: string): Promise<DailyClosesResult> {
+export async function fetchDailyCloses(
+  symbol: string,
+  from: string,
+  to: string,
+  signal?: AbortSignal,
+): Promise<DailyClosesResult> {
   const period1 = toUnixSeconds(from);
   const period2 = toUnixSeconds(to);
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=1d`;
@@ -53,6 +58,7 @@ export async function fetchDailyCloses(symbol: string, from: string, to: string)
       'User-Agent':
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
     },
+    signal,
   });
 
   if (!response.ok) {

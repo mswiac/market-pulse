@@ -127,7 +127,7 @@ describe('sendAlertEmailBatch', () => {
     expect(await sendOne()).toMatchObject({ transient: true });
   });
 
-  it.each([429, 408])('marks a %i status as transient, since it says nothing about the request itself', async (status) => {
+  it.each([429, 408, 409])('marks a %i status as transient, since it says nothing about the request itself', async (status) => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(status, { message: 'slow down' })));
 
     expect(await sendOne()).toEqual({ ok: false, error: 'slow down', transient: true });

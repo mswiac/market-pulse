@@ -3,8 +3,8 @@ import type { Env } from '../index';
 import { STALE_AFTER_SECONDS, resolveFiringValue } from '../lib/alert-evaluation';
 import { EMAIL_PATTERN, normalizeEmail } from '../lib/email';
 import type { InstrumentRow } from '../lib/instruments';
+import { refreshInstruments } from '../lib/market-refresh';
 import { sessionMiddleware } from '../lib/session';
-import { refreshInstruments } from '../scheduled';
 
 const VALID_ALERT_TYPES = ['PRICE', 'RSI'] as const;
 const VALID_DIRECTIONS = ['up', 'down'] as const;
@@ -122,6 +122,9 @@ interface CurrentMarketValue {
   low: number | null;
 }
 
+// A slow Yahoo must not hold up saving an alert for long.
+const REFRESH_TIMEOUT_MS = 4000;
+
 // The cron only refreshes tickers that already have an alert, so a ticker
 // getting its first alert can hold a stale (or no) market_data row — and the
 // initial armed state below would be computed against an old price. Refresh
@@ -133,7 +136,7 @@ async function ensureFreshMarketData(env: Env, instrument: InstrumentRow): Promi
       .bind(instrument.ticker)
       .first<{ updated_at: number }>();
     if (row && Math.floor(Date.now() / 1000) - row.updated_at <= STALE_AFTER_SECONDS) return;
-    await refreshInstruments(env, [instrument], { retryAttempts: 1, fullWindow: true });
+    await refreshInstruments(env, [instrument], { retryAttempts: 1, fullWindow: true, timeoutMs: REFRESH_TIMEOUT_MS });
   } catch (err) {
     console.error(`alerts: failed to refresh market data for ${instrument.ticker}`, err);
   }
@@ -274,6 +277,14 @@ alertsRoutes.put('/:id', async (c) => {
   const { instrument, alertType, threshold, notificationEmail, direction } = validation;
 
   const userId = c.get('userId');
+  // Cheap ownership check first: refreshing market data costs a Yahoo call,
+  // which a missing or foreign alert id must not trigger. The batch below
+  // still returns 404 for the narrow race where the alert vanishes meanwhile.
+  const owned = await c.env.DB.prepare('SELECT 1 FROM alerts WHERE id = ? AND user_id = ?').bind(id, userId).first();
+  if (!owned) {
+    return c.json({ error: 'alert not found', code: 'alert_not_found' }, 404);
+  }
+
   await ensureFreshMarketData(c.env, instrument);
   const armed = await computeArmed(c.env.DB, instrument.ticker, alertType, threshold, direction);
 
