@@ -61,6 +61,8 @@ export interface CronRunEmailResult {
   error?: string;
 }
 
+export type CronRunMarket = 'pl' | 'other';
+
 export interface CronRunSummary {
   tickers: CronRunTickerResult[];
   alertsEvaluated: number;
@@ -107,7 +109,11 @@ export class AdminService {
     return this.http.delete<RemovedUser>(`/api/admin/users/${id}`);
   }
 
-  triggerCronRun(): Observable<CronRunSummary> {
-    return this.http.post<CronRunSummary>('/api/admin/cron/run', {});
+  fetchCronMarket(market: CronRunMarket): Observable<CronRunSummary> {
+    return this.http.post<CronRunSummary>('/api/admin/cron/run', { phase: 'fetch', market });
+  }
+
+  evaluateCronAlerts(): Observable<CronRunSummary> {
+    return this.http.post<CronRunSummary>('/api/admin/cron/run', { phase: 'evaluate' });
   }
 }

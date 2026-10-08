@@ -18,8 +18,8 @@ Users whose email is listed in `ADMIN_EMAILS` get an "Admin" section in the app.
 - **Remove instrument** (`/admin/remove-instrument`) — previews how many alerts reference the instrument, then deletes it and its dependent data.
 - **Remove user** (`/admin/remove-user`) — previews how many alerts and trigger events belong to the account, then deletes it; an admin cannot delete their own account.
 
-Exact deletion cascades and the mechanics of the manual cron run (what
-`handleScheduled()` actually touches) are documented in
+Exact deletion cascades and the mechanics of the manual cron run (the
+per-market fetch requests and the evaluation request) are documented in
 `context/foundation/admin-panel-notes.md`.
 
 ## Running locally

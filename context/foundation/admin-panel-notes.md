@@ -44,9 +44,15 @@ returns `403 cannot_delete_self` before anything else runs.
 
 ## Run cron manually (`POST /admin/cron/run`)
 
-Calls `handleScheduled()` directly — the exact same function the real
-Cloudflare Cron Trigger invokes on its daily schedule (`src/worker/scheduled.ts`).
-It is not a dry run or simulation: it fetches real closes, writes real
-`price_history`/RSI state, evaluates every active alert, and sends real
-Resend emails for anything that crosses a threshold. Treat it as "run today's
-cron job right now," not as a preview.
+Takes a JSON body naming one phase, and the admin page sends three requests,
+each with its own Workers Free subrequest budget: `{ "phase": "fetch",
+"market": "pl" }` and `{ "phase": "fetch", "market": "other" }` (in parallel),
+then `{ "phase": "evaluate" }`. A fetch refreshes **every** instrument of the
+market (`MARKET_TYPES` in `src/worker/lib/instruments.ts`), alert or not,
+unlike the cron fetch, which only covers instruments that have an alert.
+Evaluation runs `evaluateAlerts` for all alerts and runs even if a fetch
+failed, because the freshness check skips stale data. It is not a dry run or
+simulation: it fetches real closes, writes real `price_history`/RSI state,
+evaluates every active alert, and sends real Resend emails for anything that
+crosses a threshold. Treat it as "run today's cron job right now," not as a
+preview.

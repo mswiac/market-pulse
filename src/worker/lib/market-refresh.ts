@@ -38,10 +38,10 @@ const LONG_LOOKBACK_DAYS = 30;
 // calculateRSI needs period + 1 closes (see rsi.ts).
 const MIN_CLOSES_FOR_RSI = 15;
 // Workers Free allows 50 subrequests per invocation and D1 queries count
-// toward it. Fetch attempts are capped below that so the fixed D1 calls (and,
-// on the manual full run, the alert evaluation that shares its invocation)
-// always fit, and a few flaky tickers retrying cannot exhaust the budget
-// mid-run. Each cron fetch trigger gets this budget on its own.
+// toward it. Fetch attempts are capped below that so the fixed D1 calls always
+// fit, and a few flaky tickers retrying cannot exhaust the budget mid-run.
+// Each cron fetch trigger and each admin per-market fetch request gets this
+// budget on its own.
 const MAX_FETCH_ATTEMPTS_PER_RUN = 40;
 // A bound-parameter budget: one IN (...) list per chunk stays far below D1's
 // 100-parameter cap.
