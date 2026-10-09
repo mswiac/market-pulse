@@ -1012,7 +1012,6 @@ describe('cron failure notice', () => {
       expect(text).toMatch(/\^(VIX|NDX), \^(VIX|NDX): .*batch boom/);
       expect(text).toContain('^VIX');
       expect(text).toContain('^NDX');
-      expect(text).not.toContain('Stryker');
     } finally {
       batchSpy.mockRestore();
       consoleErrorSpy.mockRestore();

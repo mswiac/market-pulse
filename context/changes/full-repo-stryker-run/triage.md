@@ -12,25 +12,25 @@ Issue: #190 (follow-up to #187). Run date: 2026-10-09.
 
 | File | Baseline | After new tests |
 | --- | --- | --- |
-| **All files** | **89.54%** (168 survived, 16 no coverage) | see per-file rows |
-| lib/admin.ts | 100.00 | |
+| **All files** | **89.54%** (168 survived, 16 no coverage) | n/a (baseline only) |
+| lib/admin.ts | 100.00 | n/a |
 | lib/alert-evaluation.ts | 93.55 | 94.01 |
 | lib/cron-failure-notice.ts | 77.78 | 96.30 |
-| lib/email.ts | 100.00 | |
-| lib/instruments.ts | 77.78 | |
-| lib/market-data.ts | 97.01 | |
+| lib/email.ts | 100.00 | n/a |
+| lib/instruments.ts | 77.78 | n/a |
+| lib/market-data.ts | 97.01 | n/a |
 | lib/market-refresh.ts | 79.84 | 86.82 |
-| lib/password.ts | 96.49 | |
-| lib/price-history.ts | 100.00 | |
-| lib/resend.ts | 97.01 | |
-| lib/rsi.ts | 95.24 | |
+| lib/password.ts | 96.49 | n/a |
+| lib/price-history.ts | 100.00 | n/a |
+| lib/resend.ts | 97.01 | n/a |
+| lib/rsi.ts | 95.24 | n/a |
 | lib/session.ts | 77.94 | 98.53 |
-| routes/admin.ts | 85.26 | |
-| routes/alerts.ts | 94.94 | |
+| routes/admin.ts | 85.26 | n/a |
+| routes/alerts.ts | 94.94 | n/a |
 | routes/auth.ts | 78.35 | 86.60 |
-| routes/instruments.ts | 96.23 | |
-| routes/trigger-events.ts | 88.24 | |
-| index.ts | 84.62 | |
+| routes/instruments.ts | 96.23 | n/a |
+| routes/trigger-events.ts | 88.24 | n/a |
+| index.ts | 84.62 | n/a |
 | scheduled.ts | 91.04 | 97.01 |
 
 The control run covered `scheduled.ts`, `cron-failure-notice.ts`, `session.ts`, `routes/auth.ts`, `alert-evaluation.ts` and `market-refresh.ts` (605 mutants, 92.23% total, 6 min 49 s).
@@ -49,6 +49,8 @@ Angular control runs (same temporary profile): `alert-list.ts`, `add-instrument.
 
 ## Survivor decisions
 
+Survivors are recorded per group, not per mutant: the full per-mutant list is in the HTML report (`reports/mutation/mutation.html`, gitignored) and the run output.
+
 ### Killed by new tests (this change)
 
 | Area | Survivors | New test |
@@ -63,7 +65,7 @@ Angular control runs (same temporary profile): `alert-list.ts`, `add-instrument.
 | `add-instrument.ts` | currency / suffix / RSI setters and form reset | Non-default payload submitted and reset to defaults. |
 | `remove-instrument.ts` | load error and empty catalogue states | Two new specs. |
 | `remove-user.ts`, `admin-panel.ts` | loading spinner, load error, empty list | New specs for each state. |
-| `instrument-picker.ts` | type order, invalid hint conditions, touched / dirty, `writeValue(null)`, `displayWith`, full catalogue offered after a selection, typed text kept after an outside clear | Nine new specs. |
+| `instrument-picker.ts` | type order, invalid hint conditions, touched / dirty, `writeValue(null)`, `displayWith`, full catalogue offered after a selection, typed text kept after an outside clear | Eight new specs. |
 | `instrument-search.ts` | query trimming, prefix vs suffix, sorting within each ranking group | Two new specs. |
 | `alert-form.ts` | non-numeric threshold, defaults without an alert, no signed-in user, pre-filled RSI range | Five new specs. |
 | `login.ts`, `register.ts`, `instrument-types.ts` | empty initial values, creatable type list | One spec each. |

@@ -131,12 +131,12 @@ Full runs are slow (worker: 354 tests per mutant; Angular: whole `ng test` per m
 
 #### Automated
 
-- [x] 1.1 Worker full run completes and per-file scores are recorded in triage.md
-- [x] 1.2 Angular full run completes and per-file scores are recorded in triage.md
-- [x] 1.3 Every survivor has a decision row in triage.md
-- [x] 1.4 New tests pass with npm run test:worker and npm run test:ci
-- [x] 1.5 Lint passes with npm run lint
-- [x] 1.6 Scoped control run shows the targeted survivors killed
+- [x] 1.1 Worker full run completes and per-file scores are recorded in triage.md — 42ffce0
+- [x] 1.2 Angular full run completes and per-file scores are recorded in triage.md — 42ffce0
+- [x] 1.3 Every survivor has a decision row in triage.md — 42ffce0
+- [x] 1.4 New tests pass with npm run test:worker and npm run test:ci — 42ffce0
+- [x] 1.5 Lint passes with npm run lint — 42ffce0
+- [x] 1.6 Scoped control run shows the targeted survivors killed — 42ffce0
 
 #### Manual
 

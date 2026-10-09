@@ -287,7 +287,7 @@ describe('AlertList actions', () => {
 });
 
 describe('AlertList details', () => {
-  it('shows the day high and low only for price alerts and the RSI only for RSI alerts', async () => {
+  it('shows the day high and low and no RSI for a price alert', async () => {
     await renderList([make(1, '^NDX', 'PRICE', { currentHigh: 5, currentLow: 4, currentPrice: 4.5 })]);
     expect(screen.queryByText("Today's high:")).toBeTruthy();
     expect(screen.queryByText("Today's low:")).toBeTruthy();
