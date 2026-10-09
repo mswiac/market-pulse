@@ -656,9 +656,7 @@ describe('evaluateAlerts summary', () => {
       batchSpy.mockRestore();
     }
   });
-});
 
-describe('evaluateAlerts per-alert failure', () => {
   // SQLite is dynamically typed: a non-numeric `high` stored in a REAL column
   // comes back as text, so buildEmail throws on `.toFixed` for that one alert.
   async function seedBrokenHigh(ticker: string): Promise<void> {

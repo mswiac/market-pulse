@@ -891,7 +891,7 @@ describe('cron failure notice', () => {
     }
   });
 
-  it('reports an alert whose evaluation throws by id in the notice, without blocking other alerts', async () => {
+  it('reports an alert whose evaluation throws by id in the notice', async () => {
     const fetchMock = stubYahooAndResend(false);
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     // A text `high` makes buildEmail throw for this one alert only.

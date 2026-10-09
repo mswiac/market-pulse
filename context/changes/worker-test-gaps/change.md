@@ -1,7 +1,7 @@
 ---
 change_id: worker-test-gaps
 title: Close remaining worker integration test gaps
-status: implementing
+status: impl_reviewed
 created: 2026-10-09
 updated: 2026-10-09
 archived_at: null

@@ -123,13 +123,13 @@ Close the three gaps and make coverage measurable with one command.
 
 #### Automated
 
-- [x] 1.1 New and existing worker tests pass: `npm run test:worker`
-- [x] 1.2 Coverage run works and reports `src/worker`: `npm run test:worker:coverage`
-- [x] 1.3 Clean install resolves with the new devDependency: `npm ci --dry-run`
-- [x] 1.4 Typecheck passes: `npm run typecheck`
-- [x] 1.5 Lint passes: `npm run lint`
+- [x] 1.1 New and existing worker tests pass: `npm run test:worker` — 7c60c89
+- [x] 1.2 Coverage run works and reports `src/worker`: `npm run test:worker:coverage` — 7c60c89
+- [x] 1.3 Clean install resolves with the new devDependency: `npm ci --dry-run` — 7c60c89
+- [x] 1.4 Typecheck passes: `npm run typecheck` — 7c60c89
+- [x] 1.5 Lint passes: `npm run lint` — 7c60c89
 
 #### Manual
 
-- [x] 1.6 Coverage report no longer lists the three target line ranges as uncovered
+- [x] 1.6 Coverage report no longer lists the three target line ranges as uncovered — 7c60c89
 - [ ] 1.7 GitHub Actions `npm ci` still succeeds on the PR
