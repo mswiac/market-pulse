@@ -891,6 +891,29 @@ describe('cron failure notice', () => {
     }
   });
 
+  it('reports an alert whose evaluation throws by id in the notice, without blocking other alerts', async () => {
+    const fetchMock = stubYahooAndResend(false);
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // A text `high` makes buildEmail throw for this one alert only.
+    const inserted = await env.DB.prepare(
+      'INSERT INTO alerts (user_id, ticker, alert_type, threshold, notification_email, direction, armed) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    )
+      .bind(seededUserId, '^VIX', 'PRICE', 20, 'verified@example.com', 'down', 1)
+      .run();
+    await env.DB.prepare('INSERT INTO market_data (ticker, price, high, low, updated_at) VALUES (?, ?, ?, ?, unixepoch())')
+      .bind('^VIX', 25, 'not-a-number', 5)
+      .run();
+
+    try {
+      await handleCron(EVALUATE_CRON, env);
+
+      expect(resendCalls(fetchMock)).toHaveLength(1);
+      expect(noticeBody(fetchMock).text).toContain(`alert ${inserted.meta.last_row_id}: TypeError`);
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
+  });
+
   it('lists tickers that failed for the same reason once', async () => {
     const fetchMock = stubYahooAndResend(false);
     const batchSpy = vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('batch boom'));
