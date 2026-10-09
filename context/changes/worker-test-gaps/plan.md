@@ -132,4 +132,4 @@ Close the three gaps and make coverage measurable with one command.
 #### Manual
 
 - [x] 1.6 Coverage report no longer lists the three target line ranges as uncovered — 7c60c89
-- [ ] 1.7 GitHub Actions `npm ci` still succeeds on the PR
+- [x] 1.7 GitHub Actions `npm ci` still succeeds on the PR — 68a1073
