@@ -21,6 +21,7 @@ const RESULT: MarketDataFetchResult = {
 async function renderAdminPanel(
   impl: () => ReturnType<AdminService['fetchMarketData']> = () => of(RESULT),
   initialTicker = '^NDX',
+  ensureLoaded: () => ReturnType<InstrumentsService['ensureLoaded']> = () => of(INSTRUMENTS),
 ) {
   const fetchMarketData = vi.fn(impl);
   const result = await render(AdminPanel, {
@@ -31,7 +32,7 @@ async function renderAdminPanel(
         useValue: {
           instruments: () => INSTRUMENTS,
           types: () => [...new Set(INSTRUMENTS.map((i) => i.type))],
-          ensureLoaded: () => of(INSTRUMENTS),
+          ensureLoaded,
         },
       },
       { provide: AdminService, useValue: { fetchMarketData } },
@@ -53,6 +54,20 @@ async function renderAdminPanel(
 }
 
 describe('AdminPanel', () => {
+  it('shows a spinner and no form while the instruments are loading', async () => {
+    await renderAdminPanel(() => of(RESULT), '', () => new Subject<Instrument[]>());
+
+    expect(screen.getByRole('progressbar', { name: 'Loading instruments' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /fetch/i })).toBeNull();
+  });
+
+  it('shows a load error, with the spinner gone, when the instruments cannot be loaded', async () => {
+    await renderAdminPanel(() => of(RESULT), '', () => throwError(() => new Error('offline')));
+
+    expect(screen.getByText(/Failed to load instruments/)).toBeTruthy();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
   it('starts with nothing selected and keeps submit disabled even with both dates set', async () => {
     const { fixture, component } = await renderAdminPanel(() => of(RESULT), '');
     component.onFromDateChange(new Date('2026-01-01'));

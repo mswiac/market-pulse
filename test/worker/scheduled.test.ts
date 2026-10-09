@@ -347,6 +347,22 @@ describe('scheduled handler', () => {
     expect(vixCalls).toHaveLength(3);
   });
 
+  it('waits 300 ms between attempts but not after the last one', async () => {
+    const delays: number[] = [];
+    vi.stubGlobal('setTimeout', (fn: () => void, ms?: number) => {
+      delays.push(ms ?? 0);
+      fn();
+      return 0;
+    });
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(500, {}))));
+
+    const summary = await runFetchPhase(env);
+
+    expect(summary.tickers.every((t) => t.status === 'error')).toBe(true);
+    // Two instruments, three attempts each: a pause after attempts 1 and 2 only.
+    expect(delays).toEqual([300, 300, 300, 300]);
+  });
+
   it('auto-corrects instruments.currency when the fetched currency disagrees with the stored value', async () => {
     await insertSuffixInstrument('USD');
 
@@ -516,6 +532,44 @@ describe('alert-scoped, history-backed fetch phase', () => {
     expect(Number(url.searchParams.get('period2')) - Number(url.searchParams.get('period1'))).toBe(8 * DAY);
   });
 
+  it('orders stored and fetched closes by date before computing RSI when the fetch fills a gap', async () => {
+    const closeByDaysAgo = new Map<number, number>();
+    [20, 19, 18, 17, 16, 15, 7, 6, 5, 4, 3, 2].forEach((d, i) => closeByDaysAgo.set(d, 100 + ((i * 7) % 11)));
+    const gapDays = [14, 13, 12, 11];
+    gapDays.forEach((d, i) => closeByDaysAgo.set(d, 90 + ((i * 5) % 9)));
+    await env.DB.batch(
+      [...closeByDaysAgo]
+        .filter(([d]) => !gapDays.includes(d))
+        .map(([d, close]) =>
+          env.DB.prepare('INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, NULL, NULL)').bind(
+            '^NDX',
+            isoDate(utcDaysAgo(d)),
+            close,
+          ),
+        ),
+    );
+    const fetchMock = vi.fn().mockImplementation((url: string) =>
+      Promise.resolve(
+        url.includes(encodeURIComponent('^NDX'))
+          ? jsonResponse(
+              200,
+              yahooBody(
+                gapDays.map((d) => utcDaysAgo(d)),
+                gapDays.map((d) => closeByDaysAgo.get(d) as number),
+              ),
+            )
+          : jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES)),
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await runScheduled();
+
+    const row = await env.DB.prepare('SELECT rsi FROM market_data WHERE ticker = ?').bind('^NDX').first<{ rsi: number }>();
+    const chronological = [...closeByDaysAgo].sort(([a], [b]) => b - a).map(([, close]) => close);
+    expect(row?.rsi).toBeCloseTo(calculateRSI(chronological) as number, 10);
+  });
+
   it('falls back to the long window for an RSI-eligible ticker with thin stored history', async () => {
     await env.DB.prepare('INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, NULL, NULL)')
       .bind('^NDX', isoDate(utcDaysAgo(5)), 100)
@@ -569,6 +623,8 @@ describe('alert-scoped, history-backed fetch phase', () => {
     expect(summary.tickers.some((t) => t.error?.includes('budget exhausted'))).toBe(true);
     // The ticker that was cut off mid-retry keeps the provider's own error.
     expect(summary.tickers.some((t) => t.error?.includes('budget exhausted') && t.error.includes('last error:'))).toBe(true);
+    // A ticker that never got an attempt has nothing to report beyond the budget itself.
+    expect(summary.tickers.some((t) => t.error === 'Error: fetch attempt budget exhausted for this run')).toBe(true);
   });
 });
 
@@ -891,6 +947,36 @@ describe('cron failure notice', () => {
     }
   });
 
+  it('does not list an alert whose email was sent as a problem in the notice', async () => {
+    const fetchMock = stubYahooAndResend(false);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    // Stale ^VIX forces a notice; the healthy ^NDX alert fires and its email is delivered.
+    await env.DB.prepare('INSERT INTO market_data (ticker, price, updated_at) VALUES (?, ?, unixepoch() - ?)')
+      .bind('^VIX', 10, 20 * 60 * 60)
+      .run();
+    await env.DB.prepare('INSERT INTO market_data (ticker, price, high, low, updated_at) VALUES (?, ?, ?, ?, unixepoch())')
+      .bind('^NDX', 25, 25, 25)
+      .run();
+    const sent = await env.DB.prepare(
+      'INSERT INTO alerts (user_id, ticker, alert_type, threshold, notification_email, direction, armed) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    )
+      .bind(seededUserId, '^NDX', 'PRICE', 20, 'verified@example.com', 'up', 1)
+      .run();
+
+    try {
+      await handleCron(EVALUATE_CRON, env);
+
+      const bodies = resendCalls(fetchMock).map((call) => JSON.parse((call[1] as RequestInit).body as string)[0]);
+      const notice = bodies.find((m) => m.subject.includes('alert evaluation'));
+      expect(bodies).toHaveLength(2);
+      expect(notice.text).toContain('^VIX: market data is 20h old');
+      expect(notice.text).toContain('reported 1 problem(s)');
+      expect(notice.text).not.toContain(`alert ${sent.meta.last_row_id}`);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it('reports an alert whose evaluation throws by id in the notice', async () => {
     const fetchMock = stubYahooAndResend(false);
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -923,8 +1009,10 @@ describe('cron failure notice', () => {
       await handleCron(US_FETCH_CRON, env);
       const { text } = noticeBody(fetchMock);
       expect(text.match(/batch boom/g)).toHaveLength(1);
+      expect(text).toMatch(/\^(VIX|NDX), \^(VIX|NDX): .*batch boom/);
       expect(text).toContain('^VIX');
       expect(text).toContain('^NDX');
+      expect(text).not.toContain('Stryker');
     } finally {
       batchSpy.mockRestore();
       consoleErrorSpy.mockRestore();

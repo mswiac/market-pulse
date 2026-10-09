@@ -369,6 +369,26 @@ describe('evaluateAlerts', () => {
     }
   });
 
+  it('treats data exactly 12 hours old as fresh (the staleness limit is exclusive)', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('stale-boundary@example.com');
+    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    const nowMs = Date.now();
+    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(nowMs);
+    await env.DB.prepare('INSERT INTO market_data (ticker, price, updated_at) VALUES (?, ?, ?)')
+      .bind('^VIX', 25, Math.floor(nowMs / 1000) - 12 * 60 * 60)
+      .run();
+
+    try {
+      const summary = await evaluateAlerts(env);
+
+      expect(summary.errors).toEqual([]);
+      expect(summary.emails).toEqual([{ alertId, ticker: '^VIX', status: 'sent' }]);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
   it('still evaluates data that is only slightly old (within 12 hours)', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('fresh-enough@example.com');

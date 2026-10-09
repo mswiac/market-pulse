@@ -145,6 +145,72 @@ describe('auth endpoints', () => {
   it('rejects /me without a session', async () => {
     const response = await exports.default.fetch(`${BASE_URL}/api/me`);
     expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({ error: 'unauthorized' });
+  });
+
+  it('does not mark the cleared cookie Secure when the request is not made over https', async () => {
+    const response = await exports.default.fetch('http://example.com/api/logout', { method: 'POST' });
+
+    const cleared = response.headers.get('set-cookie');
+    expect(cleared).toContain('Max-Age=0');
+    expect(cleared).not.toContain('Secure');
+  });
+
+  it('rejects /me with an unknown session id and clears the stale cookie', async () => {
+    const response = await exports.default.fetch(`${BASE_URL}/api/me`, {
+      headers: { Cookie: 'session_id=not-a-real-session' },
+    });
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({ error: 'unauthorized' });
+    const cleared = response.headers.get('set-cookie');
+    expect(cleared).toContain('session_id=;');
+    expect(cleared).toContain('Max-Age=0');
+    expect(cleared).toContain('HttpOnly');
+    expect(cleared).toContain('SameSite=Lax');
+    expect(cleared).toContain('Secure');
+  });
+
+  it('re-issues the session cookie with a fresh 7-day Max-Age on an authenticated request', async () => {
+    const registerResponse = await register('cookie-refresh@example.com');
+    const cookie = sessionCookieFrom(registerResponse);
+
+    const meResponse = await exports.default.fetch(`${BASE_URL}/api/me`, { headers: { Cookie: cookie } });
+
+    const refreshed = meResponse.headers.get('set-cookie');
+    expect(refreshed).toContain(cookie);
+    expect(refreshed).toContain(`Max-Age=${7 * 24 * 60 * 60}`);
+    expect(refreshed).toContain('HttpOnly');
+  });
+
+  it.each([
+    ['a malformed JSON body', 'not json'],
+    ['a missing password', JSON.stringify({ email: 'bad-login@example.com' })],
+    ['a non-string password', JSON.stringify({ email: 'bad-login@example.com', password: 12345678 })],
+    ['a missing email', JSON.stringify({ password: PASSWORD })],
+  ])('rejects login with %s using the generic message', async (_label, body) => {
+    const response = await exports.default.fetch(`${BASE_URL}/api/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    });
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({ error: 'invalid email or password' });
+  });
+
+  it.each([
+    ['a malformed JSON body', 'not json'],
+    ['a non-string password', JSON.stringify({ email: 'bad-register@example.com', password: 12345678 })],
+  ])('rejects registration with %s using the generic message', async (_label, body) => {
+    const response = await exports.default.fetch(`${BASE_URL}/api/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'invalid email or password' });
   });
 
   it('logout is idempotent even without an existing session', async () => {
@@ -187,5 +253,8 @@ describe('auth endpoints', () => {
     const clearedCookie = logoutResponse.headers.get('set-cookie');
     expect(clearedCookie).toContain('Max-Age=0');
     expect(clearedCookie).toContain('Path=/');
+    expect(clearedCookie).toContain('HttpOnly');
+    expect(clearedCookie).toContain('SameSite=Lax');
+    expect(clearedCookie).toContain('Secure');
   });
 });

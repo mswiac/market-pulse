@@ -62,6 +62,20 @@ async function renderRemoveUser(options?: {
 }
 
 describe('RemoveUser', () => {
+  it('shows a spinner and no form while the user list is loading', async () => {
+    await renderRemoveUser({ listUsers: () => new Subject<AdminUser[]>() });
+
+    expect(screen.getByRole('progressbar')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Remove user' })).toBeNull();
+  });
+
+  it('tells the admin there is nobody to remove when the user list is empty', async () => {
+    await renderRemoveUser({ listUsers: () => of([]) });
+
+    expect(screen.getByText('No users available to remove.')).toBeTruthy();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
   it('shows the load-error message when the user list fails to load', async () => {
     await renderRemoveUser({
       listUsers: () => throwError(() => new HttpErrorResponse({ status: 500 })),

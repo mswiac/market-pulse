@@ -32,6 +32,12 @@ async function renderLogin(
 describe('Login', () => {
   const submitButton = () => screen.getByRole('button', { name: 'Log in' }) as HTMLButtonElement;
 
+  it('starts with an empty email and password', async () => {
+    const { form } = await renderLogin();
+
+    expect(form.getRawValue()).toEqual({ email: '', password: '' });
+  });
+
   it('requires an email and rejects an invalid format', async () => {
     const { fixture, form } = await renderLogin();
 

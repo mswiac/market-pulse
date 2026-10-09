@@ -32,6 +32,12 @@ async function renderRegister(
 describe('Register', () => {
   const submitButton = () => screen.getByRole('button', { name: 'Register' }) as HTMLButtonElement;
 
+  it('starts with an empty email and password', async () => {
+    const { form } = await renderRegister();
+
+    expect(form.getRawValue()).toEqual({ email: '', password: '' });
+  });
+
   it('requires an email and rejects an invalid format', async () => {
     const { fixture, form } = await renderRegister();
 

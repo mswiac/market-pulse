@@ -29,14 +29,23 @@ async function renderAddInstrument(
   });
   const component = result.fixture.componentInstance as unknown as {
     onTypeChange: (type: string) => void;
+    onCurrencyChange: (currency: string) => void;
+    onRsiEligibleChange: (checked: boolean) => void;
     onSubmit: () => void;
     type: () => string;
     ticker: () => string;
     currency: () => string;
     rsiEligible: () => boolean;
+    suffix: () => string;
   };
   return { ...result, component, addInstrument, reload };
 }
+
+describe('CREATABLE_INSTRUMENT_TYPES', () => {
+  it('offers exactly the index, Polish stock and US stock types', () => {
+    expect(CREATABLE_INSTRUMENT_TYPES).toEqual(['index', 'pl_stock', 'us_stock']);
+  });
+});
 
 describe('AddInstrument', () => {
   it('prefills the suffix on type change, and a manual suffix edit survives unrelated field changes', async () => {
@@ -119,6 +128,31 @@ describe('AddInstrument', () => {
       true,
       '',
     );
+  });
+
+  it('submits non-default type, currency, suffix and RSI flag, then puts every field back to its default', async () => {
+    const { fixture, component, addInstrument } = await renderAddInstrument();
+    const tickerInput = () => screen.getByLabelText('Ticker') as HTMLInputElement;
+    const nameInput = () => screen.getByLabelText('Company name') as HTMLInputElement;
+    const suffixInput = () => screen.getByLabelText('Suffix (e.g. .WA)') as HTMLInputElement;
+
+    component.onTypeChange('pl_stock');
+    component.onCurrencyChange('PLN');
+    component.onRsiEligibleChange(false);
+    fireEvent.input(tickerInput(), { target: { value: 'CDR' } });
+    fireEvent.input(nameInput(), { target: { value: 'CD Projekt' } });
+    fireEvent.input(suffixInput(), { target: { value: ' .CUSTOM ' } });
+    fixture.detectChanges();
+    fireEvent.click(screen.getByRole('button', { name: 'Add instrument' }));
+    fixture.detectChanges();
+
+    expect(addInstrument).toHaveBeenCalledWith('pl_stock', 'CDR', 'CD Projekt', 'PLN', false, '.CUSTOM');
+    expect(await screen.findByText('Added instrument ABC.')).toBeTruthy();
+    expect(component.type()).toBe(CREATABLE_INSTRUMENT_TYPES[0]);
+    expect(component.currency()).toBe('EUR');
+    expect(component.rsiEligible()).toBe(true);
+    expect(component.suffix()).toBe('');
+    expect(suffixInput().value).toBe('');
   });
 
   it('shows the mapped message for a known error code', async () => {
