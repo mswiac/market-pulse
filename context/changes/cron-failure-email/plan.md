@@ -171,13 +171,13 @@ One extra Resend request per invocation: about 44 of 50 subrequests in the worst
 
 #### Automated
 
-- [x] 2.1 Worker tests pass: `npm run test:worker`
-- [x] 2.2 Type checking passes: `npm run typecheck`
-- [x] 2.3 Linting passes: `npm run lint`
-- [x] 2.4 Angular tests pass: `npm run test:ci`
+- [x] 2.1 Worker tests pass: `npm run test:worker` — 1db9153
+- [x] 2.2 Type checking passes: `npm run typecheck` — 1db9153
+- [x] 2.3 Linting passes: `npm run lint` — 1db9153
+- [x] 2.4 Angular tests pass: `npm run test:ci` — 1db9153
 
 #### Manual
 
-- [x] 2.5 A forced local fetch failure sends the failure email
-- [x] 2.6 A clean local run sends no failure email
+- [x] 2.5 A forced local fetch failure sends the failure email — 1db9153
+- [x] 2.6 A clean local run sends no failure email — 1db9153
 - [ ] 2.7 The first real cron run after deploy behaves correctly
