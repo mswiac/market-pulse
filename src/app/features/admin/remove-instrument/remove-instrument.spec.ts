@@ -17,6 +17,8 @@ async function renderRemoveInstrument(options?: {
   // Nothing is selected on load; most tests are about the flow after a choice,
   // so they start with ^NDX picked. Pass '' to keep the picker empty.
   initialTicker?: string;
+  catalogue?: Instrument[];
+  ensureLoaded?: () => ReturnType<InstrumentsService['ensureLoaded']>;
 }) {
   const dialogSubject = new Subject<boolean | undefined>();
   const dialogOpen = vi.fn(() => ({ afterClosed: () => dialogSubject.asObservable() }));
@@ -34,9 +36,9 @@ async function renderRemoveInstrument(options?: {
       {
         provide: InstrumentsService,
         useValue: {
-          instruments: () => INSTRUMENTS,
-          types: () => [...new Set(INSTRUMENTS.map((i) => i.type))],
-          ensureLoaded: () => of(INSTRUMENTS),
+          instruments: () => options?.catalogue ?? INSTRUMENTS,
+          types: () => [...new Set((options?.catalogue ?? INSTRUMENTS).map((i) => i.type))],
+          ensureLoaded: options?.ensureLoaded ?? (() => of(INSTRUMENTS)),
           reload,
         },
       },
@@ -74,6 +76,21 @@ async function renderRemoveInstrument(options?: {
 }
 
 describe('RemoveInstrument', () => {
+  it('shows a load error and no picker when the instrument catalogue cannot be loaded', async () => {
+    await renderRemoveInstrument({ initialTicker: '', ensureLoaded: () => throwError(() => new Error('offline')) });
+
+    expect(screen.getByText(/Failed to load instruments/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Remove instrument' })).toBeNull();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
+  it('tells the admin there is nothing to remove when the catalogue is empty', async () => {
+    await renderRemoveInstrument({ initialTicker: '', catalogue: [], ensureLoaded: () => of([]) });
+
+    expect(screen.getByText('No instruments available to remove.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Remove instrument' })).toBeNull();
+  });
+
   it('starts with nothing selected and the remove button disabled', async () => {
     const { fixture, getInstrumentImpact } = await renderRemoveInstrument({ initialTicker: '' });
     fixture.detectChanges();

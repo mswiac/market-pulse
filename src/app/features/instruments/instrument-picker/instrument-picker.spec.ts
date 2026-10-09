@@ -10,6 +10,8 @@ const INSTRUMENTS: Instrument[] = [
   { ticker: 'ZAB', name: 'Żabka', type: 'pl_stock', rsiEligible: true, currency: 'PLN' },
 ];
 
+const make = (ticker: string, type: string): Instrument => ({ ticker, name: ticker, type, rsiEligible: true, currency: 'USD' });
+
 const providers = [
   {
     provide: InstrumentsService,
@@ -223,6 +225,140 @@ describe('InstrumentPicker', () => {
     const { container } = await render(StackedHost, { providers });
 
     expect(container.querySelector('app-instrument-picker')!.classList.contains('stacked')).toBe(true);
+  });
+
+  it('lists the instrument types alphabetically by their label', async () => {
+    const reversed = ['us_stock', 'pl_stock', 'index'];
+    const instruments = reversed.map((t) => make(t, t));
+    const { fixture } = await render(SignalHost, {
+      providers: [{ provide: InstrumentsService, useValue: { instruments: () => instruments, types: () => reversed } }],
+    });
+    const picker = fixture.debugElement.children[0].componentInstance as unknown as {
+      types: () => string[];
+      typeLabel: (type: string) => string;
+    };
+
+    const labels = picker.types().map((t) => picker.typeLabel(t));
+    expect(labels).toEqual([...labels].sort((a, b) => a.localeCompare(b)));
+    expect(picker.types()).not.toEqual(reversed);
+  });
+
+  it('offers the whole catalogue again once an instrument is selected', async () => {
+    const { fixture } = await render(SignalHost, { providers });
+    fixture.componentInstance.ticker.set('CDR');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fireEvent.focus(combobox());
+    fireEvent.click(combobox());
+    fixture.detectChanges();
+
+    expect(await screen.findByRole('option', { name: '^NDX — NASDAQ-100' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'ZAB — Żabka' })).toBeTruthy();
+  });
+
+  it('shows the invalid hint only after blur, with unmatched text and nothing selected', async () => {
+    const { fixture } = await render(SignalHost, { providers });
+    const hint = () => screen.queryByText('Choose an instrument from the list');
+
+    type('qqq');
+    fixture.detectChanges();
+    expect(hint()).toBeNull();
+
+    fireEvent.blur(combobox());
+    fixture.detectChanges();
+    expect(hint()).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear selection' }));
+    fixture.detectChanges();
+    type('qqq');
+    fixture.detectChanges();
+    expect(hint()).toBeNull();
+  });
+
+  it('shows no hint after blur when the field is empty or an instrument is selected', async () => {
+    const { fixture } = await render(SignalHost, { providers });
+    const hint = () => screen.queryByText('Choose an instrument from the list');
+
+    fireEvent.blur(combobox());
+    fixture.detectChanges();
+    expect(hint()).toBeNull();
+
+    fixture.componentInstance.ticker.set('CDR');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fireEvent.blur(combobox());
+    fixture.detectChanges();
+    expect(hint()).toBeNull();
+  });
+
+  it('marks the bound form control as touched on blur but not as dirty while typing without a selection', async () => {
+    const { fixture } = await render(FormHost, { providers });
+    const { control } = fixture.componentInstance;
+
+    type('c');
+    fixture.detectChanges();
+    expect(control.dirty).toBe(false);
+    expect(control.touched).toBe(false);
+
+    fireEvent.blur(combobox());
+    fixture.detectChanges();
+    expect(control.touched).toBe(true);
+  });
+
+  it('resets the selection when the form control is written with null', async () => {
+    const { fixture } = await render(FormHost, { providers });
+    fixture.componentInstance.control.setValue('CDR');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const picker = fixture.debugElement.children[0].componentInstance as unknown as { ticker: () => string };
+    expect(picker.ticker()).toBe('CDR');
+
+    fixture.componentInstance.control.setValue(null as unknown as string);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(picker.ticker()).toBe('');
+    expect(combobox().value).toBe('');
+  });
+
+  it('starts with nothing selected and displays an unknown ticker as itself', async () => {
+    const { fixture } = await render(DisabledHost, { providers });
+    const picker = fixture.debugElement.children[0].componentInstance as unknown as {
+      ticker: () => string;
+      displayWith: (ticker: string) => string;
+    };
+
+    expect(picker.ticker()).toBe('');
+    expect(picker.displayWith('CDR')).toBe('CDR — CD Projekt');
+    expect(picker.displayWith('NOPE')).toBe('NOPE');
+  });
+
+  it('keeps text typed after an outside clear when the catalogue reloads', async () => {
+    const loaded = signal<Instrument[]>(INSTRUMENTS);
+    const { fixture } = await render(SignalHost, {
+      providers: [
+        {
+          provide: InstrumentsService,
+          useValue: { instruments: () => loaded(), types: () => [...new Set(loaded().map((i) => i.type))] },
+        },
+      ],
+    });
+    fixture.componentInstance.ticker.set('CDR');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.componentInstance.ticker.set('');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(combobox().value).toBe('');
+
+    type('abc');
+    fixture.detectChanges();
+    loaded.set([...INSTRUMENTS]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(combobox().value).toBe('abc');
   });
 
   it('is not stacked by default', async () => {

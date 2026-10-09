@@ -41,6 +41,8 @@ interface RenderOptions {
   // A new alert starts with no instrument selected; most tests are about
   // something else, so they begin with ^NDX picked. Pass '' to keep it empty.
   initialTicker?: string;
+  // Defaults to a signed-in user; pass null for a session without one.
+  currentUser?: { id: number; email: string; isAdmin: boolean } | null;
 }
 
 async function renderAlertForm(options: RenderOptions = {}) {
@@ -49,6 +51,7 @@ async function renderAlertForm(options: RenderOptions = {}) {
     dialogData = null,
     ensureLoaded = () => of(INSTRUMENTS),
     initialTicker = '^NDX',
+    currentUser = { id: 1, email: 'user@example.com', isAdmin: false },
   } = options;
   const create = vi.fn(serviceImpl);
   const update = vi.fn(serviceImpl);
@@ -59,7 +62,7 @@ async function renderAlertForm(options: RenderOptions = {}) {
       { provide: MAT_DIALOG_DATA, useValue: dialogData },
       {
         provide: AuthService,
-        useValue: { currentUser: () => ({ id: 1, email: 'user@example.com', isAdmin: false }) },
+        useValue: { currentUser: () => currentUser },
       },
       {
         // Plain functions, not signal()/computed() — non-reactive on purpose.
@@ -89,6 +92,45 @@ async function renderAlertForm(options: RenderOptions = {}) {
 }
 
 describe('AlertForm', () => {
+  it('rejects a non-numeric price threshold', async () => {
+    const { form } = await renderAlertForm();
+
+    form.controls.threshold.setValue('5' as unknown as number);
+
+    expect(form.controls.threshold.hasError('positive')).toBe(true);
+  });
+
+  it('opens a new alert with defaults when the dialog data carries no alert', async () => {
+    const { form, component } = await renderAlertForm({ dialogData: {}, initialTicker: '' });
+
+    expect(form.getRawValue()).toEqual({
+      ticker: '',
+      alertType: 'PRICE',
+      threshold: null,
+      direction: 'up',
+      notificationEmail: 'user@example.com',
+    });
+    expect((component as unknown as { isEditMode: boolean }).isEditMode).toBe(false);
+  });
+
+  it('leaves the notification email empty when nobody is signed in', async () => {
+    const { form } = await renderAlertForm({ currentUser: null, initialTicker: '' });
+
+    expect(form.controls.notificationEmail.value).toBe('');
+  });
+
+  it('accepts a pre-filled RSI threshold of 0, which the price rule would reject', async () => {
+    const { form } = await renderAlertForm({ dialogData: { alert: { ...ALERT, alertType: 'RSI', threshold: 0 } } });
+
+    expect(form.controls.threshold.valid).toBe(true);
+  });
+
+  it('rejects a pre-filled RSI threshold above 100', async () => {
+    const { form } = await renderAlertForm({ dialogData: { alert: { ...ALERT, alertType: 'RSI', threshold: 150 } } });
+
+    expect(form.controls.threshold.hasError('max')).toBe(true);
+  });
+
   it('rejects a zero or negative price threshold via positiveNumberValidator', async () => {
     const { fixture, form } = await renderAlertForm();
 

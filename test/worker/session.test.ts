@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createSession, validateSession } from '../../src/worker/lib/session';
 
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
@@ -49,6 +49,27 @@ describe('validateSession', () => {
       .bind(session.id)
       .first<{ expires_at: number }>();
     expect(row!.expires_at).toBe(justIssued);
+  });
+
+  it('renews expires_at when exactly the renewal threshold has elapsed since issue', async () => {
+    const userId = await insertUser('session-test-renew-boundary@example.com');
+    const session = await createSession(env.DB, userId);
+    const nowMs = Date.now();
+    const now = Math.floor(nowMs / 1000);
+    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(nowMs);
+    const exactlyDue = now + SESSION_TTL_SECONDS - RENEWAL_THRESHOLD_SECONDS;
+    await env.DB.prepare('UPDATE sessions SET expires_at = ? WHERE id = ?').bind(exactlyDue, session.id).run();
+
+    try {
+      await expect(validateSession(env.DB, session.id)).resolves.toEqual({ userId });
+
+      const row = await env.DB.prepare('SELECT expires_at FROM sessions WHERE id = ?')
+        .bind(session.id)
+        .first<{ expires_at: number }>();
+      expect(row!.expires_at).toBe(now + SESSION_TTL_SECONDS);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
   });
 
   it('renews expires_at once the renewal threshold has elapsed since issue', async () => {

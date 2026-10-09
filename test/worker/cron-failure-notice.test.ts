@@ -35,9 +35,22 @@ describe('notifyCronFailure', () => {
     const message = sentMessage(fetchSpy);
     expect(message.to).toBe('verified@example.com');
     expect(message.subject).toBe(`MarketPulse: GPW fetch had problems (${new Date().toISOString().slice(0, 10)})`);
-    expect(message.text).toContain('2 problem(s)');
-    expect(message.text).toContain('CDR: 500');
-    expect(message.text).toContain('PKN: timeout');
+    expect(message.text).toBe('GPW fetch reported 2 problem(s):\n\nCDR: 500\nPKN: timeout\n');
+  });
+
+  it('does not log an error or add a "more" line when the notice is sent and every problem fits', async () => {
+    const fetchSpy = vi.fn().mockImplementation(() => Promise.resolve(okResponse()));
+    vi.stubGlobal('fetch', fetchSpy);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await notifyCronFailure(
+      env,
+      'US fetch',
+      Array.from({ length: 20 }, (_, i) => `T${i}: failed`),
+    );
+
+    expect(sentMessage(fetchSpy).text).not.toContain('more');
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it('lists at most 20 problems and counts the rest', async () => {
