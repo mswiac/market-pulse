@@ -217,6 +217,8 @@ describe('scheduled handler', () => {
 
   it('logs and returns without writing anything when the instruments registry query fails', async () => {
     await env.DB.exec('DROP TABLE instruments');
+    // The failed load also triggers the admin failure notice, which must not reach the real Resend.
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, {})));
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     try {
@@ -754,6 +756,108 @@ describe('cron routing', () => {
       expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('* * * * *'));
     } finally {
       errorSpy.mockRestore();
+    }
+  });
+});
+
+describe('cron failure notice', () => {
+  const resendCalls = (fetchMock: ReturnType<typeof vi.fn>) =>
+    fetchMock.mock.calls.filter((call) => (call[0] as string).includes('api.resend.com'));
+  const noticeBody = (fetchMock: ReturnType<typeof vi.fn>) => JSON.parse((resendCalls(fetchMock)[0][1] as RequestInit).body as string)[0];
+
+  function stubYahooAndResend(failVix: boolean) {
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('api.resend.com')) return Promise.resolve(jsonResponse(200, { data: [{ id: 'x' }] }));
+      if (failVix && url.includes(encodeURIComponent('^VIX'))) return Promise.resolve(jsonResponse(500, {}));
+      return Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES)));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  it('sends one email naming the phase and the failing ticker when a fetch fails', async () => {
+    const fetchMock = stubYahooAndResend(true);
+
+    await handleCron(US_FETCH_CRON, env);
+
+    expect(resendCalls(fetchMock)).toHaveLength(1);
+    const message = noticeBody(fetchMock);
+    expect(message.to).toBe('verified@example.com');
+    expect(message.subject).toContain('US fetch');
+    expect(message.text).toContain('^VIX');
+    expect(message.text).not.toContain('^NDX');
+  });
+
+  it('sends nothing when the whole run succeeds', async () => {
+    const fetchMock = stubYahooAndResend(false);
+
+    await handleCron(US_FETCH_CRON, env);
+
+    expect(resendCalls(fetchMock)).toHaveLength(0);
+  });
+
+  it('reports a failed instruments registry load', async () => {
+    const fetchMock = stubYahooAndResend(false);
+    const prepareSpy = vi.spyOn(env.DB, 'prepare').mockImplementationOnce(() => {
+      throw new Error('registry down');
+    });
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      await handleCron(PL_FETCH_CRON, env);
+      expect(noticeBody(fetchMock).subject).toContain('GPW fetch');
+      expect(noticeBody(fetchMock).text).toContain('registry down');
+    } finally {
+      prepareSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    }
+  });
+
+  it('reports stale market data and failed alert emails from the evaluation phase', async () => {
+    const fetchMock = stubYahooAndResend(false);
+    await env.DB.prepare('INSERT INTO market_data (ticker, price, updated_at) VALUES (?, ?, unixepoch() - ?)')
+      .bind('^VIX', 10, 20 * 60 * 60)
+      .run();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      await handleCron(EVALUATE_CRON, env);
+      expect(resendCalls(fetchMock)).toHaveLength(1);
+      expect(noticeBody(fetchMock).subject).toContain('alert evaluation');
+      expect(noticeBody(fetchMock).text).toContain('^VIX: market data is 20h old');
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('does not make the cron run fail when the notice cannot be sent', async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('api.resend.com')) return Promise.reject(new Error('resend unreachable'));
+      return Promise.resolve(jsonResponse(500, {}));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      await expect(handleCron(US_FETCH_CRON, env)).resolves.toBeUndefined();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('cron-failure-notice'));
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
+  });
+
+  it('reports an unexpected exception and rethrows it', async () => {
+    const fetchMock = stubYahooAndResend(false);
+    // evaluateAlerts reads the clock outside its own try/catch, so a throw there escapes it.
+    vi.spyOn(Date, 'now').mockImplementationOnce(() => {
+      throw new Error('unexpected boom');
+    });
+
+    try {
+      await expect(handleCron(EVALUATE_CRON, env)).rejects.toThrow('unexpected boom');
+      expect(noticeBody(fetchMock).text).toContain('unexpected error: unexpected boom');
+    } finally {
+      vi.restoreAllMocks();
     }
   });
 });

@@ -1,5 +1,6 @@
 import type { Env } from './index';
 import { evaluateAlerts, type AlertEvaluationSummary } from './lib/alert-evaluation';
+import { notifyCronFailure } from './lib/cron-failure-notice';
 import { ALL_INSTRUMENT_TYPES, MARKET_TYPES, selectAlertInstruments, selectInstruments, type InstrumentRow } from './lib/instruments';
 import { refreshInstruments, type FetchPhaseResult, type TickerResult } from './lib/market-refresh';
 
@@ -44,12 +45,45 @@ export const FETCH_CRON_TYPES: Record<string, string[]> = {
   [US_FETCH_CRON]: [...MARKET_TYPES.other],
 };
 
+const FETCH_PHASE_LABELS: Record<string, string> = {
+  [PL_FETCH_CRON]: 'GPW fetch',
+  [US_FETCH_CRON]: 'US fetch',
+};
+
+function fetchProblems({ tickers, loadError }: FetchPhaseResult): string[] {
+  return [
+    ...(loadError ? [`failed to load instruments: ${loadError}`] : []),
+    ...tickers.filter((t) => t.status === 'error').map((t) => `${t.ticker}: ${t.error}`),
+  ];
+}
+
+function evaluationProblems({ errors, emails }: AlertEvaluationSummary): string[] {
+  return [
+    ...errors,
+    ...emails.filter((e) => e.status === 'failed').map((e) => `alert ${e.alertId} ${e.ticker}: email failed: ${e.error}`),
+  ];
+}
+
+// Runs one phase and emails the admin about its problems. An unexpected
+// exception is reported too and then rethrown, so Cloudflare still records
+// the invocation as failed.
+async function runAndReport<T>(env: Env, phase: string, run: () => Promise<T>, problemsOf: (result: T) => string[]): Promise<void> {
+  let result: T;
+  try {
+    result = await run();
+  } catch (err) {
+    await notifyCronFailure(env, phase, [`unexpected error: ${err instanceof Error ? err.message : String(err)}`]);
+    throw err;
+  }
+  await notifyCronFailure(env, phase, problemsOf(result));
+}
+
 export async function handleCron(cron: string, env: Env): Promise<void> {
   const fetchTypes = FETCH_CRON_TYPES[cron];
   if (fetchTypes) {
-    await runFetchPhase(env, fetchTypes);
+    await runAndReport(env, FETCH_PHASE_LABELS[cron], () => runFetchPhase(env, fetchTypes), fetchProblems);
   } else if (cron === EVALUATE_CRON) {
-    await evaluateAlerts(env);
+    await runAndReport(env, 'alert evaluation', () => evaluateAlerts(env), evaluationProblems);
   } else {
     console.error(`scheduled: no handler for cron expression "${cron}"`);
   }

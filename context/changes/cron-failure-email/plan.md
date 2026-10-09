@@ -159,13 +159,13 @@ One extra Resend request per invocation: about 44 of 50 subrequests in the worst
 
 #### Automated
 
-- [x] 1.1 Worker tests pass: `npm run test:worker`
-- [x] 1.2 Type checking passes: `npm run typecheck`
-- [x] 1.3 Linting passes: `npm run lint`
+- [x] 1.1 Worker tests pass: `npm run test:worker` — dc094cf
+- [x] 1.2 Type checking passes: `npm run typecheck` — dc094cf
+- [x] 1.3 Linting passes: `npm run lint` — dc094cf
 
 #### Manual
 
-- [x] 1.4 A stale ticker shows as an error in the admin evaluation step
+- [x] 1.4 A stale ticker shows as an error in the admin evaluation step — dc094cf
 
 ### Phase 2: Failure notice from handleCron
 
