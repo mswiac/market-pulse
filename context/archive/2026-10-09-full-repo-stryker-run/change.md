@@ -1,10 +1,10 @@
 ---
 change_id: full-repo-stryker-run
 title: Full-repo Stryker run and tests for surviving mutants
-status: impl_reviewed
+status: archived
 created: 2026-10-09
 updated: 2026-10-09
-archived_at: null
+archived_at: 2026-10-09T22:06:16Z
 ---
 
 ## Notes
