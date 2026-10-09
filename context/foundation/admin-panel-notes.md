@@ -56,3 +56,9 @@ simulation: it fetches real closes, writes real `price_history`/RSI state,
 evaluates every active alert, and sends real Resend emails for anything that
 crosses a threshold. Treat it as "run today's cron job right now," not as a
 preview.
+
+Unlike the scheduled cron (`handleCron`), this route does not email the admin
+about failures: the operator already sees them in the page result (HTTP 207).
+Evaluation reports a failed alert load and every ticker whose market data is
+older than 12 hours in `errors`, so a stale ticker also turns this response
+into a 207.

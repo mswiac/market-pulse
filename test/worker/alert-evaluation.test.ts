@@ -363,6 +363,7 @@ describe('evaluateAlerts', () => {
       expect((await getAlert(rearming)).armed).toBe(0);
       expect(await triggerEventsFor(firing)).toHaveLength(0);
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('^VIX'));
+      expect(summary.errors).toEqual(['^VIX: market data is 13h old (limit 12h)']);
     } finally {
       warnSpy.mockRestore();
     }
@@ -600,6 +601,41 @@ describe('evaluateAlerts summary', () => {
       expect(summary.errors).toEqual([]);
     } finally {
       batchSpy.mockRestore();
+    }
+  });
+
+  it('reports a failed alert load in errors instead of returning a clean summary', async () => {
+    const prepareSpy = vi.spyOn(env.DB, 'prepare').mockImplementationOnce(() => {
+      throw new Error('d1 unavailable');
+    });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      const summary = await evaluateAlerts(env);
+      expect(summary).toEqual({
+        alertsEvaluated: 0,
+        emails: [],
+        errors: [expect.stringContaining('failed to load alerts: Error: d1 unavailable')],
+      });
+    } finally {
+      prepareSpy.mockRestore();
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('reports each stale ticker once, however many alerts it has', async () => {
+    vi.stubGlobal('fetch', vi.fn());
+    const userId = await seedUser('stale-once@example.com');
+    await seedAlert(userId, { ticker: '^VIX', threshold: 20 });
+    await seedAlert(userId, { ticker: '^VIX', threshold: 30 });
+    await seedMarketData('^VIX', 25, null, null, null, 14 * 60 * 60);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const summary = await evaluateAlerts(env);
+      expect(summary.errors).toEqual(['^VIX: market data is 14h old (limit 12h)']);
+    } finally {
+      warnSpy.mockRestore();
     }
   });
 
