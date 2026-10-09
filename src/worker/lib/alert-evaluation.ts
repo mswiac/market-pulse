@@ -141,7 +141,7 @@ export async function evaluateAlerts(env: Env): Promise<AlertEvaluationSummary> 
     alerts = results;
   } catch (err) {
     console.error('alert-notifications: failed to load alerts for evaluation', err);
-    return { alertsEvaluated: 0, emails: [], errors: [] };
+    return { alertsEvaluated: 0, emails: [], errors: [`failed to load alerts: ${String(err)}`] };
   }
 
   const emails: AlertEvaluationSummary['emails'] = [];
@@ -184,6 +184,7 @@ export async function evaluateAlerts(env: Env): Promise<AlertEvaluationSummary> 
   }
 
   for (const [ticker, ageSeconds] of staleAges) {
+    errors.push(`${ticker}: market data is ${Math.round(ageSeconds / 3600)}h old (limit ${STALE_AFTER_SECONDS / 3600}h)`);
     console.warn(
       `alert-notifications: skipping alerts for ${ticker}: market data is ${Math.round(ageSeconds / 3600)}h old (limit ${STALE_AFTER_SECONDS / 3600}h)`,
     );
