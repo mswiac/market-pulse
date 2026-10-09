@@ -656,6 +656,37 @@ describe('evaluateAlerts summary', () => {
       batchSpy.mockRestore();
     }
   });
+
+  // SQLite is dynamically typed: a non-numeric `high` stored in a REAL column
+  // comes back as text, so buildEmail throws on `.toFixed` for that one alert.
+  async function seedBrokenHigh(ticker: string): Promise<void> {
+    await env.DB.prepare('INSERT INTO market_data (ticker, price, high, low, updated_at) VALUES (?, ?, ?, ?, unixepoch())')
+      .bind(ticker, 25, 'not-a-number', 5)
+      .run();
+  }
+
+  it('records the throwing alert in errors and still evaluates the others', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('per-alert-throws@example.com');
+    const brokenId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'down', armed: 1 });
+    const healthyId = await seedAlert(userId, { ticker: '^NDX', threshold: 20, direction: 'up', armed: 1 });
+    await seedBrokenHigh('^VIX');
+    await seedMarketData('^NDX', 25);
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      const summary = await evaluateAlerts(env);
+
+      expect(summary.alertsEvaluated).toBe(2);
+      expect(summary.errors).toHaveLength(1);
+      expect(summary.errors[0]).toMatch(new RegExp(`^alert ${brokenId}: TypeError`));
+      expect(summary.emails).toEqual([{ alertId: healthyId, ticker: '^NDX', status: 'sent' }]);
+      expect((await getAlert(brokenId)).armed).toBe(1);
+      expect((await getAlert(healthyId)).armed).toBe(0);
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
+  });
 });
 
 describe('buildEmail', () => {

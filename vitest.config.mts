@@ -29,6 +29,12 @@ export default defineConfig(async () => {
       // this config provides, and fail here with a JIT-compilation error.
       include: ["test/worker/**/*.test.ts"],
       setupFiles: ["./test/setup/apply-migrations.ts"],
+      // workerd does not support the v8 provider, so coverage needs istanbul.
+      coverage: {
+        provider: "istanbul",
+        include: ["src/worker/**"],
+        reporter: ["text"],
+      },
     },
   };
 });

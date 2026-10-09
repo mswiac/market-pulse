@@ -1268,6 +1268,33 @@ describe('POST /api/admin/cron/run', () => {
     expect(json.tickers.find((t) => t.ticker === '^NDX')?.status).toBe('ok');
   });
 
+  it('returns 500 with code cron_run_failed when the evaluate phase throws', async () => {
+    stubFetchForCronRun();
+    const cookie = await logInAsAdmin();
+    const adminId = await getUserId(ADMIN_EMAIL);
+    // A disarmed alert whose price has retreated is re-armed; building that UPDATE sits outside evaluateAlerts' own try/catch.
+    await env.DB.prepare(
+      `INSERT INTO alerts (user_id, ticker, alert_type, threshold, notification_email, direction, armed) VALUES (?, '^VIX', 'PRICE', 20, 'alerts@example.com', 'up', 0)`,
+    )
+      .bind(adminId)
+      .run();
+    await env.DB.prepare('INSERT INTO market_data (ticker, price, updated_at) VALUES (?, ?, unixepoch())').bind('^VIX', 10).run();
+    const originalPrepare = env.DB.prepare.bind(env.DB);
+    const prepareSpy = vi.spyOn(env.DB, 'prepare').mockImplementation((sql: string) => {
+      if (sql.startsWith('UPDATE alerts')) throw new Error('unexpected boom');
+      return originalPrepare(sql);
+    });
+
+    try {
+      const response = await runCronRoute(cookie, { phase: 'evaluate' });
+
+      expect(response.status).toBe(500);
+      await expect(response.json()).resolves.toEqual({ error: 'cron run failed', code: 'cron_run_failed' });
+    } finally {
+      prepareSpy.mockRestore();
+    }
+  });
+
   it('returns 207 with the stale ticker in errors, without emailing the admin about it', async () => {
     stubFetchForCronRun();
     const cookie = await logInAsAdmin();

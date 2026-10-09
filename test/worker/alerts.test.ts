@@ -157,6 +157,31 @@ describe('alerts endpoints', () => {
     await expect(response.json()).resolves.toMatchObject({ active: false, currentPrice: 25 });
   });
 
+  it('still creates the alert from the stale data when the refresh itself throws', async () => {
+    const cookie = await registerAndLogIn('stale-refresh-throws@example.com');
+    await seedMarketData('^VIX', 25, 7 * 24 * 60 * 60);
+    stubYahooClose(15);
+    // The history upsert is built outside refreshInstruments' own try blocks,
+    // so a failure there rejects the whole refresh rather than returning an error.
+    const originalPrepare = env.DB.prepare.bind(env.DB);
+    const prepareSpy = vi.spyOn(env.DB, 'prepare').mockImplementation((sql: string) => {
+      if (sql.includes('INSERT INTO price_history')) throw new Error('refresh boom');
+      return originalPrepare(sql);
+    });
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'up' });
+
+      expect(response.status).toBe(201);
+      await expect(response.json()).resolves.toMatchObject({ active: false, currentPrice: 25 });
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('failed to refresh market data for ^VIX'), expect.any(Error));
+    } finally {
+      prepareSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    }
+  });
+
   it('refreshes stale market data when an alert is edited too', async () => {
     const cookie = await registerAndLogIn('stale-refresh-edit@example.com');
     const created = (await (await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 30, direction: 'up' })).json()) as {
