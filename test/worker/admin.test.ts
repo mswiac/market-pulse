@@ -1268,6 +1268,28 @@ describe('POST /api/admin/cron/run', () => {
     expect(json.tickers.find((t) => t.ticker === '^NDX')?.status).toBe('ok');
   });
 
+  it('returns 207 with the stale ticker in errors, without emailing the admin about it', async () => {
+    stubFetchForCronRun();
+    const cookie = await logInAsAdmin();
+    const adminId = await getUserId(ADMIN_EMAIL);
+    await insertAlert('^VIX', adminId);
+    await env.DB.prepare('INSERT INTO market_data (ticker, price, updated_at) VALUES (?, ?, unixepoch() - ?)')
+      .bind('^VIX', 25, 20 * 60 * 60)
+      .run();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const response = await runCronRoute(cookie, { phase: 'evaluate' });
+
+      expect(response.status).toBe(207);
+      const json = (await response.json()) as CronRunSummaryBody;
+      expect(json.errors).toEqual(['^VIX: market data is 20h old (limit 12h)']);
+      expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it('evaluates alerts without fetching anything and reports no tickers', async () => {
     stubFetchForCronRun();
     const cookie = await logInAsAdmin();

@@ -50,17 +50,25 @@ const FETCH_PHASE_LABELS: Record<string, string> = {
   [US_FETCH_CRON]: 'US fetch',
 };
 
+// Tickers failing for the same reason (typically one rejected D1 batch) are
+// listed once, so the mail does not repeat a long error up to 20 times.
 function fetchProblems({ tickers, loadError }: FetchPhaseResult): string[] {
+  const tickersByError = new Map<string, string[]>();
+  for (const t of tickers) {
+    if (t.status !== 'error') continue;
+    const error = t.error ?? 'unknown error';
+    tickersByError.set(error, [...(tickersByError.get(error) ?? []), t.ticker]);
+  }
   return [
     ...(loadError ? [`failed to load instruments: ${loadError}`] : []),
-    ...tickers.filter((t) => t.status === 'error').map((t) => `${t.ticker}: ${t.error}`),
+    ...[...tickersByError].map(([error, group]) => `${group.join(', ')}: ${error}`),
   ];
 }
 
 function evaluationProblems({ errors, emails }: AlertEvaluationSummary): string[] {
   return [
     ...errors,
-    ...emails.filter((e) => e.status === 'failed').map((e) => `alert ${e.alertId} ${e.ticker}: email failed: ${e.error}`),
+    ...emails.filter((e) => e.status === 'failed').map((e) => `alert ${e.alertId} ${e.ticker}: ${e.error}`),
   ];
 }
 
@@ -72,7 +80,7 @@ async function runAndReport<T>(env: Env, phase: string, run: () => Promise<T>, p
   try {
     result = await run();
   } catch (err) {
-    await notifyCronFailure(env, phase, [`unexpected error: ${err instanceof Error ? err.message : String(err)}`]);
+    await notifyCronFailure(env, phase, [`unexpected error: ${String(err)}`]);
     throw err;
   }
   await notifyCronFailure(env, phase, problemsOf(result));

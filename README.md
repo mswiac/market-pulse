@@ -149,7 +149,7 @@ Deployment runs through **Cloudflare Workers Builds**, configured in the Cloudfl
 
 `wrangler.toml` defines what ships: the `marketpulse` Worker, the `DB` binding to the `marketpulse-db` D1 database, the cron triggers (a GPW fetch at 16:30 UTC, a US and index fetch at 23:00 UTC, and one alert evaluation at 23:15 UTC), and the static assets directory (`dist/market-pulse/browser/pl`).
 
-**Cron failure notices.** When a scheduled invocation (GPW fetch, US fetch, or alert evaluation) has problems — failed tickers, a failed D1 write or load, alert emails that did not go out, market data older than 12 hours, or an unexpected exception — the Worker emails a summary to `RESEND_VERIFIED_EMAIL`. A failure to send that notice is only logged. The manual admin run does not send it; its result is shown on the page instead.
+**Cron failure notices.** When a scheduled invocation (GPW fetch, US fetch, or alert evaluation) has problems — failed tickers, a failed D1 write or load, alert emails that did not go out, market data older than 12 hours, or an unexpected exception — the Worker emails a summary to `RESEND_VERIFIED_EMAIL`. A failure to send that notice is only logged. A ticker whose fetch failed is also stale at the evaluation, so one cause can produce a fetch mail and an evaluation mail on the same day. The manual admin run does not send it; its result is shown on the page instead.
 
 **D1 migrations are not applied automatically on deploy.** After deploying a change that adds a migration file, apply it to the remote database by hand:
 

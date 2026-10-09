@@ -65,6 +65,19 @@ describe('notifyCronFailure', () => {
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('bad key'));
   });
 
+  it('logs and does not throw when the recipient is not configured', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(
+      notifyCronFailure({ ...env, RESEND_VERIFIED_EMAIL: undefined } as unknown as typeof env, 'US fetch', ['x']),
+    ).resolves.toBeUndefined();
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalled();
+  });
+
   it('logs and does not throw when the request itself throws', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});

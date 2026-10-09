@@ -813,7 +813,7 @@ describe('cron failure notice', () => {
     }
   });
 
-  it('reports stale market data and failed alert emails from the evaluation phase', async () => {
+  it('reports stale market data from the evaluation phase', async () => {
     const fetchMock = stubYahooAndResend(false);
     await env.DB.prepare('INSERT INTO market_data (ticker, price, updated_at) VALUES (?, ?, unixepoch() - ?)')
       .bind('^VIX', 10, 20 * 60 * 60)
@@ -848,16 +848,63 @@ describe('cron failure notice', () => {
 
   it('reports an unexpected exception and rethrows it', async () => {
     const fetchMock = stubYahooAndResend(false);
-    // evaluateAlerts reads the clock outside its own try/catch, so a throw there escapes it.
-    vi.spyOn(Date, 'now').mockImplementationOnce(() => {
-      throw new Error('unexpected boom');
+    const userId = seededUserId;
+    // A disarmed alert whose price has retreated is re-armed; building that UPDATE happens outside evaluateAlerts' own try/catch.
+    await env.DB.prepare(
+      'INSERT INTO alerts (user_id, ticker, alert_type, threshold, notification_email, direction, armed) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    )
+      .bind(userId, '^VIX', 'PRICE', 20, 'verified@example.com', 'up', 0)
+      .run();
+    await env.DB.prepare('INSERT INTO market_data (ticker, price, updated_at) VALUES (?, ?, unixepoch())').bind('^VIX', 10).run();
+    const originalPrepare = env.DB.prepare.bind(env.DB);
+    const prepareSpy = vi.spyOn(env.DB, 'prepare').mockImplementation((sql: string) => {
+      if (sql.startsWith('UPDATE alerts')) throw new Error('unexpected boom');
+      return originalPrepare(sql);
     });
 
     try {
       await expect(handleCron(EVALUATE_CRON, env)).rejects.toThrow('unexpected boom');
-      expect(noticeBody(fetchMock).text).toContain('unexpected error: unexpected boom');
+      expect(noticeBody(fetchMock).text).toContain('unexpected error: Error: unexpected boom');
     } finally {
-      vi.restoreAllMocks();
+      prepareSpy.mockRestore();
+    }
+  });
+
+  it('reports a failed alert email by alert id and ticker', async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(403, { message: 'denied' })));
+    vi.stubGlobal('fetch', fetchMock);
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const inserted = await env.DB.prepare(
+      'INSERT INTO alerts (user_id, ticker, alert_type, threshold, notification_email, direction, armed) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    )
+      .bind(seededUserId, '^VIX', 'PRICE', 20, 'verified@example.com', 'up', 1)
+      .run();
+    await env.DB.prepare('INSERT INTO market_data (ticker, price, updated_at) VALUES (?, ?, unixepoch())').bind('^VIX', 25).run();
+
+    try {
+      await handleCron(EVALUATE_CRON, env);
+      const bodies = resendCalls(fetchMock).map((call) => JSON.parse((call[1] as RequestInit).body as string)[0]);
+      const notice = bodies.find((m) => m.subject.includes('alert evaluation'));
+      expect(notice.text).toContain(`alert ${inserted.meta.last_row_id} ^VIX: denied`);
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
+  });
+
+  it('lists tickers that failed for the same reason once', async () => {
+    const fetchMock = stubYahooAndResend(false);
+    const batchSpy = vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('batch boom'));
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      await handleCron(US_FETCH_CRON, env);
+      const { text } = noticeBody(fetchMock);
+      expect(text.match(/batch boom/g)).toHaveLength(1);
+      expect(text).toContain('^VIX');
+      expect(text).toContain('^NDX');
+    } finally {
+      batchSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
     }
   });
 });

@@ -1,7 +1,7 @@
 ---
 change_id: cron-failure-email
 title: Email the admin when a cron run fails
-status: implemented
+status: impl_reviewed
 created: 2026-10-09
 updated: 2026-10-09
 archived_at: null
