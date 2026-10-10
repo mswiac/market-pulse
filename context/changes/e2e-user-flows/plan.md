@@ -207,20 +207,20 @@ Specs are independent and parallel-safe (unique thresholds and emails).
 
 #### Automated
 
-- [x] 2.1 Account flow spec passes
-- [x] 2.2 Whole Playwright suite stays green
+- [x] 2.1 Account flow spec passes — 97eae1c
+- [x] 2.2 Whole Playwright suite stays green — 97eae1c
 
 #### Manual
 
-- [x] 2.3 Registered users removed from local D1
+- [x] 2.3 Registered users removed from local D1 — 97eae1c
 
 ### Phase 3: History page smoke tests
 
 #### Automated
 
-- [ ] 3.1 History smoke spec passes
-- [ ] 3.2 Whole Playwright suite stays green
+- [x] 3.1 History smoke spec passes
+- [x] 3.2 Whole Playwright suite stays green
 
 #### Manual
 
-- [ ] 3.3 Deliberate break makes the smoke test fail
+- [x] 3.3 Deliberate break makes the smoke test fail
