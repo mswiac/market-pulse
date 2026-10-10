@@ -164,4 +164,4 @@ Existing local setups must add the two admin variables to the local e2e env file
 #### Manual
 
 - [x] 2.4 Deliberate break of the admin gate turns the spec red and was reverted — 0cb2435
-- [ ] 2.5 CI run on the PR is green, with the admin account registered
+- [x] 2.5 CI run on the PR is green, with the admin account registered
