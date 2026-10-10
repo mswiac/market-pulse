@@ -157,7 +157,7 @@ describe('AddInstrument', () => {
     const suffixInput = () => screen.getByLabelText('Suffix (e.g. .WA)') as HTMLInputElement;
 
     component.onTypeChange('pl_stock');
-    component.onCurrencyChange('PLN');
+    component.onCurrencyChange('USD');
     component.onRsiEligibleChange(false);
     fireEvent.input(tickerInput(), { target: { value: 'CDR' } });
     fireEvent.input(nameInput(), { target: { value: 'CD Projekt' } });
@@ -170,7 +170,7 @@ describe('AddInstrument', () => {
       'pl_stock',
       'CDR',
       'CD Projekt',
-      'PLN',
+      'USD',
       false,
       '.CUSTOM',
     );

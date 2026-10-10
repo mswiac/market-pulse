@@ -17,7 +17,11 @@
 import { test, expect } from '@playwright/test';
 import { deleteInstrument, instrumentName, uniqueTicker } from './admin-api';
 
-const ticker = uniqueTicker();
+let ticker: string;
+
+test.beforeEach(() => {
+  ticker = uniqueTicker();
+});
 
 test.afterEach(async ({ request }) => {
   await deleteInstrument(request, ticker);
