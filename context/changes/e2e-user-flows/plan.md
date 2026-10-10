@@ -194,25 +194,25 @@ Specs are independent and parallel-safe (unique thresholds and emails).
 
 #### Automated
 
-- [x] 1.1 New alert specs pass
-- [x] 1.2 Whole Playwright suite stays green
-- [x] 1.3 Prettier check passes for e2e (new files; 3 older specs already unformatted on main)
+- [x] 1.1 New alert specs pass — 74f68a4
+- [x] 1.2 Whole Playwright suite stays green — 74f68a4
+- [x] 1.3 Prettier check passes for e2e (new files; 3 older specs already unformatted on main) — 74f68a4
 
 #### Manual
 
-- [x] 1.4 Deliberate breaks make the matching tests fail
-- [x] 1.5 No test alerts remain in local D1
+- [x] 1.4 Deliberate breaks make the matching tests fail — 74f68a4
+- [x] 1.5 No test alerts remain in local D1 — 74f68a4
 
 ### Phase 2: Register, log out, log back in
 
 #### Automated
 
-- [ ] 2.1 Account flow spec passes
-- [ ] 2.2 Whole Playwright suite stays green
+- [x] 2.1 Account flow spec passes
+- [x] 2.2 Whole Playwright suite stays green
 
 #### Manual
 
-- [ ] 2.3 Registered users removed from local D1
+- [x] 2.3 Registered users removed from local D1
 
 ### Phase 3: History page smoke tests
 
