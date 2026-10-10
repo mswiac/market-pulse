@@ -8,7 +8,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminService, CreatedInstrument } from '../admin-panel.service';
-import { CREATABLE_INSTRUMENT_TYPES, INSTRUMENT_TYPE_LABELS } from '../../instruments/instrument-types';
+import {
+  CREATABLE_INSTRUMENT_TYPES,
+  INSTRUMENT_TYPE_LABELS,
+} from '../../instruments/instrument-types';
 import { InstrumentsService } from '../../instruments/instruments.service';
 
 const CURRENCIES: readonly string[] = ['EUR', 'PLN', 'USD'];
@@ -18,6 +21,13 @@ const CURRENCIES: readonly string[] = ['EUR', 'PLN', 'USD'];
 // non-GPW market just needs a different typed value here, no code change.
 const SUFFIX_DEFAULTS: Record<string, string> = {
   pl_stock: '.WA',
+};
+
+// Suggested currency per type, prefilled on type change like the suffix. A type
+// without an entry (index) falls back to the first currency in the list.
+const CURRENCY_DEFAULTS: Record<string, string> = {
+  pl_stock: 'PLN',
+  us_stock: 'USD',
 };
 
 // Backend returns a fixed set of machine-readable codes for validation and
@@ -39,7 +49,15 @@ const SNACKBAR_DURATION_MS = 5000;
 
 @Component({
   selector: 'app-add-instrument',
-  imports: [MatFormFieldModule, MatSelectModule, MatInputModule, MatButtonModule, MatCardModule, MatSnackBarModule, MatCheckboxModule],
+  imports: [
+    MatFormFieldModule,
+    MatSelectModule,
+    MatInputModule,
+    MatButtonModule,
+    MatCardModule,
+    MatSnackBarModule,
+    MatCheckboxModule,
+  ],
   templateUrl: './add-instrument.html',
   styleUrl: './add-instrument.scss',
 })
@@ -58,7 +76,9 @@ export class AddInstrument {
   protected readonly suffix = signal('');
   protected readonly submitting = signal(false);
 
-  protected readonly canSubmit = computed(() => !!this.ticker().trim() && !!this.name().trim() && !this.submitting());
+  protected readonly canSubmit = computed(
+    () => !!this.ticker().trim() && !!this.name().trim() && !this.submitting(),
+  );
 
   protected instrumentTypeLabel(type: string): string {
     return INSTRUMENT_TYPE_LABELS[type] ?? type;
@@ -69,6 +89,7 @@ export class AddInstrument {
     // Only overwrite on an actual type change (not on every keystroke
     // elsewhere), so it doesn't fight an admin who already edited the field.
     this.suffix.set(SUFFIX_DEFAULTS[type] ?? '');
+    this.currency.set(CURRENCY_DEFAULTS[type] ?? CURRENCIES[0]);
   }
 
   protected onTickerChange(ticker: string): void {
@@ -107,7 +128,14 @@ export class AddInstrument {
     this.submitting.set(true);
 
     this.adminService
-      .addInstrument(this.type(), this.ticker().trim(), this.name().trim(), this.currency().trim(), this.rsiEligible(), this.suffix().trim())
+      .addInstrument(
+        this.type(),
+        this.ticker().trim(),
+        this.name().trim(),
+        this.currency().trim(),
+        this.rsiEligible(),
+        this.suffix().trim(),
+      )
       .subscribe({
         next: (result) => {
           this.submitting.set(false);
@@ -137,7 +165,10 @@ export class AddInstrument {
   }
 
   private showError(err: unknown): void {
-    const code = err instanceof HttpErrorResponse && typeof err.error?.code === 'string' ? err.error.code : null;
+    const code =
+      err instanceof HttpErrorResponse && typeof err.error?.code === 'string'
+        ? err.error.code
+        : null;
     const message = (code && ERROR_MESSAGES[code]) || GENERIC_ERROR;
     this.snackBar.open(message, undefined, { duration: SNACKBAR_DURATION_MS });
   }

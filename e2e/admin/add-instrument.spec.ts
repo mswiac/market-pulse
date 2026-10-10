@@ -17,7 +17,11 @@
 import { test, expect } from '@playwright/test';
 import { deleteInstrument, instrumentName, uniqueTicker } from './admin-api';
 
-const ticker = uniqueTicker();
+let ticker: string;
+
+test.beforeEach(() => {
+  ticker = uniqueTicker();
+});
 
 test.afterEach(async ({ request }) => {
   await deleteInstrument(request, ticker);
@@ -50,5 +54,26 @@ test.describe('add instrument admin screen (test-plan.md Risk #8 — destructive
     await expect(
       page.getByRole('option', { name: new RegExp(`${ticker} — ${instrumentName(ticker)}`) }),
     ).toBeVisible();
+  });
+
+  test('picking the PL companies type prefills PLN and the submitted instrument is created with it', async ({
+    page,
+  }) => {
+    await page.goto('/admin/add-instrument');
+
+    await page.getByRole('combobox', { name: 'Typ' }).click();
+    await page.getByRole('option', { name: 'Spółki PL' }).click();
+    await expect(page.getByRole('combobox', { name: 'Waluta' })).toHaveText('PLN');
+
+    await page.getByLabel('Ticker', { exact: true }).fill(ticker);
+    await page.getByLabel('Nazwa spółki').fill(instrumentName(ticker));
+
+    const created = page.waitForResponse(
+      (r) => r.url().endsWith('/api/admin/instruments') && r.request().method() === 'POST',
+    );
+    await page.getByRole('button', { name: 'Dodaj instrument' }).click();
+    const response = await created;
+    expect(response.status()).toBe(201);
+    expect(response.request().postDataJSON()).toMatchObject({ type: 'pl_stock', currency: 'PLN' });
   });
 });
