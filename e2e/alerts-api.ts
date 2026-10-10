@@ -13,8 +13,11 @@ export function uniqueThreshold(): number {
   return Number((10 + Math.floor(Math.random() * 89_000) / 100).toFixed(2));
 }
 
+// Anchored so 55.50 does not also match 155.50 or 1 055,50 (the pl locale
+// groups thousands with a no-break space).
 export function thresholdPattern(threshold: number): RegExp {
-  return new RegExp(threshold.toFixed(2).replace('.', '[.,]'));
+  const digits = threshold.toFixed(2).replace('.', '[.,]');
+  return new RegExp(`(?<![\\d.,\\u00a0\\u202f])${digits}(?!\\d)`);
 }
 
 export async function createAlert(

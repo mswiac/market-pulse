@@ -27,7 +27,9 @@ test.describe('alert editing (test-plan.md Risk #4 — alert form, edit facet)',
     request,
   }) => {
     const oldThreshold = uniqueThreshold();
-    const newThreshold = oldThreshold + 0.5;
+    // Rounded: float addition can leave 12.840000000000002, which the server
+    // (fed the 2-decimal form value) would never store.
+    const newThreshold = Number((oldThreshold + 0.5).toFixed(2));
     alertId = await createAlert(request, oldThreshold);
 
     await page.goto('/alerts');

@@ -52,7 +52,7 @@ async function submitCredentials(
   user: Pick<RegisteredUser, 'email' | 'password'>,
 ): Promise<void> {
   await page.getByLabel('Email', { exact: true }).fill(user.email);
-  await page.getByLabel('Hasło').fill(user.password);
+  await page.getByLabel('Hasło', { exact: true }).fill(user.password);
   await page.getByRole('button', { name: button }).click();
 }
 
@@ -111,5 +111,6 @@ test.describe('account flow (test-plan.md Risk #4 auth forms, Risk #6 session bo
 
     await expect(page.getByText('Ten adres e-mail jest już zarejestrowany.')).toBeVisible();
     await expect(page).toHaveURL(/\/register$/);
+    await expect(page.getByRole('heading', { name: 'Pulpit' })).toHaveCount(0);
   });
 });
