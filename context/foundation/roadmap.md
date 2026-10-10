@@ -3,7 +3,7 @@ project: MarketPulse
 version: 1
 status: draft
 created: 2026-06-21
-updated: 2026-08-14
+updated: 2026-10-11
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -46,6 +46,20 @@ Stock market alert platforms lock RSI-based alerts behind a paywall and limit fr
 | S-10 | admin-add-instrument   | (admin-only) add a new instrument to the registry — pick type (Index / Spółki PL / Spółki USA), enter ticker + company name | S-09, F-03 | —                          | done |
 | S-11 | admin-remove-instrument | (admin-only) remove an instrument from the registry | S-09, F-03 | —                          | done |
 | S-12 | admin-remove-user      | (admin-only) remove a user account (cascades to their sessions/alerts/trigger history) | F-01a, S-01, S-09 | —              | done |
+| S-13 | ai-review-workflow | (maintainer) PRs to `main` get an advisory AI code review comment from a Claude Code Action workflow | — | — | done |
+| S-14 | alert-list-long-names | read long instrument names in the alerts list without overlap, with a consistent content width on every page | — | — | done |
+| S-15 | remove-user-loading-flash | (admin) open the remove-user, remove-instrument and admin-panel pages without a transient error/empty-state flash before the content loads | — | — | done |
+| S-16 | admin-cron-trigger | (admin-only) run the daily cron pipeline on demand from `/admin/cron-run` via `POST /api/admin/cron/run`, with a confirm dialog and a results panel | — | — | done |
+| S-17 | instrument-picker-search | pick an instrument through one searchable picker instead of choosing a type and then scrolling a list | — | — | done |
+| S-18 | alerts-list-filtering | narrow the alerts list with combinable filters by instrument type, instrument and alert type | — | — | done |
+| S-19 | dashboard-page | land on a Dashboard after login showing the latest close of every instrument; the alerts list moves to `/alerts` | — | — | done |
+| S-20 | cron-run-capacity | (foundation) the daily cron cost depends only on tickers that have an alert, and alert evaluation runs in its own invocation to fit the Workers Free subrequest limit | — | — | done |
+| S-21 | alerts-ux-polish | see the selected instrument fully in the alert dialog and the current price/RSI in the alerts list without expanding a row | — | — | done |
+| S-22 | per-market-cron-triggers | (foundation) market-data fetching is split into one cron trigger per market group, so GPW data is available the same evening and the catalogue can grow past one invocation's budget | — | — | done |
+| S-23 | admin-per-market-refresh | (admin-only) force a data refresh of the whole instrument catalogue through per-market requests | — | — | done |
+| S-24 | cron-failure-email | (admin) get an email when a scheduled cron invocation has problems | — | — | done |
+| S-25 | add-instrument-currency-prefill | (admin-only) get the currency prefilled from the selected type on the add-instrument form | — | — | done |
+| S-26 | manual-alert-pause | pause an alert without deleting it, so the daily cron skips it until it is resumed | — | — | done |
 
 ## Streams
 
@@ -346,3 +360,17 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **F-04: (foundation) GPW-listed equities (`instruments.type = 'pl_stock'`) get a working data fetch by extending the existing Yahoo fetch in `src/worker/lib/market-data.ts` — not via a second Stooq provider as originally scoped (see Risk for why). `instruments.suffix` (a new column, admin-set on creation with a per-type default suggestion — `.WA` for `pl_stock`, empty otherwise — freely overridable) is appended to `ticker` only when building the Yahoo query symbol; every persisted row (`price_history`, `market_data`) and every displayed value (alerts, instrument details, history) stays keyed on the bare `ticker`. The daily cron (`scheduled.ts`) and the admin backfill action (S-09) both use `ticker + suffix` for the fetch call and the bare `ticker` for all writes. `instruments.currency` self-corrects (and logs the correction) against whatever currency Yahoo reports on every successful fetch.** — Archived 2026-08-09 → `context/archive/2026-08-09-stooq-provider-support/`. Lesson: —.
 - **S-11: In the admin panel, a new "Remove instrument" tab lets an admin pick an instrument via the same type + instrument two-combobox pattern used elsewhere (S-07/S-09/S-10) and delete it from the `instruments` table. Because `ticker` is a plain string match (not an enforced foreign key) across `price_history`, `market_data`, and `alerts`, removal must decide what happens to those rows — deleting the registry row alone would leave existing user alerts pointing at a ticker no longer resolvable to a name/type, plus orphaned `price_history`/`market_data` rows behind. Exact cleanup behavior (block deletion while active alerts reference the ticker vs. cascade-delete those alerts too) is an open question for planning.** — Archived 2026-08-14 → `context/archive/2026-08-14-admin-remove-instrument/`. Lesson: —.
 - **S-12: In the admin panel, a new "Remove user" tab lets an admin pick a user by email (own account excluded from the picker) and delete their account. `users.id` is referenced with `ON DELETE CASCADE` from `sessions`, `alerts`, and `trigger_events`, so a single `DELETE FROM users WHERE id = ?` removes the user's sessions, alerts, and trigger history in one statement — verified empirically against local D1 that the cascade actually fires, so no manual multi-table cleanup was needed (unlike S-11's instrument delete). Self-deletion is blocked both in the UI and server-side (`cannot_delete_self`).** — Archived 2026-08-14 → `context/archive/2026-08-14-admin-remove-user/`. Lesson: —.
+- **S-13: (maintainer) PRs to `main` get an advisory AI code review comment from a Claude Code Action workflow.** — Archived 2026-09-10 → `context/archive/2026-09-10-ai-review-workflow/`. Lesson: —.
+- **S-14: Read long instrument names in the alerts list without overlap, with a consistent content width on every page.** — Archived 2026-09-11 → `context/archive/2026-09-11-alert-list-long-names/`. Lesson: —.
+- **S-15: (admin) open the remove-user, remove-instrument and admin-panel pages without a transient error/empty-state flash before the content loads.** — Archived 2026-09-11 → `context/archive/2026-09-11-remove-user-loading-flash/`. Lesson: —.
+- **S-16: (admin-only) run the daily cron pipeline on demand from `/admin/cron-run` via `POST /api/admin/cron/run`, with a confirm dialog and a results panel.** — Archived 2026-09-11 → `context/archive/2026-09-11-admin-cron-trigger/`. Lesson: —.
+- **S-17: Pick an instrument through one searchable picker instead of choosing a type and then scrolling a list.** — Archived 2026-10-07 → `context/archive/2026-10-07-instrument-picker-search/`. Lesson: —.
+- **S-18: Narrow the alerts list with combinable filters by instrument type, instrument and alert type.** — Archived 2026-10-07 → `context/archive/2026-10-07-alerts-list-filtering/`. Lesson: —.
+- **S-19: Land on a Dashboard after login showing the latest close of every instrument; the alerts list moves to `/alerts`.** — Archived 2026-10-08 → `context/archive/2026-10-08-dashboard-page/`. Lesson: —.
+- **S-20: (foundation) the daily cron cost depends only on tickers that have an alert, and alert evaluation runs in its own invocation to fit the Workers Free subrequest limit.** — Archived 2026-10-08 → `context/archive/2026-10-08-cron-run-capacity/`. Lesson: —.
+- **S-21: See the selected instrument fully in the alert dialog and the current price/RSI in the alerts list without expanding a row.** — Archived 2026-10-08 → `context/archive/2026-10-08-alerts-ux-polish/`. Lesson: —.
+- **S-22: (foundation) market-data fetching is split into one cron trigger per market group, so GPW data is available the same evening and the catalogue can grow past one invocation's budget.** — Archived 2026-10-08 → `context/archive/2026-10-08-per-market-cron-triggers/`. Lesson: —.
+- **S-23: (admin-only) force a data refresh of the whole instrument catalogue through per-market requests.** — Archived 2026-10-08 → `context/archive/2026-10-09-admin-per-market-refresh/`. Lesson: —.
+- **S-24: (admin) get an email when a scheduled cron invocation has problems.** — Archived 2026-10-09 → `context/archive/2026-10-09-cron-failure-email/`. Lesson: —.
+- **S-25: (admin-only) get the currency prefilled from the selected type on the add-instrument form.** — Archived 2026-10-10 → `context/archive/2026-10-10-add-instrument-currency-prefill/`. Lesson: —.
+- **S-26: Pause an alert without deleting it, so the daily cron skips it until it is resumed.** — Archived 2026-10-10 → `context/archive/2026-10-10-manual-alert-pause/`. Lesson: —.
