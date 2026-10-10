@@ -70,6 +70,26 @@ describe('AddInstrument', () => {
     expect(suffixInput().value).toBe('');
   });
 
+  it('prefills the currency on type change, and a manual currency pick survives unrelated field changes', async () => {
+    const { fixture, component } = await renderAddInstrument();
+    const tickerInput = () => screen.getByLabelText('Ticker') as HTMLInputElement;
+
+    component.onTypeChange('pl_stock');
+    expect(component.currency()).toBe('PLN');
+
+    component.onTypeChange('us_stock');
+    expect(component.currency()).toBe('USD');
+
+    component.onCurrencyChange('EUR');
+    fireEvent.input(tickerInput(), { target: { value: 'CDR' } });
+    fixture.detectChanges();
+    expect(component.currency()).toBe('EUR');
+
+    component.onTypeChange('pl_stock');
+    component.onTypeChange('index');
+    expect(component.currency()).toBe('EUR');
+  });
+
   it('uppercases the ticker on blur, in both the signal and the rendered input', async () => {
     const { fixture, component } = await renderAddInstrument();
     const tickerInput = () => screen.getByLabelText('Ticker') as HTMLInputElement;
@@ -146,7 +166,14 @@ describe('AddInstrument', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add instrument' }));
     fixture.detectChanges();
 
-    expect(addInstrument).toHaveBeenCalledWith('pl_stock', 'CDR', 'CD Projekt', 'PLN', false, '.CUSTOM');
+    expect(addInstrument).toHaveBeenCalledWith(
+      'pl_stock',
+      'CDR',
+      'CD Projekt',
+      'PLN',
+      false,
+      '.CUSTOM',
+    );
     expect(await screen.findByText('Added instrument ABC.')).toBeTruthy();
     expect(component.type()).toBe(CREATABLE_INSTRUMENT_TYPES[0]);
     expect(component.currency()).toBe('EUR');
