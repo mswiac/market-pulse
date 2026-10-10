@@ -141,7 +141,7 @@ Rationale and the risk each spec protects:
 
 Deployment runs through **Cloudflare Workers Builds**, configured in the Cloudflare dashboard — not through a GitHub Actions workflow file. Every push that triggers a build runs:
 
-- **Build command**: `npm run ci` (`typecheck && test:worker && build`)
+- **Build command**: `npm run ci` (`typecheck && test && test:worker && build`)
 - **Deploy command**: `npx wrangler deploy`
 - **Version command**: `npx wrangler version upload`
 
