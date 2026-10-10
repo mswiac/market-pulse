@@ -1,7 +1,7 @@
 ---
 change_id: add-instrument-currency-prefill
 title: Prefill currency on add-instrument form from selected type
-status: implementing
+status: implemented
 created: 2026-10-10
 updated: 2026-10-10
 archived_at: null

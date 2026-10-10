@@ -90,17 +90,17 @@ One component change plus unit and E2E coverage.
 
 ## Progress
 
-> Convention: `- [x]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles. See `references/progress-format.md`.
+> Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles. See `references/progress-format.md`.
 
 ### Phase 1: Prefill currency on type change
 
 #### Automated
 
-- [x] 1.1 Typecheck passes
-- [x] 1.2 Angular unit tests pass
-- [x] 1.3 Lint passes
-- [x] 1.4 Add-instrument E2E passes (both cases)
+- [x] 1.1 Typecheck passes — 98d806b
+- [x] 1.2 Angular unit tests pass — 98d806b
+- [x] 1.3 Lint passes — 98d806b
+- [x] 1.4 Add-instrument E2E passes (both cases) — 98d806b
 
 #### Manual
 
-- [x] 1.5 Type switch prefills PLN / USD / EUR and manual currency edits are kept
+- [x] 1.5 Type switch prefills PLN / USD / EUR and manual currency edits are kept — 98d806b
