@@ -20,12 +20,12 @@ Three specs under `e2e/admin/`, green in `chromium-admin` locally and in CI, eac
 
 1. `add-instrument.spec.ts`: filling the form and submitting makes the instrument findable in the instrument picker (with the ticker uppercased); the instrument is removed again via the API.
 2. `remove-instrument.spec.ts`: for an instrument created via the API, the confirm dialog shows the impact, confirming removes it from the picker and from the server, cancelling removes nothing.
-3. `remove-user.spec.ts`: for a user created via `/api/register`, the confirm dialog shows that user's email, confirming removes them from the list and from the server (the user can no longer log in); cancelling removes nothing; the admin's own account is not selectable and a direct `DELETE` of one's own id is rejected with 403 `cannot_delete_self`.
+3. `remove-user.spec.ts`: for a user created via `/api/register`, the confirm dialog shows that user's email, confirming removes them from the list and from the server (the user can no longer log in); cancelling removes nothing; the admin's own account is not offered in the list. (Review F1: the 403 `cannot_delete_self` contract is left to the worker test; E2E does not send a `DELETE` for the admin's own id, because a regressed guard would delete the dev admin.)
 
 ### Key Discoveries:
 
 - Register must run in a fresh `APIRequestContext` (`playwright.request.newContext`), otherwise its `Set-Cookie` replaces the admin session in the page's context (`auth.ts` `/register`).
-- The self-delete guard cannot be driven from the UI because `GET /api/admin/users` omits the caller (`admin.ts` `/users`); it is asserted over the API, plus a UI assertion that the admin's email is absent from the list.
+- The self-delete guard cannot be driven from the UI because `GET /api/admin/users` omits the caller (`admin.ts` `/users`); E2E asserts only that the admin's email is absent from the list (a direct `DELETE` would delete the dev admin if the guard regressed; the 403 is covered by `test/worker/admin.test.ts`).
 - `DELETE /api/admin/instruments/:ticker` and `DELETE /api/admin/users/:id` double as the cleanup calls (admin session, idempotent enough: a 404 after a test already removed the row is fine).
 - The remove-user select preselects the first user, so the test must pick its own user explicitly by email, never rely on the default.
 
@@ -44,7 +44,7 @@ One `/10x-e2e` phase: fill one prompt file, generate three spec files modeled on
 
 - **Unique, collision-proof ids**: the instruments table is global and `ticker` is unique, so use a prefix such as `E2E` plus a timestamp and random suffix (letters/digits only, uppercase already so the server normalization is a no-op); users use `e2e-<id>@e2e.market-pulse.test`. The remove-user list is global too, so locate the row by the unique email.
 - **Cleanup must not touch real data**: delete only the exact ticker/id this test created. Never sweep by prefix across the table in a way that could remove another parallel run's data unless the prefix is run-unique.
-- **Self-delete id**: read the admin's own id from `GET /api/me` in the test; do not hardcode.
+- **Self check**: read the admin's own email from `GET /api/me` in the test; do not hardcode.
 
 ## Phase 1: Admin management E2E
 
@@ -84,7 +84,7 @@ Generate, review, and verify the three specs via `/10x-e2e`.
 
 **Intent**: Prove the same gating for user removal, and that an admin cannot delete themselves.
 
-**Contract**: Three tests. User is registered via `POST /api/register` in a fresh request context (returns `id`). (a) Confirm: dialog shows the user's email, confirming removes the email from the select and the user can no longer log in. (b) Cancel: user still listed and can still log in. (c) Self: the admin's own email is absent from the select, and `DELETE /api/admin/users/<own id>` returns 403 with `code: 'cannot_delete_self'`. `afterEach` best-effort deletes the registered user by id.
+**Contract**: Three tests. User is registered via `POST /api/register` in a fresh request context (returns `id`). (a) Confirm: dialog shows the user's email, confirming removes the email from the select and the user can no longer log in. (b) Cancel: user still listed and can still log in. (c) Self: the admin's own email is absent from the select (no direct `DELETE` of the admin's id — see review F1). `afterEach` best-effort deletes the registered user by id.
 
 ### Success Criteria:
 
@@ -128,8 +128,8 @@ Each spec makes a few API calls; registration hashes a password once per created
 
 #### Automated
 
-- [x] 1.1 The new specs pass in the admin project
-- [x] 1.2 Each test fails when its risk is deliberately broken
-- [x] 1.3 No test data is left behind after a run
-- [x] 1.4 Typecheck and lint pass
+- [x] 1.1 The new specs pass in the admin project — e3744a0
+- [x] 1.2 Each test fails when its risk is deliberately broken — e3744a0
+- [x] 1.3 No test data is left behind after a run — e3744a0
+- [x] 1.4 Typecheck and lint pass — e3744a0
 - [ ] 1.5 CI Playwright job is green on the PR

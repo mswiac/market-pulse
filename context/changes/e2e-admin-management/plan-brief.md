@@ -12,7 +12,7 @@ The screens, their confirm dialogs and the admin API already exist. Admin E2E in
 
 ## Desired End State
 
-Three spec files under `e2e/admin/` with six green tests, each red when its behavior breaks: add shows the new instrument in the picker; remove instrument and remove user work only after confirmation and really persist; cancel removes nothing; the admin cannot delete themselves.
+Three spec files under `e2e/admin/` with six green tests, each red when its behavior breaks: add shows the new instrument in the picker; remove instrument and remove user work only after confirmation and really persist; cancel removes nothing; the admin's own account is not offered for removal.
 
 ## Key Decisions Made
 
@@ -22,7 +22,7 @@ Three spec files under `e2e/admin/` with six green tests, each red when its beha
 | File layout | Three files, one per screen | One scenario group per file; independent and parallel-safe | Plan |
 | Phases | One phase | Small independent specs, one PR | Plan |
 | Test data | Created via API with unique ids; cleaned in `afterEach` | Tests stay independent; failures leave nothing behind | Plan |
-| Self-delete | Asserted over the API plus "own email absent from list" | The UI list excludes the caller, so it cannot be clicked | Plan |
+| Self-delete | Asserted only as "own email absent from list"; 403 left to the worker test | A regressed guard would delete the dev admin (review F1) | Review |
 | Complexity | LOW | No app changes, existing patterns | Plan |
 
 ## Scope

@@ -1,7 +1,7 @@
 // E2E — admin "Remove user" screen. Risk: context/foundation/test-plan.md
 // Risk #8 (admin panel UI for destructive / irreversible actions): a confirm
 // dialog gates an irreversible account delete, which must hit the user that was
-// picked, really persist, and never be possible on the admin's own account.
+// picked, really persist, and the admin's own account must not be offered.
 // Generated via /10x-e2e from e2e/prompts/admin-management.prompt.md, modeled on
 // e2e/seed.spec.ts and e2e/admin/admin-gate-pass.spec.ts.
 //
@@ -18,13 +18,18 @@ import { test, expect, type Page } from '@playwright/test';
 import { deleteUser, loginStatus, registerUser, type RegisteredUser } from './admin-api';
 
 let user: RegisteredUser;
+// Set only once registration succeeded, so a failed beforeEach neither makes
+// afterEach throw (masking the real error) nor deletes a previous test's id.
+let registeredId: number | undefined;
 
 test.beforeEach(async ({ playwright, baseURL }) => {
+  registeredId = undefined;
   user = await registerUser(playwright, baseURL!);
+  registeredId = user.id;
 });
 
 test.afterEach(async ({ request }) => {
-  await deleteUser(request, user.id);
+  if (registeredId !== undefined) await deleteUser(request, registeredId);
 });
 
 async function pickAndRequestRemoval(page: Page): Promise<void> {
@@ -79,24 +84,18 @@ test.describe('remove user admin screen (test-plan.md Risk #8 — destructive-ac
     expect(await loginStatus(playwright, baseURL!, user)).toBe(200);
   });
 
-  test('an admin cannot delete their own account: it is not offered and a direct delete is rejected', async ({
-    page,
-    request,
-  }) => {
+  test('an admin is not offered their own account in the list', async ({ page, request }) => {
     const meRes = await request.get('/api/me');
     expect(meRes.ok()).toBeTruthy();
-    const me = (await meRes.json()) as { id: number; email: string };
+    const me = (await meRes.json()) as { email: string };
 
     await page.goto('/admin/remove-user');
     await page.getByRole('combobox', { name: 'Użytkownik' }).click();
     // The list is loaded (our throwaway user is in it) but the admin is not.
+    // The 403 cannot_delete_self contract is covered by test/worker/admin.test.ts;
+    // a real DELETE of the admin's own id is deliberately not sent from here, as a
+    // regressed guard would delete the local dev admin account.
     await expect(page.getByRole('option', { name: user.email, exact: true })).toBeVisible();
     await expect(page.getByRole('option', { name: me.email, exact: true })).toHaveCount(0);
-
-    const res = await request.delete(`/api/admin/users/${me.id}`);
-    expect(res.status()).toBe(403);
-    expect(((await res.json()) as { code: string }).code).toBe('cannot_delete_self');
-    // Still logged in as the same admin afterwards.
-    expect((await request.get('/api/me')).ok()).toBeTruthy();
   });
 });

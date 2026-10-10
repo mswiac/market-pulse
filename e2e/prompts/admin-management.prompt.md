@@ -31,7 +31,9 @@ Business scenarios (observable behaviors that must stay true):
 3. Remove user: the impact dialog names the user's email; confirming removes
    them from the list and they can no longer log in; cancelling keeps them.
 4. The admin cannot delete themselves: their own account is not offered in the
-   list, and a direct DELETE of their own id is rejected (403 cannot_delete_self).
+   list. (The 403 cannot_delete_self contract is covered by the worker test; a
+   real DELETE of the admin's own id is not sent from E2E, as a regressed guard
+   would delete the local dev admin.)
 
 Real boundaries (do not mock — the risk hides here):
 Admin session (storageState), adminGuard, router, dialogs, the admin API and
@@ -49,4 +51,4 @@ Explain in one sentence which regression each test catches.
 **Regressions caught:** the add form posting a wrong/un-normalized payload or not
 reloading the instrument list; a delete dialog that can be bypassed, that sends
 the wrong ticker/id, or whose confirmed delete does not persist; a cancel that
-still deletes; and an admin self-delete guard that stops working.
+still deletes; and the admin's own account showing up in the removable-users list.

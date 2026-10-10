@@ -35,8 +35,10 @@ export async function createInstrument(request: APIRequestContext, ticker: strin
 }
 
 export async function deleteInstrument(request: APIRequestContext, ticker: string): Promise<void> {
-  // 404 when the test already removed it — that is the success path.
-  await request.delete(`/api/admin/instruments/${encodeURIComponent(ticker)}`);
+  // 404 when the test already removed it — that is the success path. Anything
+  // else would silently leave rows behind, so fail loudly.
+  const res = await request.delete(`/api/admin/instruments/${encodeURIComponent(ticker)}`);
+  expect([200, 404]).toContain(res.status());
 }
 
 export async function listInstrumentTickers(request: APIRequestContext): Promise<string[]> {
@@ -86,5 +88,7 @@ export async function loginStatus(
 
 export async function deleteUser(request: APIRequestContext, id: number): Promise<void> {
   // 404 when the test already removed the user — that is the success path.
-  await request.delete(`/api/admin/users/${id}`);
+  // Anything else would silently leave rows behind, so fail loudly.
+  const res = await request.delete(`/api/admin/users/${id}`);
+  expect([200, 404]).toContain(res.status());
 }
