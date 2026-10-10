@@ -136,7 +136,8 @@ export async function evaluateAlerts(env: Env): Promise<AlertEvaluationSummary> 
               i.name AS instrumentName, i.currency, m.price, m.rsi, m.high, m.low, m.updated_at
        FROM alerts a
        JOIN instruments i ON i.ticker = a.ticker
-       JOIN market_data m ON m.ticker = a.ticker`,
+       JOIN market_data m ON m.ticker = a.ticker
+       WHERE a.paused = 0`,
     ).all<LoadedAlertRow>();
     alerts = results;
   } catch (err) {

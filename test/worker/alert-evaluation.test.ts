@@ -10,6 +10,7 @@ interface AlertSeed {
   threshold?: number;
   direction?: 'up' | 'down';
   armed?: number;
+  paused?: number;
   notificationEmail?: string;
 }
 
@@ -27,13 +28,14 @@ async function seedAlert(userId: number, overrides: AlertSeed = {}): Promise<num
     threshold = 20,
     direction = 'up',
     armed = 1,
+    paused = 0,
     notificationEmail = VERIFIED_EMAIL,
   } = overrides;
 
   const result = await env.DB.prepare(
-    'INSERT INTO alerts (user_id, ticker, alert_type, threshold, notification_email, direction, armed) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO alerts (user_id, ticker, alert_type, threshold, notification_email, direction, armed, paused) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
   )
-    .bind(userId, ticker, alertType, threshold, notificationEmail, direction, armed)
+    .bind(userId, ticker, alertType, threshold, notificationEmail, direction, armed, paused)
     .run();
   return result.meta.last_row_id as number;
 }
@@ -111,6 +113,32 @@ describe('evaluateAlerts', () => {
     const events = await triggerEventsFor(alertId);
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({ email_status: 'sent', value_at_trigger: 25 });
+  });
+
+  it('skips a paused armed alert even though its condition is met: no email, no event, still armed', async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse(200, { id: 'fake-resend-id' }));
+    vi.stubGlobal('fetch', fetchMock);
+    const userId = await seedUser('paused-armed@example.com');
+    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1, paused: 1 });
+    await seedMarketData('^VIX', 25);
+
+    const summary = await evaluateAlerts(env);
+
+    expect(summary.alertsEvaluated).toBe(0);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(await triggerEventsFor(alertId)).toHaveLength(0);
+    expect((await getAlert(alertId)).armed).toBe(1);
+  });
+
+  it('does not re-arm a paused disarmed alert even after the value retreats past the margin', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('paused-disarmed@example.com');
+    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 0, paused: 1 });
+    await seedMarketData('^VIX', 10);
+
+    await evaluateAlerts(env);
+
+    expect((await getAlert(alertId)).armed).toBe(0);
   });
 
   it('does not fire an armed alert whose condition is not yet met', async () => {

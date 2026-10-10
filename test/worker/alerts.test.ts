@@ -52,6 +52,14 @@ async function updateAlert(cookie: string, id: number, overrides: Record<string,
   });
 }
 
+async function setPaused(cookie: string, id: number, body: unknown): Promise<Response> {
+  return exports.default.fetch(`${BASE_URL}/api/alerts/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
+    body: typeof body === 'string' ? body : JSON.stringify(body),
+  });
+}
+
 async function deleteAlert(cookie: string, id: number): Promise<Response> {
   return exports.default.fetch(`${BASE_URL}/api/alerts/${id}`, {
     method: 'DELETE',
@@ -690,6 +698,86 @@ describe('alerts endpoints', () => {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(validAlertBody()),
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it('returns paused: false on create and list', async () => {
+    const cookie = await registerAndLogIn('paused-default@example.com');
+    const created = await createAlert(cookie);
+    await expect(created.json()).resolves.toMatchObject({ paused: false });
+
+    const list = (await (await listAlerts(cookie)).json()) as Record<string, unknown>[];
+    expect(list[0]['paused']).toBe(false);
+  });
+
+  it('pauses an alert, keeps it paused through an edit, and resumes it re-armed', async () => {
+    const cookie = await registerAndLogIn('pause-resume@example.com');
+    await seedMarketData('^VIX', 25, 0);
+    // The current price (25) already meets the threshold, so the alert is created disarmed.
+    const created = (await (await createAlert(cookie, { threshold: 20, direction: 'up' })).json()) as Record<
+      string,
+      unknown
+    >;
+    expect(created['active']).toBe(false);
+    const id = created['id'] as number;
+
+    const paused = await setPaused(cookie, id, { paused: true });
+    expect(paused.status).toBe(200);
+    await expect(paused.json()).resolves.toMatchObject({ id, paused: true, active: false });
+
+    const edited = await updateAlert(cookie, id, { threshold: 21, direction: 'up' });
+    expect(edited.status).toBe(200);
+    await expect(edited.json()).resolves.toMatchObject({ paused: true });
+
+    const resumed = await setPaused(cookie, id, { paused: false });
+    expect(resumed.status).toBe(200);
+    await expect(resumed.json()).resolves.toMatchObject({ id, paused: false, active: true });
+  });
+
+  it('rejects a PATCH with a non-numeric alert id', async () => {
+    const cookie = await registerAndLogIn('pause-nonnumeric-id@example.com');
+    const response = await setPaused(cookie, Number.NaN, { paused: true });
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: 'invalid alert id', code: 'invalid_alert_id' });
+  });
+
+  it.each([['malformed JSON', '{not valid json'], ['a missing paused field', {}], ['a non-boolean paused', { paused: 1 }]])(
+    'rejects a PATCH with %s',
+    async (_label, body) => {
+      const cookie = await registerAndLogIn(`pause-bad-body-${String(_label).replaceAll(' ', '-')}@example.com`);
+      const created = (await (await createAlert(cookie)).json()) as Record<string, unknown>;
+
+      const response = await setPaused(cookie, created['id'] as number, body);
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toMatchObject({ error: 'invalid request body', code: 'invalid_body' });
+    },
+  );
+
+  it('returns 404 pausing a nonexistent alert id', async () => {
+    const cookie = await registerAndLogIn('pause-nonexistent@example.com');
+    const response = await setPaused(cookie, 999999, { paused: true });
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toMatchObject({ error: 'alert not found', code: 'alert_not_found' });
+  });
+
+  it("returns 404 pausing another user's alert and leaves it unpaused (isolation)", async () => {
+    const cookieA = await registerAndLogIn('pause-isolation-a@example.com');
+    const cookieB = await registerAndLogIn('pause-isolation-b@example.com');
+    const created = (await (await createAlert(cookieA)).json()) as Record<string, unknown>;
+
+    const response = await setPaused(cookieB, created['id'] as number, { paused: true });
+    expect(response.status).toBe(404);
+
+    const listForA = (await (await listAlerts(cookieA)).json()) as Record<string, unknown>[];
+    expect(listForA[0]['paused']).toBe(false);
+  });
+
+  it('rejects PATCH without a session cookie', async () => {
+    const response = await exports.default.fetch(`${BASE_URL}/api/alerts/1`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paused: true }),
     });
     expect(response.status).toBe(401);
   });

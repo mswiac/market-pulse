@@ -183,6 +183,7 @@ const ALERT_SELECT = `
     a.threshold,
     a.direction AS direction,
     a.armed AS active,
+    a.paused AS paused,
     a.notification_email AS notificationEmail,
     a.created_at AS createdAt,
     a.updated_at AS updatedAt,
@@ -195,10 +196,11 @@ const ALERT_SELECT = `
   LEFT JOIN market_data m ON m.ticker = a.ticker
 `;
 
-// D1 returns raw 0/1 for the `armed` INTEGER column — convert to a real
-// JSON boolean at the response boundary so the frontend gets `active: boolean`.
+// D1 returns raw 0/1 for the `armed` and `paused` INTEGER columns — convert to
+// real JSON booleans at the response boundary so the frontend gets
+// `active: boolean` and `paused: boolean`.
 function toAlertResponse(row: Record<string, unknown>): Record<string, unknown> {
-  return { ...row, active: row['active'] === 1 };
+  return { ...row, active: row['active'] === 1, paused: row['paused'] === 1 };
 }
 
 alertsRoutes.post('/', async (c) => {
@@ -314,6 +316,42 @@ alertsRoutes.put('/:id', async (c) => {
     }
     throw err;
   }
+});
+
+// Pause is its own endpoint rather than a field of the create/edit body, so an
+// edit (which recomputes `armed`) can never clear it. Resuming re-arms in the
+// same statement: a cron run must never see a resumed alert still disarmed.
+alertsRoutes.patch('/:id', async (c) => {
+  const id = parseAlertId(c.req.param('id'));
+  if (id === null) {
+    return c.json({ error: 'invalid alert id', code: 'invalid_alert_id' }, 400);
+  }
+
+  let body: { paused?: unknown } | null;
+  try {
+    body = (await c.req.json()) as { paused?: unknown } | null;
+  } catch {
+    body = null;
+  }
+  if (typeof body?.paused !== 'boolean') {
+    return c.json({ error: 'invalid request body', code: 'invalid_body' }, 400);
+  }
+
+  const userId = c.get('userId');
+  const paused = body.paused ? 1 : 0;
+  const [, selectResult] = await c.env.DB.batch([
+    c.env.DB.prepare(
+      `UPDATE alerts SET paused = ?, armed = CASE WHEN ? = 0 THEN 1 ELSE armed END WHERE id = ? AND user_id = ?`,
+    ).bind(paused, paused, id, userId),
+    c.env.DB.prepare(`${ALERT_SELECT} WHERE a.id = ? AND a.user_id = ?`).bind(id, userId),
+  ]);
+
+  const updated = selectResult.results[0];
+  if (!updated) {
+    return c.json({ error: 'alert not found', code: 'alert_not_found' }, 404);
+  }
+
+  return c.json(toAlertResponse(updated as Record<string, unknown>), 200);
 });
 
 alertsRoutes.delete('/:id', async (c) => {
