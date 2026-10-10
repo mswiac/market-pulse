@@ -31,5 +31,10 @@ setup('authenticate as admin', async ({ page }) => {
   await page.waitForURL('/');
   await expect(page.getByRole('heading', { name: 'Pulpit' })).toBeVisible();
 
+  // The shell renders the "Administrator" nav group only when GET /api/me says
+  // isAdmin. Failing here points at the account / ADMIN_EMAILS config instead of
+  // surfacing later as an unrelated assertion in an admin spec.
+  await expect(page.getByRole('button', { name: 'Administrator' })).toBeVisible();
+
   await page.context().storageState({ path: authFile });
 });

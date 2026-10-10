@@ -157,11 +157,11 @@ Existing local setups must add the two admin variables to the local e2e env file
 
 #### Automated
 
-- [x] 2.1 The new spec passes: `npx playwright test --project=chromium-admin`
-- [x] 2.2 The full suite passes (user and admin): `npx playwright test`
-- [x] 2.3 Lint passes: `npm run lint`
+- [x] 2.1 The new spec passes: `npx playwright test --project=chromium-admin` — 0cb2435
+- [x] 2.2 The full suite passes (user and admin): `npx playwright test` — 0cb2435
+- [x] 2.3 Lint passes: `npm run lint` — 0cb2435
 
 #### Manual
 
-- [x] 2.4 Deliberate break of the admin gate turns the spec red and was reverted
+- [x] 2.4 Deliberate break of the admin gate turns the spec red and was reverted — 0cb2435
 - [ ] 2.5 CI run on the PR is green, with the admin account registered

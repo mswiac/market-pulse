@@ -1,7 +1,7 @@
 ---
 change_id: e2e-admin-account-infra
 title: Admin account infrastructure for Playwright e2e
-status: implementing
+status: impl_reviewed
 created: 2026-10-10
 updated: 2026-10-10
 archived_at: null
