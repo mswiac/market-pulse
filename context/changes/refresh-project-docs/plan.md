@@ -195,11 +195,11 @@ None. Links into the moved sections (`README.md#admin-panel` anchors) were grepp
 
 #### Automated
 
-- [x] 1.1 Moved sections removed from README and present in new foundation files
-- [x] 1.2 No dangling section references to moved README sections
-- [x] 1.3 Every path referenced in README and new files exists
-- [x] 1.4 Prettier clean on README and touched foundation notes
-- [x] 1.5 Diff contains only Markdown files
+- [x] 1.1 Moved sections removed from README and present in new foundation files — b37f352
+- [x] 1.2 No dangling section references to moved README sections — b37f352
+- [x] 1.3 Every path referenced in README and new files exists — b37f352
+- [x] 1.4 Prettier clean on README and touched foundation notes — b37f352
+- [x] 1.5 Diff contains only Markdown files — b37f352
 
 #### Manual
 
@@ -210,9 +210,9 @@ None. Links into the moved sections (`README.md#admin-panel` anchors) were grepp
 
 #### Automated
 
-- [ ] 2.1 Every backfilled archive path exists
-- [ ] 2.2 Each of the 14 change IDs appears in both table and Done
-- [ ] 2.3 Existing roadmap rows unchanged (only frontmatter `updated` differs)
+- [x] 2.1 Every backfilled archive path exists
+- [x] 2.2 Each of the 14 change IDs appears in both table and Done
+- [x] 2.3 Existing roadmap rows unchanged (only frontmatter `updated` differs)
 
 #### Manual
 
