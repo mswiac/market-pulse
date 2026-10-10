@@ -42,6 +42,10 @@ jobs:
       # Miniflare D1. Nothing sensitive — no repo secrets required.
       E2E_EMAIL: e2e@ci.market-pulse.test
       E2E_PASSWORD: ci-e2e-pw-4f2b9c1a
+      # The admin account: its email must match ADMIN_EMAILS in the .dev.vars
+      # written below, which is what makes the Worker report isAdmin = true.
+      E2E_ADMIN_EMAIL: admin@ci.market-pulse.test
+      E2E_ADMIN_PASSWORD: ci-e2e-admin-pw-7d3e5a90
 
     steps:
       - uses: actions/checkout@v4
@@ -117,17 +121,21 @@ jobs:
           wait_up "Angular dev server" "$web_pid" http://localhost:4200 120 \
             || { cat "$RUNNER_TEMP/web.log"; exit 1; }
 
-      - name: Seed E2E test account
+      - name: Seed E2E test accounts (user + admin)
         run: |
-          status=$(curl -s -o /dev/null -w '%{http_code}' \
-            -X POST http://localhost:8787/api/register \
-            -H 'content-type: application/json' \
-            -d "{\"email\":\"${E2E_EMAIL}\",\"password\":\"${E2E_PASSWORD}\"}")
-          echo "POST /api/register -> ${status}"
-          case "${status}" in
-            201|409) ;;
-            *) echo "::error::unexpected register status ${status}"; cat "$RUNNER_TEMP/worker.log"; exit 1 ;;
-          esac
+          register() { # $1=email $2=password
+            status=$(curl -s -o /dev/null -w '%{http_code}' \
+              -X POST http://localhost:8787/api/register \
+              -H 'content-type: application/json' \
+              -d "{\"email\":\"$1\",\"password\":\"$2\"}")
+            echo "POST /api/register ($1) -> ${status}"
+            case "${status}" in
+              201|409) ;;
+              *) echo "::error::unexpected register status ${status} for $1"; cat "$RUNNER_TEMP/worker.log"; exit 1 ;;
+            esac
+          }
+          register "${E2E_EMAIL}" "${E2E_PASSWORD}"
+          register "${E2E_ADMIN_EMAIL}" "${E2E_ADMIN_PASSWORD}"
 
       - name: Run Playwright
         run: npx playwright test

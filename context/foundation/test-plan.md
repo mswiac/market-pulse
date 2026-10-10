@@ -392,6 +392,17 @@ its rules file):
 - Internal boundaries (auth, routing, D1) stay real. Only the daily-cron
   external calls (Yahoo, Resend) would ever be network-mocked, and neither
   smoke scenario touches them.
+- Admin scenarios: specs under `e2e/admin/` run in the `chromium-admin`
+  project, authenticated as an administrator (`playwright/.auth/admin.json`,
+  written by `e2e/admin-auth.setup.ts`); every other spec runs as the
+  non-admin user. The admin credentials are `E2E_ADMIN_EMAIL` /
+  `E2E_ADMIN_PASSWORD` in the same gitignored local env file as the user
+  ones, and the account's email must be listed in the Worker's
+  `ADMIN_EMAILS` (that is what makes `isAdmin` true). Missing admin
+  credentials fail the admin setup loudly rather than skipping. In CI,
+  `e2e.yml` registers `admin@ci.market-pulse.test` (already in the CI
+  `ADMIN_EMAILS`). Specs that need a non-admin session (e.g.
+  `admin-gate-redirect.spec.ts`) stay in `e2e/`, not `e2e/admin/`.
 
 Generation workflow: `/10x-e2e` (PLAN → GENERATE from seed + rules → REVIEW
 against the five anti-patterns → VERIFY by deliberately breaking the
@@ -443,6 +454,7 @@ new Worker test files under `test/worker/` (matched only by
 - 2026-08-25 — PR #91 mutation-testing triage (commits `8a2884f^`..`07bef80`, 6 commits): test-only sweep closing Stryker survivor gaps across `src/worker/**` (session/auth, scheduled/admin routes, index/email, market-data/password, alert-evaluation, alerts/trigger-events/admin/resend/rsi). ~823 lines added across 14 `test/worker/*.test.ts` files. No production code changed, no risk-map delta from this sweep itself (Risk #8 is a separate, interview-sourced addition — see §2).
 - 2026-08-28 — added the browser-level E2E layer (§3 Phase 6, §4 stack row, §6.6): Playwright `e2e/seed.spec.ts` exemplar plus four smoke specs — alert create→reload, auth-gate redirect, admin-gate redirect, alert delete confirm/cancel. 10xDevs M3L4 practical exercise. No risk-map delta — all cover browser-only facets of existing risks #4 and #6. Every spec anti-pattern-reviewed and deliberate-break-verified; `auth-gate-redirect`, `admin-gate-redirect`, `delete-alert` generated via standalone `/10x-e2e` runs. Branch `test/e2e-playwright-smoke` / PR #119.
 - 2026-08-28 — wired the E2E suite into CI (issue #121, follow-up to #119): `.github/workflows/e2e.yml` runs the `e2e/` specs on GitHub Actions (PRs + pushes to `main`) against the same local dev servers + an ephemeral offline Miniflare D1, seeding a throwaway account via `POST /api/register`. Free (public repo). **Informational, not a required branch-protection check** — required gate stays `Workers Builds: marketpulse`. §3 Phase 6 Enforcement + §5 gate table updated; no risk-map delta.
+- 2026-10-10 — added admin account infrastructure to the E2E layer (issue #183): second Playwright project chain (`setup-admin` → `chromium-admin`, specs under `e2e/admin/`), CI registration of the admin account, and the §6.6 admin bullet. Enables the admin feature specs (#184, #185). No risk-map delta.
 - 2026-08-29 — closed the frontend `submitting`-flag / double-submit mutant follow-up series (#113 admin, #114 alert-form, #115 register, #116 login). #116 also gave `login.ts` its first-ever component spec — validator gates, happy path (`login()` args + `navigateByUrl('/')`), error message, and the double-submit guard. Test-only, per-component scoped Stryker (`login.ts:26-43`, 12/13 killed, `errorMessage.set(null)` the accepted survivor → #110); `login.html:31` `[disabled]` binding covered by a deliberate-break check. §3 Phase 3 scope-note updated. No risk-map delta — covers a client-side facet of Risk #4 (auth/form input validation). Branch `test/116-login-component-coverage`.
 - 2026-08-29 — broad Stryker mutation sweep of the three Angular form components (#110), the broad-triage half of the frontend mutation work (#114/#115/#116 were the narrow submit-guard half). Test-only, per-file multi-range `--mutate` skipping the `fb.nonNullable.group` initializer. Before/after: `alert-form.ts` 72.41→93.10%, `register.ts` 84.00→92.00%, `login.ts` 92.31→100.00%. New tests cover the success path (`create`/`update`/`register`/`login` never previously exercised on success — `dialogRef.close(true)` / `navigateByUrl('/')` / submitted-payload shape), the error-reset facet (`login.ts:32` now killed), and `alert-form`'s display helpers + `valueChanges` cascades. Residual survivors are documented equivalents (dialog-only `{ optional: true }`, `typeof`-guards redundant with `> 0` / `Number.isFinite`, mat-form-field-gated `emailError`/`markAsTouched`, `alert-form.ts:168` carried from #114). Three `[disabled]`-binding deliberate-break checks re-confirmed. No risk-map delta — client-side facet of Risk #4. Branch `test/110-app-component-mutation-sweep`.
 

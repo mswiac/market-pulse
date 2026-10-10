@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 import path from 'node:path';
 
 // Local-only convenience: if e2e/.env exists, load E2E_EMAIL / E2E_PASSWORD
+// (the non-admin user) and E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD (the admin)
 // from it so `npx playwright test` works with no inline env vars. The file is
 // gitignored; real env vars still win in CI.
 try {
@@ -43,12 +44,21 @@ export default defineConfig({
   projects: [
     // Logs in once per `playwright test` run using E2E_EMAIL / E2E_PASSWORD
     // (from e2e/.env) and refreshes playwright/.auth/user.json.
-    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+    { name: 'setup', testMatch: /[\\/]auth\.setup\.ts$/ },
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup'],
-      testIgnore: /auth\.setup\.ts/,
+      testIgnore: [/\.setup\.ts$/, /[\\/]e2e[\\/]admin[\\/]/],
+    },
+    // Admin chain: logs in as E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD, saves
+    // playwright/.auth/admin.json, and runs only the specs under e2e/admin/.
+    { name: 'setup-admin', testMatch: /[\\/]admin-auth\.setup\.ts$/ },
+    {
+      name: 'chromium-admin',
+      use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/admin.json' },
+      dependencies: ['setup-admin'],
+      testMatch: /[\\/]e2e[\\/]admin[\\/].*\.spec\.ts$/,
     },
   ],
 });
