@@ -13,7 +13,12 @@ const INSTRUMENTS: Instrument[] = [
   { ticker: 'CDR', name: 'CD Projekt', type: 'pl_stock', rsiEligible: true, currency: 'PLN' },
 ];
 
-const make = (id: number, ticker: string, alertType: string, current: Partial<Alert> = {}): Alert => {
+const make = (
+  id: number,
+  ticker: string,
+  alertType: string,
+  current: Partial<Alert> = {},
+): Alert => {
   const instrument = INSTRUMENTS.find((i) => i.ticker === ticker)!;
   return {
     id,
@@ -25,6 +30,7 @@ const make = (id: number, ticker: string, alertType: string, current: Partial<Al
     threshold: id * 10,
     direction: 'up',
     active: true,
+    paused: false,
     notificationEmail: 'user@example.com',
     createdAt: 0,
     updatedAt: 0,
@@ -41,7 +47,7 @@ const ALERTS: Alert[] = [make(1, '^NDX', 'PRICE'), make(2, '^NDX', 'RSI'), make(
 interface ListOverrides {
   // What the confirm/edit dialog resolves to when closed.
   dialogResult?: boolean;
-  alertsService?: Partial<Record<'list' | 'delete', unknown>>;
+  alertsService?: Partial<Record<'list' | 'delete' | 'setPaused', unknown>>;
 }
 
 async function renderList(alerts: Alert[] = ALERTS, overrides: ListOverrides = {}) {
@@ -49,7 +55,13 @@ async function renderList(alerts: Alert[] = ALERTS, overrides: ListOverrides = {
     providers: [
       {
         provide: AlertsService,
-        useValue: { alerts: () => alerts, list: () => of(alerts), delete: vi.fn(), ...overrides.alertsService },
+        useValue: {
+          alerts: () => alerts,
+          list: () => of(alerts),
+          delete: vi.fn(),
+          setPaused: vi.fn(),
+          ...overrides.alertsService,
+        },
       },
       {
         provide: InstrumentsService,
@@ -76,7 +88,8 @@ async function renderList(alerts: Alert[] = ALERTS, overrides: ListOverrides = {
 
 type Settle = () => Promise<void>;
 
-const rowCount = () => screen.queryAllByRole('button', { name: /NASDAQ-100|VIX|CD Projekt/ }).length;
+const rowCount = () =>
+  screen.queryAllByRole('button', { name: /NASDAQ-100|VIX|CD Projekt/ }).length;
 
 async function chooseAlertType(settle: Settle, name: string) {
   fireEvent.click(screen.getByRole('combobox', { name: 'Alert type' }));
@@ -174,9 +187,13 @@ describe('AlertList current value', () => {
 
 describe('AlertList sorting', () => {
   const thresholds = () =>
-    screen.getAllByRole('button', { name: /NASDAQ-100|VIX|CD Projekt/ }).map((row) => /\d+\.\d{2}/.exec(row.textContent!)![0]);
+    screen
+      .getAllByRole('button', { name: /NASDAQ-100|VIX|CD Projekt/ })
+      .map((row) => /\d+\.\d{2}/.exec(row.textContent!)![0]);
   const names = () =>
-    screen.getAllByRole('button', { name: /NASDAQ-100|VIX|CD Projekt/ }).map((row) => /NASDAQ-100|VIX|CD Projekt/.exec(row.textContent!)![0]);
+    screen
+      .getAllByRole('button', { name: /NASDAQ-100|VIX|CD Projekt/ })
+      .map((row) => /NASDAQ-100|VIX|CD Projekt/.exec(row.textContent!)![0]);
 
   it('keeps the server order until a column is chosen', async () => {
     await renderList();
@@ -184,7 +201,11 @@ describe('AlertList sorting', () => {
   });
 
   it('sorts a numeric column ascending first and descending on the second click', async () => {
-    const { settle } = await renderList([make(3, 'CDR', 'PRICE'), make(1, '^NDX', 'PRICE'), make(2, '^NDX', 'RSI')]);
+    const { settle } = await renderList([
+      make(3, 'CDR', 'PRICE'),
+      make(1, '^NDX', 'PRICE'),
+      make(2, '^NDX', 'RSI'),
+    ]);
 
     fireEvent.click(screen.getByRole('button', { name: 'Threshold' }));
     await settle();
@@ -228,7 +249,9 @@ describe('AlertList actions', () => {
   }
 
   it('shows a load error instead of the list when the alerts cannot be loaded', async () => {
-    await renderList(ALERTS, { alertsService: { list: () => throwError(() => new Error('offline')) } });
+    await renderList(ALERTS, {
+      alertsService: { list: () => throwError(() => new Error('offline')) },
+    });
 
     expect(screen.getByText('Failed to load alerts.')).toBeTruthy();
     expect(rowCount()).toBe(0);
@@ -239,12 +262,18 @@ describe('AlertList actions', () => {
 
     await clickFirst(settle, 'Edit alert');
 
-    expect(dialogOpen).toHaveBeenCalledWith(AlertForm, { width: '32rem', data: { alert: ALERTS[0] } });
+    expect(dialogOpen).toHaveBeenCalledWith(AlertForm, {
+      width: '32rem',
+      data: { alert: ALERTS[0] },
+    });
   });
 
   it('asks for confirmation with a summary of the alert, then deletes it once confirmed', async () => {
     const remove = vi.fn().mockReturnValue(of(undefined));
-    const { settle, dialogOpen } = await renderList(ALERTS, { dialogResult: true, alertsService: { delete: remove } });
+    const { settle, dialogOpen } = await renderList(ALERTS, {
+      dialogResult: true,
+      alertsService: { delete: remove },
+    });
 
     await clickFirst(settle, 'Delete alert');
 
@@ -266,7 +295,10 @@ describe('AlertList actions', () => {
 
   it('does not delete the alert when the confirmation is dismissed', async () => {
     const remove = vi.fn().mockReturnValue(of(undefined));
-    const { settle } = await renderList(ALERTS, { dialogResult: false, alertsService: { delete: remove } });
+    const { settle } = await renderList(ALERTS, {
+      dialogResult: false,
+      alertsService: { delete: remove },
+    });
 
     await clickFirst(settle, 'Delete alert');
 
@@ -286,9 +318,62 @@ describe('AlertList actions', () => {
   });
 });
 
+describe('AlertList pause', () => {
+  async function expandFirst(settle: Settle) {
+    fireEvent.click(screen.getAllByRole('button', { name: /NASDAQ-100|VIX|CD Projekt/ })[0]);
+    await settle();
+  }
+
+  it('pauses an unpaused alert from the row actions', async () => {
+    const setPaused = vi.fn().mockReturnValue(of(make(1, '^NDX', 'PRICE', { paused: true })));
+    const { settle } = await renderList([make(1, '^NDX', 'PRICE')], {
+      alertsService: { setPaused },
+    });
+
+    await expandFirst(settle);
+    fireEvent.click(screen.getByRole('button', { name: 'Pause alert' }));
+
+    expect(setPaused).toHaveBeenCalledWith(1, true);
+    expect(screen.queryByRole('button', { name: 'Resume alert' })).toBeNull();
+  });
+
+  it('shows Paused instead of Active/Inactive and offers Resume for a paused alert', async () => {
+    const setPaused = vi.fn().mockReturnValue(of(make(1, '^NDX', 'PRICE')));
+    const { settle } = await renderList(
+      [make(1, '^NDX', 'PRICE', { paused: true, active: false })],
+      {
+        alertsService: { setPaused },
+      },
+    );
+
+    await expandFirst(settle);
+
+    expect(screen.getByText('Paused')).toBeTruthy();
+    expect(screen.queryByText('Inactive')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Pause alert' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Resume alert' }));
+    expect(setPaused).toHaveBeenCalledWith(1, false);
+  });
+
+  it('shows an error when pausing fails', async () => {
+    const { settle } = await renderList([make(1, '^NDX', 'PRICE')], {
+      alertsService: { setPaused: vi.fn().mockReturnValue(throwError(() => new Error('boom'))) },
+    });
+
+    await expandFirst(settle);
+    fireEvent.click(screen.getByRole('button', { name: 'Pause alert' }));
+    await settle();
+
+    expect(screen.getByText('Failed to update the alert. Please try again.')).toBeTruthy();
+  });
+});
+
 describe('AlertList details', () => {
   it('shows the day high and low and no RSI for a price alert', async () => {
-    await renderList([make(1, '^NDX', 'PRICE', { currentHigh: 5, currentLow: 4, currentPrice: 4.5 })]);
+    await renderList([
+      make(1, '^NDX', 'PRICE', { currentHigh: 5, currentLow: 4, currentPrice: 4.5 }),
+    ]);
     expect(screen.queryByText("Today's high:")).toBeTruthy();
     expect(screen.queryByText("Today's low:")).toBeTruthy();
     expect(screen.queryByText('Current RSI:')).toBeNull();

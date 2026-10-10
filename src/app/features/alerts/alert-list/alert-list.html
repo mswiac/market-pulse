@@ -2,11 +2,22 @@
   <p class="empty-state" i18n="@@alertList.loadError">Failed to load alerts.</p>
 } @else {
   @if (deleteError()) {
-    <p class="delete-error" i18n="@@alertList.deleteError">Failed to delete the alert. Please try again.</p>
+    <p class="action-error" i18n="@@alertList.deleteError">
+      Failed to delete the alert. Please try again.
+    </p>
+  }
+  @if (pauseError()) {
+    <p class="action-error" i18n="@@alertList.pauseError">
+      Failed to update the alert. Please try again.
+    </p>
   }
   @if (alerts().length > 0) {
     <div class="filter-bar">
-      <app-instrument-picker class="filter-picker" [(ticker)]="filterTicker" [(type)]="filterType" />
+      <app-instrument-picker
+        class="filter-picker"
+        [(ticker)]="filterTicker"
+        [(type)]="filterType"
+      />
       <mat-form-field appearance="outline" subscriptSizing="dynamic" class="alert-type-field">
         <mat-label i18n="@@alertList.filter.alertType">Alert type</mat-label>
         <mat-select [(value)]="filterAlertType">
@@ -17,26 +28,40 @@
         </mat-select>
       </mat-form-field>
       @if (hasActiveFilters()) {
-        <button mat-stroked-button class="clear-filters" type="button" (click)="clearFilters()" i18n="@@alertList.filter.clear">Clear filters</button>
+        <button
+          mat-stroked-button
+          class="clear-filters"
+          type="button"
+          (click)="clearFilters()"
+          i18n="@@alertList.filter.clear"
+        >
+          Clear filters
+        </button>
       }
     </div>
     <div class="list-header">
       <button type="button" class="sort-col" (click)="toggleSort('instrumentName')">
         <span i18n="@@alertList.sort.instrument">Instrument</span>
         @if (sortBy() === 'instrumentName') {
-          <mat-icon class="sort-icon">{{ sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+          <mat-icon class="sort-icon">{{
+            sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward'
+          }}</mat-icon>
         }
       </button>
       <button type="button" class="sort-col" (click)="toggleSort('alertType')">
         <span i18n="@@alertList.sort.alertType">Alert type</span>
         @if (sortBy() === 'alertType') {
-          <mat-icon class="sort-icon">{{ sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+          <mat-icon class="sort-icon">{{
+            sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward'
+          }}</mat-icon>
         }
       </button>
       <button type="button" class="sort-col" (click)="toggleSort('threshold')">
         <span i18n="@@alertList.sort.threshold">Threshold</span>
         @if (sortBy() === 'threshold') {
-          <mat-icon class="sort-icon">{{ sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+          <mat-icon class="sort-icon">{{
+            sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward'
+          }}</mat-icon>
         }
       </button>
       <span class="value-col" i18n="@@alertList.header.currentValue">Current value</span>
@@ -46,11 +71,16 @@
   <mat-accordion>
     @for (alert of sortedAlerts(); track alert.id) {
       <mat-expansion-panel>
-        <mat-expansion-panel-header [class.inactive]="!alert.active">
+        <mat-expansion-panel-header [class.inactive]="!alert.active || alert.paused">
           <mat-panel-title class="alert-summary">
             <span>{{ alert.instrumentName }}</span>
             <span>{{ alertTypeLabel(alert.alertType) }}</span>
-            <span>{{ alert.threshold | number: '1.2-2' }} @if (!showCurrentRsi(alert.alertType)) { {{ alert.currency }} }</span>
+            <span
+              >{{ alert.threshold | number: '1.2-2' }}
+              @if (!showCurrentRsi(alert.alertType)) {
+                {{ alert.currency }}
+              }
+            </span>
             <span>
               @if (showCurrentRsi(alert.alertType)) {
                 @if (alert.currentRsi !== null) {
@@ -69,7 +99,8 @@
 
         <div class="alert-detail">
           <p>
-            <strong i18n="@@alertList.detail.currentPrice">Current price:</strong>&nbsp;@if (alert.currentPrice !== null) {
+            <strong i18n="@@alertList.detail.currentPrice">Current price:</strong>&nbsp;
+            @if (alert.currentPrice !== null) {
               {{ alert.currentPrice | number: '1.2-2' }} {{ alert.currency }}
             } @else {
               <span i18n="@@alertList.detail.noData">No data</span>
@@ -77,14 +108,16 @@
           </p>
           @if (showCurrentHighLow(alert.alertType)) {
             <p>
-              <strong i18n="@@alertList.detail.currentHigh">Today's high:</strong>&nbsp;@if (alert.currentHigh !== null) {
+              <strong i18n="@@alertList.detail.currentHigh">Today's high:</strong>&nbsp;
+              @if (alert.currentHigh !== null) {
                 {{ alert.currentHigh | number: '1.2-2' }} {{ alert.currency }}
               } @else {
                 <span i18n="@@alertList.detail.noData">No data</span>
               }
             </p>
             <p>
-              <strong i18n="@@alertList.detail.currentLow">Today's low:</strong>&nbsp;@if (alert.currentLow !== null) {
+              <strong i18n="@@alertList.detail.currentLow">Today's low:</strong>&nbsp;
+              @if (alert.currentLow !== null) {
                 {{ alert.currentLow | number: '1.2-2' }} {{ alert.currency }}
               } @else {
                 <span i18n="@@alertList.detail.noData">No data</span>
@@ -93,7 +126,8 @@
           }
           @if (showCurrentRsi(alert.alertType)) {
             <p>
-              <strong i18n="@@alertList.detail.currentRsi">Current RSI:</strong>&nbsp;@if (alert.currentRsi !== null) {
+              <strong i18n="@@alertList.detail.currentRsi">Current RSI:</strong>&nbsp;
+              @if (alert.currentRsi !== null) {
                 {{ alert.currentRsi | number: '1.2-2' }}
               } @else {
                 <span i18n="@@alertList.detail.noData">No data</span>
@@ -102,27 +136,61 @@
           }
           <p><strong i18n="@@alertList.detail.ticker">Ticker:</strong> {{ alert.ticker }}</p>
           <p>
-            <strong i18n="@@alertList.detail.direction">Direction:</strong>&nbsp;@if (alert.direction === 'up') {
+            <strong i18n="@@alertList.detail.direction">Direction:</strong>&nbsp;
+            @if (alert.direction === 'up') {
               <span i18n="@@alertForm.direction.up">Rises above threshold</span>
             } @else {
               <span i18n="@@alertForm.direction.down">Falls below threshold</span>
             }
           </p>
           <p>
-            <strong i18n="@@alertList.detail.status">Status:</strong>&nbsp;@if (alert.active) {
+            <strong i18n="@@alertList.detail.status">Status:</strong>&nbsp;
+            @if (alert.paused) {
+              <span i18n="@@alertList.status.paused">Paused</span>
+            } @else if (alert.active) {
               <span i18n="@@alertList.status.active">Active</span>
             } @else {
               <span i18n="@@alertList.status.inactive">Inactive</span>
             }
           </p>
-          <p><strong i18n="@@alertList.detail.notificationEmail">Notification email:</strong> {{ alert.notificationEmail }}</p>
-          <p><strong i18n="@@alertList.detail.lastEdited">Last edited:</strong> {{ alert.updatedAt * 1000 | date: 'dd.MM.yyyy' }}</p>
+          <p>
+            <strong i18n="@@alertList.detail.notificationEmail">Notification email:</strong>
+            {{ alert.notificationEmail }}
+          </p>
+          <p>
+            <strong i18n="@@alertList.detail.lastEdited">Last edited:</strong>
+            {{ alert.updatedAt * 1000 | date: 'dd.MM.yyyy' }}
+          </p>
         </div>
 
         <mat-action-row>
-          <button mat-icon-button (click)="openEditDialog(alert)" i18n-aria-label="@@alertList.action.edit" aria-label="Edit alert">
+          <button
+            mat-icon-button
+            (click)="openEditDialog(alert)"
+            i18n-aria-label="@@alertList.action.edit"
+            aria-label="Edit alert"
+          >
             <mat-icon>edit</mat-icon>
           </button>
+          @if (alert.paused) {
+            <button
+              mat-icon-button
+              (click)="togglePause(alert)"
+              i18n-aria-label="@@alertList.action.resume"
+              aria-label="Resume alert"
+            >
+              <mat-icon>play_arrow</mat-icon>
+            </button>
+          } @else {
+            <button
+              mat-icon-button
+              (click)="togglePause(alert)"
+              i18n-aria-label="@@alertList.action.pause"
+              aria-label="Pause alert"
+            >
+              <mat-icon>pause</mat-icon>
+            </button>
+          }
           <button
             mat-icon-button
             color="warn"
@@ -136,9 +204,13 @@
       </mat-expansion-panel>
     } @empty {
       @if (alerts().length > 0) {
-        <p class="empty-state" i18n="@@alertList.noMatches">No alerts match the selected filters.</p>
+        <p class="empty-state" i18n="@@alertList.noMatches">
+          No alerts match the selected filters.
+        </p>
       } @else {
-        <p class="empty-state" i18n="@@alertList.emptyState">No alerts yet — add your first one to get started.</p>
+        <p class="empty-state" i18n="@@alertList.emptyState">
+          No alerts yet — add your first one to get started.
+        </p>
       }
     }
   </mat-accordion>

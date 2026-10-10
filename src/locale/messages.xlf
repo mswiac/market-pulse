@@ -401,6 +401,13 @@
           <context context-type="linenumber">5,7</context>
         </context-group>
       </trans-unit>
+      <trans-unit id="alertList.pauseError" datatype="html">
+        <source>Failed to update the alert. Please try again.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">10,12</context>
+        </context-group>
+      </trans-unit>
       <trans-unit id="alertList.sort.instrument" datatype="html">
         <source>Instrument</source>
         <context-group purpose="location">
@@ -516,6 +523,13 @@
           <context context-type="linenumber">86,89</context>
         </context-group>
       </trans-unit>
+      <trans-unit id="alertList.status.paused" datatype="html">
+        <source>Paused</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">149,149</context>
+        </context-group>
+      </trans-unit>
       <trans-unit id="alertList.detail.notificationEmail" datatype="html">
         <source>Notification email:</source>
         <context-group purpose="location">
@@ -542,6 +556,20 @@
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
           <context context-type="linenumber">102,104</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.action.resume" datatype="html">
+        <source>Resume alert</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">179,179</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.action.pause" datatype="html">
+        <source>Pause alert</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
+          <context context-type="linenumber">188,188</context>
         </context-group>
       </trans-unit>
       <trans-unit id="alertList.emptyState" datatype="html">

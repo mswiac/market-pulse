@@ -62,8 +62,12 @@ export function buildEmail(alert: AlertEvalRow, value: number): { subject: strin
   const valueLines: string[] =
     alert.alert_type === 'PRICE'
       ? [
-          alert.high !== null ? `Maksimum dnia: ${formatValue(alert.high, alert.alert_type, alert.currency)}` : null,
-          alert.low !== null ? `Minimum dnia: ${formatValue(alert.low, alert.alert_type, alert.currency)}` : null,
+          alert.high !== null
+            ? `Maksimum dnia: ${formatValue(alert.high, alert.alert_type, alert.currency)}`
+            : null,
+          alert.low !== null
+            ? `Minimum dnia: ${formatValue(alert.low, alert.alert_type, alert.currency)}`
+            : null,
           `Zamknięcie: ${formatValue(alert.price, alert.alert_type, alert.currency)}`,
         ].filter((line): line is string => line !== null)
       : [`Wartość w dniu wyzwolenia: ${formatValue(value, alert.alert_type, alert.currency)}`];
@@ -83,7 +87,12 @@ function conditionMet(direction: 'up' | 'down', value: number, threshold: number
   return direction === 'up' ? value >= threshold : value <= threshold;
 }
 
-function hasRetreatedPastMargin(direction: 'up' | 'down', value: number, threshold: number, margin: number): boolean {
+function hasRetreatedPastMargin(
+  direction: 'up' | 'down',
+  value: number,
+  threshold: number,
+  margin: number,
+): boolean {
   return direction === 'up' ? value <= threshold - margin : value >= threshold + margin;
 }
 
@@ -124,7 +133,11 @@ interface PendingSend {
 
 function updateByIds(db: D1Database, armed: 0 | 1, ids: number[]): D1PreparedStatement[] {
   return chunk(ids, IDS_PER_UPDATE_STATEMENT).map((group) =>
-    db.prepare(`UPDATE alerts SET armed = ${armed} WHERE id IN (${group.map(() => '?').join(', ')})`).bind(...group),
+    db
+      .prepare(
+        `UPDATE alerts SET armed = ${armed} WHERE id IN (${group.map(() => '?').join(', ')})`,
+      )
+      .bind(...group),
   );
 }
 
@@ -136,7 +149,8 @@ export async function evaluateAlerts(env: Env): Promise<AlertEvaluationSummary> 
               i.name AS instrumentName, i.currency, m.price, m.rsi, m.high, m.low, m.updated_at
        FROM alerts a
        JOIN instruments i ON i.ticker = a.ticker
-       JOIN market_data m ON m.ticker = a.ticker`,
+       JOIN market_data m ON m.ticker = a.ticker
+       WHERE a.paused = 0`,
     ).all<LoadedAlertRow>();
     alerts = results;
   } catch (err) {
@@ -166,11 +180,14 @@ export async function evaluateAlerts(env: Env): Promise<AlertEvaluationSummary> 
       // (RSI is a bounded 0-100 index, not a monetary value) — RSI uses a
       // fixed point margin instead, matching the scale it's actually read on.
       const margin =
-        alert.alert_type === 'RSI' ? RSI_RE_ARM_MARGIN_POINTS : alert.threshold * PRICE_RE_ARM_MARGIN_FRACTION;
+        alert.alert_type === 'RSI'
+          ? RSI_RE_ARM_MARGIN_POINTS
+          : alert.threshold * PRICE_RE_ARM_MARGIN_FRACTION;
 
       if (alert.armed === 1) {
         const firingValue = resolveFiringValue(alert.alert_type, alert.direction, alert);
-        if (firingValue === null || !conditionMet(alert.direction, firingValue, alert.threshold)) continue;
+        if (firingValue === null || !conditionMet(alert.direction, firingValue, alert.threshold))
+          continue;
 
         const { subject, text } = buildEmail(alert, value);
         pendingSends.push({ alert, value, input: { to: alert.notification_email, subject, text } });
@@ -184,13 +201,21 @@ export async function evaluateAlerts(env: Env): Promise<AlertEvaluationSummary> 
   }
 
   for (const [ticker, ageSeconds] of staleAges) {
-    errors.push(`${ticker}: market data is ${Math.round(ageSeconds / 3600)}h old (limit ${STALE_AFTER_SECONDS / 3600}h)`);
+    errors.push(
+      `${ticker}: market data is ${Math.round(ageSeconds / 3600)}h old (limit ${STALE_AFTER_SECONDS / 3600}h)`,
+    );
     console.warn(
       `alert-notifications: skipping alerts for ${ticker}: market data is ${Math.round(ageSeconds / 3600)}h old (limit ${STALE_AFTER_SECONDS / 3600}h)`,
     );
   }
 
-  const sendResults = pendingSends.length > 0 ? await sendAlertEmailBatch(env, pendingSends.map((p) => p.input)) : [];
+  const sendResults =
+    pendingSends.length > 0
+      ? await sendAlertEmailBatch(
+          env,
+          pendingSends.map((p) => p.input),
+        )
+      : [];
 
   // A transient send failure (network-level, not a permanent rejection like
   // an unverified recipient) leaves the alert armed so tomorrow's cron run
@@ -243,11 +268,21 @@ export async function evaluateAlerts(env: Env): Promise<AlertEvaluationSummary> 
     if (writeError !== null) {
       // The mail may already have gone out, but its record and the disarm
       // did not land — report it as failed, as a single failed write always has.
-      emails.push({ alertId: alert.id, ticker: alert.ticker, status: 'failed', error: String(writeError) });
+      emails.push({
+        alertId: alert.id,
+        ticker: alert.ticker,
+        status: 'failed',
+        error: String(writeError),
+      });
     } else if (result.ok) {
       emails.push({ alertId: alert.id, ticker: alert.ticker, status: 'sent' });
     } else {
-      emails.push({ alertId: alert.id, ticker: alert.ticker, status: 'failed', error: result.error });
+      emails.push({
+        alertId: alert.id,
+        ticker: alert.ticker,
+        status: 'failed',
+        error: result.error,
+      });
     }
   });
   if (writeError !== null) {

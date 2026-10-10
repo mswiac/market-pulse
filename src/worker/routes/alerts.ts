@@ -27,13 +27,15 @@ async function lookupTicker(db: D1Database, ticker: unknown): Promise<Instrument
 }
 
 function normalizeAlertType(alertType: unknown): AlertType | null {
-  return typeof alertType === 'string' && (VALID_ALERT_TYPES as readonly string[]).includes(alertType)
+  return typeof alertType === 'string' &&
+    (VALID_ALERT_TYPES as readonly string[]).includes(alertType)
     ? (alertType as AlertType)
     : null;
 }
 
 function normalizeDirection(direction: unknown): Direction | null {
-  return typeof direction === 'string' && (VALID_DIRECTIONS as readonly string[]).includes(direction)
+  return typeof direction === 'string' &&
+    (VALID_DIRECTIONS as readonly string[]).includes(direction)
     ? (direction as Direction)
     : null;
 }
@@ -81,7 +83,13 @@ type AlertValidationResult =
 // RSI-eligibility checks before writing.
 async function validateAlertInput(
   db: D1Database,
-  body: { ticker?: unknown; alertType?: unknown; threshold?: unknown; notificationEmail?: unknown; direction?: unknown },
+  body: {
+    ticker?: unknown;
+    alertType?: unknown;
+    threshold?: unknown;
+    notificationEmail?: unknown;
+    direction?: unknown;
+  },
 ): Promise<AlertValidationResult> {
   const instrument = await lookupTicker(db, body.ticker);
   if (!instrument) {
@@ -136,7 +144,11 @@ async function ensureFreshMarketData(env: Env, instrument: InstrumentRow): Promi
       .bind(instrument.ticker)
       .first<{ updated_at: number }>();
     if (row && Math.floor(Date.now() / 1000) - row.updated_at <= STALE_AFTER_SECONDS) return;
-    await refreshInstruments(env, [instrument], { retryAttempts: 1, fullWindow: true, timeoutMs: REFRESH_TIMEOUT_MS });
+    await refreshInstruments(env, [instrument], {
+      retryAttempts: 1,
+      fullWindow: true,
+      timeoutMs: REFRESH_TIMEOUT_MS,
+    });
   } catch (err) {
     console.error(`alerts: failed to refresh market data for ${instrument.ticker}`, err);
   }
@@ -183,6 +195,7 @@ const ALERT_SELECT = `
     a.threshold,
     a.direction AS direction,
     a.armed AS active,
+    a.paused AS paused,
     a.notification_email AS notificationEmail,
     a.created_at AS createdAt,
     a.updated_at AS updatedAt,
@@ -195,10 +208,11 @@ const ALERT_SELECT = `
   LEFT JOIN market_data m ON m.ticker = a.ticker
 `;
 
-// D1 returns raw 0/1 for the `armed` INTEGER column — convert to a real
-// JSON boolean at the response boundary so the frontend gets `active: boolean`.
+// D1 returns raw 0/1 for the `armed` and `paused` INTEGER columns — convert to
+// real JSON booleans at the response boundary so the frontend gets
+// `active: boolean` and `paused: boolean`.
 function toAlertResponse(row: Record<string, unknown>): Record<string, unknown> {
-  return { ...row, active: row['active'] === 1 };
+  return { ...row, active: row['active'] === 1, paused: row['paused'] === 1 };
 }
 
 alertsRoutes.post('/', async (c) => {
@@ -244,7 +258,9 @@ alertsRoutes.post('/', async (c) => {
 alertsRoutes.get('/', async (c) => {
   const userId = c.get('userId');
 
-  const { results } = await c.env.DB.prepare(`${ALERT_SELECT} WHERE a.user_id = ? ORDER BY a.created_at DESC, a.id DESC`)
+  const { results } = await c.env.DB.prepare(
+    `${ALERT_SELECT} WHERE a.user_id = ? ORDER BY a.created_at DESC, a.id DESC`,
+  )
     .bind(userId)
     .all();
 
@@ -280,7 +296,9 @@ alertsRoutes.put('/:id', async (c) => {
   // Cheap ownership check first: refreshing market data costs a Yahoo call,
   // which a missing or foreign alert id must not trigger. The batch below
   // still returns 404 for the narrow race where the alert vanishes meanwhile.
-  const owned = await c.env.DB.prepare('SELECT 1 FROM alerts WHERE id = ? AND user_id = ?').bind(id, userId).first();
+  const owned = await c.env.DB.prepare('SELECT 1 FROM alerts WHERE id = ? AND user_id = ?')
+    .bind(id, userId)
+    .first();
   if (!owned) {
     return c.json({ error: 'alert not found', code: 'alert_not_found' }, 404);
   }
@@ -298,7 +316,16 @@ alertsRoutes.put('/:id', async (c) => {
     const [, selectResult] = await c.env.DB.batch([
       c.env.DB.prepare(
         `UPDATE alerts SET ticker = ?, alert_type = ?, threshold = ?, notification_email = ?, direction = ?, armed = ?, updated_at = unixepoch() WHERE id = ? AND user_id = ?`,
-      ).bind(instrument.ticker, alertType, threshold, notificationEmail, direction, armed, id, userId),
+      ).bind(
+        instrument.ticker,
+        alertType,
+        threshold,
+        notificationEmail,
+        direction,
+        armed,
+        id,
+        userId,
+      ),
       c.env.DB.prepare(`${ALERT_SELECT} WHERE a.id = ? AND a.user_id = ?`).bind(id, userId),
     ]);
 
@@ -316,6 +343,74 @@ alertsRoutes.put('/:id', async (c) => {
   }
 });
 
+// Pause is its own endpoint rather than a field of the create/edit body, so an
+// edit (which recomputes `armed`) can never clear it. Resuming recomputes
+// `armed` against the current price, exactly like create/edit, so an alert
+// whose condition is already met comes back disarmed instead of mailing on the
+// next cron run; paused and armed change in one statement, so a cron run can
+// never see a resumed alert with a stale armed state.
+alertsRoutes.patch('/:id', async (c) => {
+  const id = parseAlertId(c.req.param('id'));
+  if (id === null) {
+    return c.json({ error: 'invalid alert id', code: 'invalid_alert_id' }, 400);
+  }
+
+  let body: { paused?: unknown } | null;
+  try {
+    body = (await c.req.json()) as { paused?: unknown } | null;
+  } catch {
+    body = null;
+  }
+  if (typeof body?.paused !== 'boolean') {
+    return c.json({ error: 'invalid request body', code: 'invalid_body' }, 400);
+  }
+
+  const userId = c.get('userId');
+  let update: D1PreparedStatement;
+  if (body.paused) {
+    update = c.env.DB.prepare('UPDATE alerts SET paused = 1 WHERE id = ? AND user_id = ?').bind(
+      id,
+      userId,
+    );
+  } else {
+    // Ownership check first, same reasoning as PUT: refreshing market data costs
+    // a Yahoo call that a missing or foreign alert id must not trigger.
+    const alert = await c.env.DB.prepare(
+      'SELECT ticker, alert_type, threshold, direction FROM alerts WHERE id = ? AND user_id = ?',
+    )
+      .bind(id, userId)
+      .first<{ ticker: string; alert_type: AlertType; threshold: number; direction: Direction }>();
+    const instrument = alert ? await lookupTicker(c.env.DB, alert.ticker) : null;
+    if (!alert || !instrument) {
+      return c.json({ error: 'alert not found', code: 'alert_not_found' }, 404);
+    }
+
+    await ensureFreshMarketData(c.env, instrument);
+    const armed = await computeArmed(
+      c.env.DB,
+      alert.ticker,
+      alert.alert_type,
+      alert.threshold,
+      alert.direction,
+    );
+    update = c.env.DB.prepare(
+      'UPDATE alerts SET paused = 0, armed = ? WHERE id = ? AND user_id = ?',
+    ).bind(armed, id, userId);
+  }
+
+  const [, selectResult] = await c.env.DB.batch([
+    update,
+    c.env.DB.prepare(`${ALERT_SELECT} WHERE a.id = ? AND a.user_id = ?`).bind(id, userId),
+  ]);
+
+  const updated = selectResult.results[0];
+  if (!updated) {
+    return c.json({ error: 'alert not found', code: 'alert_not_found' }, 404);
+  }
+
+  return c.json(toAlertResponse(updated as Record<string, unknown>), 200);
+});
+
 alertsRoutes.delete('/:id', async (c) => {
   const id = parseAlertId(c.req.param('id'));
   if (id === null) {
@@ -324,7 +419,9 @@ alertsRoutes.delete('/:id', async (c) => {
 
   const userId = c.get('userId');
 
-  const deleted = await c.env.DB.prepare('DELETE FROM alerts WHERE id = ? AND user_id = ? RETURNING id')
+  const deleted = await c.env.DB.prepare(
+    'DELETE FROM alerts WHERE id = ? AND user_id = ? RETURNING id',
+  )
     .bind(id, userId)
     .first();
 
