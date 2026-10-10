@@ -30,7 +30,10 @@ function validAlertBody(overrides: Record<string, unknown> = {}): Record<string,
   };
 }
 
-async function createAlert(cookie: string, overrides: Record<string, unknown> = {}): Promise<Response> {
+async function createAlert(
+  cookie: string,
+  overrides: Record<string, unknown> = {},
+): Promise<Response> {
   return exports.default.fetch(`${BASE_URL}/api/alerts`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Cookie: cookie },
@@ -44,7 +47,11 @@ async function listAlerts(cookie?: string): Promise<Response> {
   });
 }
 
-async function updateAlert(cookie: string, id: number, overrides: Record<string, unknown> = {}): Promise<Response> {
+async function updateAlert(
+  cookie: string,
+  id: number,
+  overrides: Record<string, unknown> = {},
+): Promise<Response> {
   return exports.default.fetch(`${BASE_URL}/api/alerts/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', Cookie: cookie },
@@ -77,7 +84,10 @@ describe('alerts endpoints', () => {
     // Creating/editing an alert on a ticker with missing or stale market_data
     // refreshes it from Yahoo; default to a failing Yahoo so no test touches
     // the real network, and let individual tests override it.
-    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(new Response('{}', { status: 500 }))));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => Promise.resolve(new Response('{}', { status: 500 }))),
+    );
   });
 
   afterEach(() => {
@@ -108,7 +118,9 @@ describe('alerts endpoints', () => {
   }
 
   async function seedMarketData(ticker: string, price: number, ageSeconds: number): Promise<void> {
-    await env.DB.prepare('INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, NULL, unixepoch() - ?)')
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, NULL, unixepoch() - ?)',
+    )
       .bind(ticker, price, ageSeconds)
       .run();
   }
@@ -119,7 +131,12 @@ describe('alerts endpoints', () => {
     await seedMarketData('^VIX', 25, 7 * 24 * 60 * 60);
     const fetchMock = stubYahooClose(15);
 
-    const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'up' });
+    const response = await createAlert(cookie, {
+      ticker: '^VIX',
+      alertType: 'PRICE',
+      threshold: 20,
+      direction: 'up',
+    });
 
     expect(response.status).toBe(201);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -127,7 +144,9 @@ describe('alerts endpoints', () => {
     // The full 30-day window (plus the extra day on `to`), so RSI is computed
     // from a gap-free series even if the ticker was not refreshed for weeks.
     const url = new URL(fetchMock.mock.calls[0][0] as string);
-    expect(Number(url.searchParams.get('period2')) - Number(url.searchParams.get('period1'))).toBe(31 * 24 * 60 * 60);
+    expect(Number(url.searchParams.get('period2')) - Number(url.searchParams.get('period1'))).toBe(
+      31 * 24 * 60 * 60,
+    );
     // A slow provider must not hold up saving the alert.
     expect((fetchMock.mock.calls[0][1] as RequestInit).signal).toBeInstanceOf(AbortSignal);
   });
@@ -137,7 +156,12 @@ describe('alerts endpoints', () => {
     await seedMarketData('^VIX', 25, 7 * 24 * 60 * 60);
     const fetchMock = stubYahooClose(15);
 
-    const response = await updateAlert(cookie, 999999, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'up' });
+    const response = await updateAlert(cookie, 999999, {
+      ticker: '^VIX',
+      alertType: 'PRICE',
+      threshold: 20,
+      direction: 'up',
+    });
 
     expect(response.status).toBe(404);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -148,7 +172,12 @@ describe('alerts endpoints', () => {
     await seedMarketData('^VIX', 15, 60);
     const fetchMock = stubYahooClose(99);
 
-    const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'up' });
+    const response = await createAlert(cookie, {
+      ticker: '^VIX',
+      alertType: 'PRICE',
+      threshold: 20,
+      direction: 'up',
+    });
 
     expect(response.status).toBe(201);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -159,7 +188,12 @@ describe('alerts endpoints', () => {
     const cookie = await registerAndLogIn('stale-refresh-fails@example.com');
     await seedMarketData('^VIX', 25, 7 * 24 * 60 * 60);
 
-    const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'up' });
+    const response = await createAlert(cookie, {
+      ticker: '^VIX',
+      alertType: 'PRICE',
+      threshold: 20,
+      direction: 'up',
+    });
 
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toMatchObject({ active: false, currentPrice: 25 });
@@ -179,11 +213,19 @@ describe('alerts endpoints', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     try {
-      const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'up' });
+      const response = await createAlert(cookie, {
+        ticker: '^VIX',
+        alertType: 'PRICE',
+        threshold: 20,
+        direction: 'up',
+      });
 
       expect(response.status).toBe(201);
       await expect(response.json()).resolves.toMatchObject({ active: false, currentPrice: 25 });
-      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('failed to refresh market data for ^VIX'), expect.any(Error));
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('failed to refresh market data for ^VIX'),
+        expect.any(Error),
+      );
     } finally {
       prepareSpy.mockRestore();
       consoleErrorSpy.mockRestore();
@@ -192,13 +234,25 @@ describe('alerts endpoints', () => {
 
   it('refreshes stale market data when an alert is edited too', async () => {
     const cookie = await registerAndLogIn('stale-refresh-edit@example.com');
-    const created = (await (await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 30, direction: 'up' })).json()) as {
+    const created = (await (
+      await createAlert(cookie, {
+        ticker: '^VIX',
+        alertType: 'PRICE',
+        threshold: 30,
+        direction: 'up',
+      })
+    ).json()) as {
       id: number;
     };
     await seedMarketData('^VIX', 25, 7 * 24 * 60 * 60);
     const fetchMock = stubYahooClose(15);
 
-    const response = await updateAlert(cookie, created.id, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'up' });
+    const response = await updateAlert(cookie, created.id, {
+      ticker: '^VIX',
+      alertType: 'PRICE',
+      threshold: 20,
+      direction: 'up',
+    });
 
     expect(response.status).toBe(200);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -208,7 +262,11 @@ describe('alerts endpoints', () => {
   it('creates then lists a VIX/PRICE alert, including matching createdAt/updatedAt', async () => {
     const cookie = await registerAndLogIn('vix-price@example.com');
 
-    const createResponse = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 18.42 });
+    const createResponse = await createAlert(cookie, {
+      ticker: '^VIX',
+      alertType: 'PRICE',
+      threshold: 18.42,
+    });
     expect(createResponse.status).toBe(201);
     const created = (await createResponse.json()) as Record<string, unknown>;
     expect(created).toMatchObject({
@@ -247,7 +305,11 @@ describe('alerts endpoints', () => {
   it('creates then lists a NASDAQ-100/RSI alert', async () => {
     const cookie = await registerAndLogIn('nasdaq-rsi@example.com');
 
-    const createResponse = await createAlert(cookie, { ticker: '^NDX', alertType: 'RSI', threshold: 70 });
+    const createResponse = await createAlert(cookie, {
+      ticker: '^NDX',
+      alertType: 'RSI',
+      threshold: 70,
+    });
     expect(createResponse.status).toBe(201);
     await expect(createResponse.json()).resolves.toMatchObject({
       ticker: '^NDX',
@@ -277,7 +339,9 @@ describe('alerts endpoints', () => {
 
   it('returns seeded market data as currentPrice/currentRsi for a matching alert', async () => {
     const cookie = await registerAndLogIn('market-data-join@example.com');
-    await env.DB.prepare('INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())')
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())',
+    )
       .bind('^NDX', 4567.89, 62.5)
       .run();
 
@@ -293,21 +357,30 @@ describe('alerts endpoints', () => {
     const cookie = await registerAndLogIn('bad-instrument@example.com');
     const response = await createAlert(cookie, { ticker: 'SPX' });
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: 'invalid instrument', code: 'invalid_instrument' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'invalid instrument',
+      code: 'invalid_instrument',
+    });
   });
 
   it('rejects an invalid alert type', async () => {
     const cookie = await registerAndLogIn('bad-alerttype@example.com');
     const response = await createAlert(cookie, { alertType: 'MACD' });
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: 'invalid alert type', code: 'invalid_alert_type' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'invalid alert type',
+      code: 'invalid_alert_type',
+    });
   });
 
   it('rejects a non-numeric threshold', async () => {
     const cookie = await registerAndLogIn('nonnumeric-threshold@example.com');
     const response = await createAlert(cookie, { threshold: 'not a number' });
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: 'invalid threshold', code: 'invalid_threshold' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'invalid threshold',
+      code: 'invalid_threshold',
+    });
   });
 
   it('rejects a threshold sent as a numeric-looking string, not a real number', async () => {
@@ -317,28 +390,48 @@ describe('alerts endpoints', () => {
     const cookie = await registerAndLogIn('stringy-threshold@example.com');
     const response = await createAlert(cookie, { threshold: '20' });
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: 'invalid threshold', code: 'invalid_threshold' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'invalid threshold',
+      code: 'invalid_threshold',
+    });
   });
 
   it('rejects a non-string (object) ticker with a clean 400, not a crash', async () => {
     const cookie = await registerAndLogIn('object-ticker@example.com');
     const response = await createAlert(cookie, { ticker: { nested: true } });
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: 'invalid instrument', code: 'invalid_instrument' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'invalid instrument',
+      code: 'invalid_instrument',
+    });
   });
 
   it('rejects a negative RSI threshold', async () => {
     const cookie = await registerAndLogIn('negative-rsi@example.com');
-    const response = await createAlert(cookie, { ticker: '^NDX', alertType: 'RSI', threshold: -0.01 });
+    const response = await createAlert(cookie, {
+      ticker: '^NDX',
+      alertType: 'RSI',
+      threshold: -0.01,
+    });
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: 'invalid threshold', code: 'invalid_threshold' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'invalid threshold',
+      code: 'invalid_threshold',
+    });
   });
 
   it('rejects an RSI threshold above 100', async () => {
     const cookie = await registerAndLogIn('over-100-rsi@example.com');
-    const response = await createAlert(cookie, { ticker: '^NDX', alertType: 'RSI', threshold: 100.01 });
+    const response = await createAlert(cookie, {
+      ticker: '^NDX',
+      alertType: 'RSI',
+      threshold: 100.01,
+    });
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: 'invalid threshold', code: 'invalid_threshold' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'invalid threshold',
+      code: 'invalid_threshold',
+    });
   });
 
   it('accepts an RSI threshold of exactly 0', async () => {
@@ -349,20 +442,35 @@ describe('alerts endpoints', () => {
 
   it('accepts an RSI threshold of exactly 100', async () => {
     const cookie = await registerAndLogIn('rsi-hundred@example.com');
-    const response = await createAlert(cookie, { ticker: '^NDX', alertType: 'RSI', threshold: 100 });
+    const response = await createAlert(cookie, {
+      ticker: '^NDX',
+      alertType: 'RSI',
+      threshold: 100,
+    });
     expect(response.status).toBe(201);
   });
 
   it('rejects a price threshold of 0', async () => {
     const cookie = await registerAndLogIn('price-zero@example.com');
-    const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 0 });
+    const response = await createAlert(cookie, {
+      ticker: '^VIX',
+      alertType: 'PRICE',
+      threshold: 0,
+    });
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: 'invalid threshold', code: 'invalid_threshold' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'invalid threshold',
+      code: 'invalid_threshold',
+    });
   });
 
   it('accepts a price threshold with decimals', async () => {
     const cookie = await registerAndLogIn('price-decimal@example.com');
-    const response = await createAlert(cookie, { ticker: '^NDX', alertType: 'PRICE', threshold: 4500.25 });
+    const response = await createAlert(cookie, {
+      ticker: '^NDX',
+      alertType: 'PRICE',
+      threshold: 4500.25,
+    });
     expect(response.status).toBe(201);
   });
 
@@ -370,14 +478,20 @@ describe('alerts endpoints', () => {
     const cookie = await registerAndLogIn('bad-email@example.com');
     const response = await createAlert(cookie, { notificationEmail: 'not-an-email' });
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: 'invalid notification email', code: 'invalid_notification_email' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'invalid notification email',
+      code: 'invalid_notification_email',
+    });
   });
 
   it('rejects VIX + RSI with the specific error message', async () => {
     const cookie = await registerAndLogIn('vix-rsi@example.com');
     const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'RSI', threshold: 50 });
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: 'RSI is not available for VIX', code: 'rsi_not_eligible' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'RSI is not available for VIX',
+      code: 'rsi_not_eligible',
+    });
   });
 
   it('creates an alert with direction "down"', async () => {
@@ -391,27 +505,44 @@ describe('alerts endpoints', () => {
     const cookie = await registerAndLogIn('bad-direction@example.com');
     const response = await createAlert(cookie, { direction: 'sideways' });
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: 'invalid direction', code: 'invalid_direction' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'invalid direction',
+      code: 'invalid_direction',
+    });
   });
 
   it('starts an "up" alert inactive when the current price already meets the threshold', async () => {
     const cookie = await registerAndLogIn('armed-up-already-met@example.com');
-    await env.DB.prepare('INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())')
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())',
+    )
       .bind('^VIX', 25, null)
       .run();
 
-    const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'up' });
+    const response = await createAlert(cookie, {
+      ticker: '^VIX',
+      alertType: 'PRICE',
+      threshold: 20,
+      direction: 'up',
+    });
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toMatchObject({ active: false });
   });
 
   it('starts a "down" alert inactive when the current price already meets the threshold', async () => {
     const cookie = await registerAndLogIn('armed-down-already-met@example.com');
-    await env.DB.prepare('INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())')
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())',
+    )
       .bind('^VIX', 15, null)
       .run();
 
-    const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'down' });
+    const response = await createAlert(cookie, {
+      ticker: '^VIX',
+      alertType: 'PRICE',
+      threshold: 20,
+      direction: 'down',
+    });
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toMatchObject({ active: false });
   });
@@ -422,44 +553,72 @@ describe('alerts endpoints', () => {
     // crossed it. computeArmed must use the same high/low-aware rule as the
     // cron, not just close, or this alert would start armed and then
     // immediately disagree with the very next evaluation run.
-    await env.DB.prepare('INSERT INTO market_data (ticker, price, rsi, high, low, updated_at) VALUES (?, ?, ?, ?, ?, unixepoch())')
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, rsi, high, low, updated_at) VALUES (?, ?, ?, ?, ?, unixepoch())',
+    )
       .bind('^VIX', 25, null, 26, 18)
       .run();
 
-    const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'down' });
+    const response = await createAlert(cookie, {
+      ticker: '^VIX',
+      alertType: 'PRICE',
+      threshold: 20,
+      direction: 'down',
+    });
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toMatchObject({ active: false });
   });
 
   it('starts an "up" alert active when the current price has not yet reached the threshold', async () => {
     const cookie = await registerAndLogIn('armed-up-not-met@example.com');
-    await env.DB.prepare('INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())')
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())',
+    )
       .bind('^VIX', 15, null)
       .run();
 
-    const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'up' });
+    const response = await createAlert(cookie, {
+      ticker: '^VIX',
+      alertType: 'PRICE',
+      threshold: 20,
+      direction: 'up',
+    });
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toMatchObject({ active: true });
   });
 
   it('starts an "up" alert inactive when the price exactly equals the threshold (inclusive boundary)', async () => {
     const cookie = await registerAndLogIn('armed-up-exact-boundary@example.com');
-    await env.DB.prepare('INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())')
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())',
+    )
       .bind('^VIX', 20, null)
       .run();
 
-    const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'up' });
+    const response = await createAlert(cookie, {
+      ticker: '^VIX',
+      alertType: 'PRICE',
+      threshold: 20,
+      direction: 'up',
+    });
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toMatchObject({ active: false });
   });
 
   it('starts a "down" alert inactive when the price exactly equals the threshold (inclusive boundary)', async () => {
     const cookie = await registerAndLogIn('armed-down-exact-boundary@example.com');
-    await env.DB.prepare('INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())')
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())',
+    )
       .bind('^VIX', 20, null)
       .run();
 
-    const response = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20, direction: 'down' });
+    const response = await createAlert(cookie, {
+      ticker: '^VIX',
+      alertType: 'PRICE',
+      threshold: 20,
+      direction: 'down',
+    });
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toMatchObject({ active: false });
   });
@@ -470,11 +629,18 @@ describe('alerts endpoints', () => {
     // wouldn't tell the two cases apart, since 0 >= threshold would already
     // be false either way.
     const cookie = await registerAndLogIn('armed-rsi-null-row-exists@example.com');
-    await env.DB.prepare('INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())')
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())',
+    )
       .bind('^NDX', 4500, null)
       .run();
 
-    const response = await createAlert(cookie, { ticker: '^NDX', alertType: 'RSI', threshold: 0, direction: 'up' });
+    const response = await createAlert(cookie, {
+      ticker: '^NDX',
+      alertType: 'RSI',
+      threshold: 0,
+      direction: 'up',
+    });
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toMatchObject({ active: true });
   });
@@ -486,7 +652,10 @@ describe('alerts endpoints', () => {
 
     const second = await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 22 });
     expect(second.status).toBe(409);
-    await expect(second.json()).resolves.toMatchObject({ error: 'duplicate alert', code: 'duplicate_alert' });
+    await expect(second.json()).resolves.toMatchObject({
+      error: 'duplicate alert',
+      code: 'duplicate_alert',
+    });
   });
 
   it('rejects a malformed JSON body with 400', async () => {
@@ -497,7 +666,10 @@ describe('alerts endpoints', () => {
       body: '{not valid json',
     });
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: 'invalid request body', code: 'invalid_body' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'invalid request body',
+      code: 'invalid_body',
+    });
   });
 
   it('propagates a non-UNIQUE D1 failure on create instead of misreporting it as a duplicate', async () => {
@@ -524,7 +696,7 @@ describe('alerts endpoints', () => {
     expect(response.status).toBe(401);
   });
 
-  it('never includes another user\'s alerts (isolation)', async () => {
+  it("never includes another user's alerts (isolation)", async () => {
     const cookieA = await registerAndLogIn('isolation-user-a@example.com');
     const cookieB = await registerAndLogIn('isolation-user-b@example.com');
 
@@ -537,10 +709,9 @@ describe('alerts endpoints', () => {
 
   it('updates an alert, advancing updatedAt past createdAt and persisting the new values', async () => {
     const cookie = await registerAndLogIn('update-happy-path@example.com');
-    const created = (await (await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20 })).json()) as Record<
-      string,
-      unknown
-    >;
+    const created = (await (
+      await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20 })
+    ).json()) as Record<string, unknown>;
 
     const updateResponse = await updateAlert(cookie, created['id'] as number, {
       ticker: '^VIX',
@@ -569,12 +740,19 @@ describe('alerts endpoints', () => {
 
   it('recomputes active on edit when the threshold crosses the current market value', async () => {
     const cookie = await registerAndLogIn('recompute-armed-on-edit@example.com');
-    await env.DB.prepare('INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())')
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())',
+    )
       .bind('^VIX', 20, null)
       .run();
 
     const created = (await (
-      await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 25, direction: 'up' })
+      await createAlert(cookie, {
+        ticker: '^VIX',
+        alertType: 'PRICE',
+        threshold: 25,
+        direction: 'up',
+      })
     ).json()) as Record<string, unknown>;
     expect(created['active']).toBe(true);
 
@@ -592,12 +770,19 @@ describe('alerts endpoints', () => {
 
   it('recomputes active on edit when direction changes against an unchanged threshold', async () => {
     const cookie = await registerAndLogIn('recompute-armed-on-direction-edit@example.com');
-    await env.DB.prepare('INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())')
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, unixepoch())',
+    )
       .bind('^VIX', 20, null)
       .run();
 
     const created = (await (
-      await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 15, direction: 'up' })
+      await createAlert(cookie, {
+        ticker: '^VIX',
+        alertType: 'PRICE',
+        threshold: 15,
+        direction: 'up',
+      })
     ).json()) as Record<string, unknown>;
     expect(created['active']).toBe(false);
 
@@ -619,7 +804,10 @@ describe('alerts endpoints', () => {
       body: JSON.stringify(validAlertBody()),
     });
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: 'invalid alert id', code: 'invalid_alert_id' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'invalid alert id',
+      code: 'invalid_alert_id',
+    });
   });
 
   it('rejects a PUT with a malformed JSON body', async () => {
@@ -632,7 +820,10 @@ describe('alerts endpoints', () => {
       body: '{not valid json',
     });
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: 'invalid request body', code: 'invalid_body' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'invalid request body',
+      code: 'invalid_body',
+    });
   });
 
   it('rejects an update with an invalid threshold, mirroring create validation', async () => {
@@ -641,29 +832,45 @@ describe('alerts endpoints', () => {
 
     const response = await updateAlert(cookie, created['id'] as number, { threshold: 0 });
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: 'invalid threshold', code: 'invalid_threshold' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'invalid threshold',
+      code: 'invalid_threshold',
+    });
   });
 
   it('rejects updating an alert to VIX + RSI with the specific error message', async () => {
     const cookie = await registerAndLogIn('update-vix-rsi@example.com');
     const created = (await (await createAlert(cookie)).json()) as Record<string, unknown>;
 
-    const response = await updateAlert(cookie, created['id'] as number, { ticker: '^VIX', alertType: 'RSI', threshold: 50 });
+    const response = await updateAlert(cookie, created['id'] as number, {
+      ticker: '^VIX',
+      alertType: 'RSI',
+      threshold: 50,
+    });
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: 'RSI is not available for VIX', code: 'rsi_not_eligible' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'RSI is not available for VIX',
+      code: 'rsi_not_eligible',
+    });
   });
 
   it('rejects updating an alert to collide with a different existing alert', async () => {
     const cookie = await registerAndLogIn('update-duplicate@example.com');
     await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 20 });
-    const second = (await (await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 22 })).json()) as Record<
-      string,
-      unknown
-    >;
+    const second = (await (
+      await createAlert(cookie, { ticker: '^VIX', alertType: 'PRICE', threshold: 22 })
+    ).json()) as Record<string, unknown>;
 
-    const response = await updateAlert(cookie, second['id'] as number, { ticker: '^VIX', alertType: 'PRICE', threshold: 20 });
+    const response = await updateAlert(cookie, second['id'] as number, {
+      ticker: '^VIX',
+      alertType: 'PRICE',
+      threshold: 20,
+    });
     expect(response.status).toBe(409);
-    await expect(response.json()).resolves.toMatchObject({ error: 'duplicate alert', code: 'duplicate_alert' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'duplicate alert',
+      code: 'duplicate_alert',
+    });
   });
 
   it('propagates a non-UNIQUE D1 failure on update instead of misreporting it as a duplicate', async () => {
@@ -681,10 +888,13 @@ describe('alerts endpoints', () => {
     const cookie = await registerAndLogIn('update-nonexistent@example.com');
     const response = await updateAlert(cookie, 999999);
     expect(response.status).toBe(404);
-    await expect(response.json()).resolves.toMatchObject({ error: 'alert not found', code: 'alert_not_found' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'alert not found',
+      code: 'alert_not_found',
+    });
   });
 
-  it('returns 404 updating another user\'s alert (isolation)', async () => {
+  it("returns 404 updating another user's alert (isolation)", async () => {
     const cookieA = await registerAndLogIn('update-isolation-a@example.com');
     const cookieB = await registerAndLogIn('update-isolation-b@example.com');
     const created = (await (await createAlert(cookieA)).json()) as Record<string, unknown>;
@@ -715,10 +925,9 @@ describe('alerts endpoints', () => {
     const cookie = await registerAndLogIn('pause-resume@example.com');
     await seedMarketData('^VIX', 25, 0);
     // The current price (25) already meets the threshold, so the alert is created disarmed.
-    const created = (await (await createAlert(cookie, { threshold: 20, direction: 'up' })).json()) as Record<
-      string,
-      unknown
-    >;
+    const created = (await (
+      await createAlert(cookie, { threshold: 20, direction: 'up' })
+    ).json()) as Record<string, unknown>;
     expect(created['active']).toBe(false);
     const id = created['id'] as number;
 
@@ -739,26 +948,38 @@ describe('alerts endpoints', () => {
     const cookie = await registerAndLogIn('pause-nonnumeric-id@example.com');
     const response = await setPaused(cookie, Number.NaN, { paused: true });
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: 'invalid alert id', code: 'invalid_alert_id' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'invalid alert id',
+      code: 'invalid_alert_id',
+    });
   });
 
-  it.each([['malformed JSON', '{not valid json'], ['a missing paused field', {}], ['a non-boolean paused', { paused: 1 }]])(
-    'rejects a PATCH with %s',
-    async (_label, body) => {
-      const cookie = await registerAndLogIn(`pause-bad-body-${String(_label).replaceAll(' ', '-')}@example.com`);
-      const created = (await (await createAlert(cookie)).json()) as Record<string, unknown>;
+  it.each([
+    ['malformed JSON', '{not valid json'],
+    ['a missing paused field', {}],
+    ['a non-boolean paused', { paused: 1 }],
+  ])('rejects a PATCH with %s', async (_label, body) => {
+    const cookie = await registerAndLogIn(
+      `pause-bad-body-${String(_label).replaceAll(' ', '-')}@example.com`,
+    );
+    const created = (await (await createAlert(cookie)).json()) as Record<string, unknown>;
 
-      const response = await setPaused(cookie, created['id'] as number, body);
-      expect(response.status).toBe(400);
-      await expect(response.json()).resolves.toMatchObject({ error: 'invalid request body', code: 'invalid_body' });
-    },
-  );
+    const response = await setPaused(cookie, created['id'] as number, body);
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'invalid request body',
+      code: 'invalid_body',
+    });
+  });
 
   it('returns 404 pausing a nonexistent alert id', async () => {
     const cookie = await registerAndLogIn('pause-nonexistent@example.com');
     const response = await setPaused(cookie, 999999, { paused: true });
     expect(response.status).toBe(404);
-    await expect(response.json()).resolves.toMatchObject({ error: 'alert not found', code: 'alert_not_found' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'alert not found',
+      code: 'alert_not_found',
+    });
   });
 
   it("returns 404 pausing another user's alert and leaves it unpaused (isolation)", async () => {
@@ -797,7 +1018,10 @@ describe('alerts endpoints', () => {
     const cookie = await registerAndLogIn('delete-nonexistent@example.com');
     const response = await deleteAlert(cookie, 999999);
     expect(response.status).toBe(404);
-    await expect(response.json()).resolves.toMatchObject({ error: 'alert not found', code: 'alert_not_found' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'alert not found',
+      code: 'alert_not_found',
+    });
   });
 
   it('rejects a DELETE with a non-numeric alert id', async () => {
@@ -807,10 +1031,13 @@ describe('alerts endpoints', () => {
       headers: { Cookie: cookie },
     });
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ error: 'invalid alert id', code: 'invalid_alert_id' });
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'invalid alert id',
+      code: 'invalid_alert_id',
+    });
   });
 
-  it('returns 404 deleting another user\'s alert (isolation)', async () => {
+  it("returns 404 deleting another user's alert (isolation)", async () => {
     const cookieA = await registerAndLogIn('delete-isolation-a@example.com');
     const cookieB = await registerAndLogIn('delete-isolation-b@example.com');
     const created = (await (await createAlert(cookieA)).json()) as Record<string, unknown>;
@@ -825,12 +1052,14 @@ describe('alerts endpoints', () => {
   // 'admin@example.com' matches ADMIN_EMAILS in vitest.config.mts, but these
   // routes never mount adminMiddleware — an admin session must get the same
   // 404 as any other non-owning user, never a bypass.
-  it('returns 404 updating/deleting another user\'s alert for an admin session (isolation)', async () => {
+  it("returns 404 updating/deleting another user's alert for an admin session (isolation)", async () => {
     const adminCookie = await registerAndLogIn('admin@example.com');
     const ownerCookie = await registerAndLogIn('admin-route-isolation-owner@example.com');
     const created = (await (await createAlert(ownerCookie)).json()) as Record<string, unknown>;
 
-    const updateResponse = await updateAlert(adminCookie, created['id'] as number, { threshold: 99 });
+    const updateResponse = await updateAlert(adminCookie, created['id'] as number, {
+      threshold: 99,
+    });
     expect(updateResponse.status).toBe(404);
 
     const deleteResponse = await deleteAlert(adminCookie, created['id'] as number);

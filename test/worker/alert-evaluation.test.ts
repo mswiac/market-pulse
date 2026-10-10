@@ -57,7 +57,9 @@ async function seedMarketData(
 }
 
 async function getAlert(id: number): Promise<{ armed: number }> {
-  const row = await env.DB.prepare('SELECT armed FROM alerts WHERE id = ?').bind(id).first<{ armed: number }>();
+  const row = await env.DB.prepare('SELECT armed FROM alerts WHERE id = ?')
+    .bind(id)
+    .first<{ armed: number }>();
   if (!row) throw new Error(`alert ${id} not found`);
   return row;
 }
@@ -83,7 +85,10 @@ function jsonResponse(status: number, body: unknown): Response {
 }
 
 function stubFetchAlwaysSucceeds(): void {
-  vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => jsonResponse(200, { id: 'fake-resend-id' })));
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockImplementation(async () => jsonResponse(200, { id: 'fake-resend-id' })),
+  );
 }
 
 beforeEach(async () => {
@@ -104,7 +109,12 @@ describe('evaluateAlerts', () => {
   it('fires an armed "up" alert once its direction condition is met, disarming it', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('fires-up@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
     await seedMarketData('^VIX', 25);
 
     await evaluateAlerts(env);
@@ -116,10 +126,18 @@ describe('evaluateAlerts', () => {
   });
 
   it('skips a paused armed alert even though its condition is met: no email, no event, still armed', async () => {
-    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse(200, { id: 'fake-resend-id' }));
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(async () => jsonResponse(200, { id: 'fake-resend-id' }));
     vi.stubGlobal('fetch', fetchMock);
     const userId = await seedUser('paused-armed@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1, paused: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+      paused: 1,
+    });
     await seedMarketData('^VIX', 25);
 
     const summary = await evaluateAlerts(env);
@@ -133,7 +151,13 @@ describe('evaluateAlerts', () => {
   it('does not re-arm a paused disarmed alert even after the value retreats past the margin', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('paused-disarmed@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 0, paused: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 0,
+      paused: 1,
+    });
     await seedMarketData('^VIX', 10);
 
     await evaluateAlerts(env);
@@ -144,7 +168,12 @@ describe('evaluateAlerts', () => {
   it('does not fire an armed alert whose condition is not yet met', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('not-armed-yet@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
     await seedMarketData('^VIX', 15);
 
     await evaluateAlerts(env);
@@ -156,7 +185,12 @@ describe('evaluateAlerts', () => {
   it('does not fire again on a later run while the value has not retreated', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('no-refire@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
     await seedMarketData('^VIX', 25);
 
     await evaluateAlerts(env);
@@ -170,7 +204,12 @@ describe('evaluateAlerts', () => {
   it('does not re-arm a PRICE alert until the value retreats past the 10%-of-threshold margin', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('margin-not-enough@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
     await seedMarketData('^VIX', 25);
     await evaluateAlerts(env);
     expect((await getAlert(alertId)).armed).toBe(0);
@@ -187,7 +226,13 @@ describe('evaluateAlerts', () => {
     // A 10%-of-threshold margin here would be 0.7 (threshold 7) — a fixed
     // 10-point margin means re-arm requires rsi <= threshold - 10 = -3, i.e.
     // never, for this low a threshold. 5 isn't nearly enough to re-arm.
-    const alertId = await seedAlert(userId, { ticker: '^NDX', alertType: 'RSI', threshold: 7, direction: 'up', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^NDX',
+      alertType: 'RSI',
+      threshold: 7,
+      direction: 'up',
+      armed: 1,
+    });
     await seedMarketData('^NDX', 4500, 10);
     await evaluateAlerts(env);
     expect((await getAlert(alertId)).armed).toBe(0);
@@ -200,7 +245,13 @@ describe('evaluateAlerts', () => {
   it('re-arms an RSI alert once it retreats past the fixed 10-point margin', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('rsi-margin-rearm@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^NDX', alertType: 'RSI', threshold: 70, direction: 'up', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^NDX',
+      alertType: 'RSI',
+      threshold: 70,
+      direction: 'up',
+      armed: 1,
+    });
     await seedMarketData('^NDX', 4500, 75);
     await evaluateAlerts(env);
     expect((await getAlert(alertId)).armed).toBe(0);
@@ -219,7 +270,12 @@ describe('evaluateAlerts', () => {
   it('re-arms and fires again once the value retreats past the margin and re-crosses', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('rearm-and-refire@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
     await seedMarketData('^VIX', 25);
     await evaluateAlerts(env);
     expect((await getAlert(alertId)).armed).toBe(0);
@@ -255,7 +311,10 @@ describe('evaluateAlerts', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
     const events = await triggerEventsFor(alertId);
     expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ email_status: 'failed', email_error: 'recipient not verified in Resend sandbox' });
+    expect(events[0]).toMatchObject({
+      email_status: 'failed',
+      email_error: 'recipient not verified in Resend sandbox',
+    });
     expect((await getAlert(alertId)).armed).toBe(0); // still disarms — the crossing itself is real
   });
 
@@ -263,8 +322,18 @@ describe('evaluateAlerts', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('simulated network failure')));
     const userIdA = await seedUser('throwing-alert-a@example.com');
     const userIdB = await seedUser('throwing-alert-b@example.com');
-    const alertA = await seedAlert(userIdA, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
-    const alertB = await seedAlert(userIdB, { ticker: '^NDX', threshold: 20, direction: 'up', armed: 1 });
+    const alertA = await seedAlert(userIdA, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
+    const alertB = await seedAlert(userIdB, {
+      ticker: '^NDX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
     await seedMarketData('^VIX', 25);
     await seedMarketData('^NDX', 25);
 
@@ -276,7 +345,10 @@ describe('evaluateAlerts', () => {
       expect((await getAlert(alertId)).armed).toBe(1);
       const events = await triggerEventsFor(alertId);
       expect(events).toHaveLength(1);
-      expect(events[0]).toMatchObject({ email_status: 'failed', email_error: expect.stringContaining('network error') });
+      expect(events[0]).toMatchObject({
+        email_status: 'failed',
+        email_error: expect.stringContaining('network error'),
+      });
     }
   });
 
@@ -289,7 +361,12 @@ describe('evaluateAlerts', () => {
       await seedAlert(userId, { ticker: '^VIX', threshold: 21, direction: 'up', armed: 1 }),
       await seedAlert(userId, { ticker: '^NDX', threshold: 20, direction: 'up', armed: 1 }),
     ];
-    const rearmId = await seedAlert(userId, { ticker: '^NDX', threshold: 90, direction: 'up', armed: 0 });
+    const rearmId = await seedAlert(userId, {
+      ticker: '^NDX',
+      threshold: 90,
+      direction: 'up',
+      armed: 0,
+    });
     await seedMarketData('^VIX', 25);
     await seedMarketData('^NDX', 25);
     const batchSpy = vi.spyOn(env.DB, 'batch');
@@ -319,7 +396,12 @@ describe('evaluateAlerts', () => {
       armed: 1,
       notificationEmail: 'someone-else@example.com',
     });
-    const verified = await seedAlert(userId, { ticker: '^NDX', threshold: 20, direction: 'up', armed: 1 });
+    const verified = await seedAlert(userId, {
+      ticker: '^NDX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
     await seedMarketData('^VIX', 25);
     await seedMarketData('^NDX', 25);
 
@@ -328,7 +410,12 @@ describe('evaluateAlerts', () => {
     expect(JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)).toHaveLength(1);
     expect(summary.emails).toEqual(
       expect.arrayContaining([
-        { alertId: unverified, ticker: '^VIX', status: 'failed', error: 'recipient not verified in Resend sandbox' },
+        {
+          alertId: unverified,
+          ticker: '^VIX',
+          status: 'failed',
+          error: 'recipient not verified in Resend sandbox',
+        },
         { alertId: verified, ticker: '^NDX', status: 'sent' },
       ]),
     );
@@ -337,10 +424,23 @@ describe('evaluateAlerts', () => {
   });
 
   it('keeps every alert of the batch armed when Resend answers with a 5xx', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(503, { message: 'resend down' })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse(503, { message: 'resend down' })),
+    );
     const userId = await seedUser('batch-5xx@example.com');
-    const alertA = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
-    const alertB = await seedAlert(userId, { ticker: '^NDX', threshold: 20, direction: 'up', armed: 1 });
+    const alertA = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
+    const alertB = await seedAlert(userId, {
+      ticker: '^NDX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
     await seedMarketData('^VIX', 25);
     await seedMarketData('^NDX', 25);
 
@@ -348,7 +448,10 @@ describe('evaluateAlerts', () => {
 
     for (const alertId of [alertA, alertB]) {
       expect((await getAlert(alertId)).armed).toBe(1);
-      expect((await triggerEventsFor(alertId))[0]).toMatchObject({ email_status: 'failed', email_error: 'resend down' });
+      expect((await triggerEventsFor(alertId))[0]).toMatchObject({
+        email_status: 'failed',
+        email_error: 'resend down',
+      });
     }
   });
 
@@ -358,7 +461,9 @@ describe('evaluateAlerts', () => {
     const userId = await seedUser('many-alerts@example.com');
     const alertIds: number[] = [];
     for (let threshold = 1; threshold <= 101; threshold++) {
-      alertIds.push(await seedAlert(userId, { ticker: '^VIX', threshold, direction: 'up', armed: 1 }));
+      alertIds.push(
+        await seedAlert(userId, { ticker: '^VIX', threshold, direction: 'up', armed: 1 }),
+      );
     }
     await seedMarketData('^VIX', 500);
 
@@ -367,7 +472,9 @@ describe('evaluateAlerts', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(summary.emails).toHaveLength(101);
     expect(summary.emails.every((e) => e.status === 'sent')).toBe(true);
-    const events = await env.DB.prepare('SELECT COUNT(*) as count FROM trigger_events').first<{ count: number }>();
+    const events = await env.DB.prepare('SELECT COUNT(*) as count FROM trigger_events').first<{
+      count: number;
+    }>();
     expect(events?.count).toBe(101);
     expect((await getAlert(alertIds[100])).armed).toBe(0);
   });
@@ -376,8 +483,18 @@ describe('evaluateAlerts', () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
     const userId = await seedUser('stale-data@example.com');
-    const firing = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
-    const rearming = await seedAlert(userId, { ticker: '^VIX', threshold: 30, direction: 'up', armed: 0 });
+    const firing = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
+    const rearming = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 30,
+      direction: 'up',
+      armed: 0,
+    });
     await seedMarketData('^VIX', 25, null, null, null, 13 * 60 * 60);
     // On fresh data the first alert would fire (25 >= 20) and the second would re-arm (25 <= 30 - 3); stale data does neither.
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -400,7 +517,12 @@ describe('evaluateAlerts', () => {
   it('treats data exactly 12 hours old as fresh (the staleness limit is exclusive)', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('stale-boundary@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
     const nowMs = Date.now();
     const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(nowMs);
     await env.DB.prepare('INSERT INTO market_data (ticker, price, updated_at) VALUES (?, ?, ?)')
@@ -420,7 +542,12 @@ describe('evaluateAlerts', () => {
   it('still evaluates data that is only slightly old (within 12 hours)', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('fresh-enough@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
     await seedMarketData('^VIX', 25, null, null, null, 11 * 60 * 60);
 
     await evaluateAlerts(env);
@@ -431,7 +558,13 @@ describe('evaluateAlerts', () => {
   it('skips an RSI alert when rsi is not yet available', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('rsi-not-ready@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^NDX', alertType: 'RSI', threshold: 70, direction: 'up', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^NDX',
+      alertType: 'RSI',
+      threshold: 70,
+      direction: 'up',
+      armed: 1,
+    });
     await seedMarketData('^NDX', 4500, null);
 
     await evaluateAlerts(env);
@@ -443,7 +576,12 @@ describe('evaluateAlerts', () => {
   it('fires an armed "up" PRICE alert when the day\'s high crosses the threshold while price (close) stays below it', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('fires-on-high@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
     // Close (18) never crosses 20 — only the intraday high (22) does.
     await seedMarketData('^VIX', 18, null, 22, 16);
 
@@ -452,13 +590,22 @@ describe('evaluateAlerts', () => {
     expect((await getAlert(alertId)).armed).toBe(0);
     const events = await triggerEventsFor(alertId);
     expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ value_at_trigger: 18, high_at_trigger: 22, low_at_trigger: 16 });
+    expect(events[0]).toMatchObject({
+      value_at_trigger: 18,
+      high_at_trigger: 22,
+      low_at_trigger: 16,
+    });
   });
 
   it('fires an armed "down" PRICE alert when the day\'s low crosses the threshold while price (close) stays above it', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('fires-on-low@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'down', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'down',
+      armed: 1,
+    });
     // Close (22) never crosses 20 — only the intraday low (18) does.
     await seedMarketData('^VIX', 22, null, 24, 18);
 
@@ -467,13 +614,22 @@ describe('evaluateAlerts', () => {
     expect((await getAlert(alertId)).armed).toBe(0);
     const events = await triggerEventsFor(alertId);
     expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ value_at_trigger: 22, high_at_trigger: 24, low_at_trigger: 18 });
+    expect(events[0]).toMatchObject({
+      value_at_trigger: 22,
+      high_at_trigger: 24,
+      low_at_trigger: 18,
+    });
   });
 
   it('does not re-arm purely because high/low retreated — re-arm still requires price (close) to retreat past the margin', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('rearm-needs-close@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
     await seedMarketData('^VIX', 25, null, 26, 24);
     await evaluateAlerts(env);
     expect((await getAlert(alertId)).armed).toBe(0);
@@ -488,7 +644,12 @@ describe('evaluateAlerts', () => {
   it('falls back to comparing against price (close) when high/low are null', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('fallback-to-close@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
     // No high/low seeded (defaults to null) — firing must fall back to price.
     await seedMarketData('^VIX', 25);
 
@@ -497,26 +658,45 @@ describe('evaluateAlerts', () => {
     expect((await getAlert(alertId)).armed).toBe(0);
     const events = await triggerEventsFor(alertId);
     expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ value_at_trigger: 25, high_at_trigger: null, low_at_trigger: null });
+    expect(events[0]).toMatchObject({
+      value_at_trigger: 25,
+      high_at_trigger: null,
+      low_at_trigger: null,
+    });
   });
 
   it('does not record high_at_trigger/low_at_trigger for a fired RSI alert', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('rsi-no-high-low@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^NDX', alertType: 'RSI', threshold: 70, direction: 'up', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^NDX',
+      alertType: 'RSI',
+      threshold: 70,
+      direction: 'up',
+      armed: 1,
+    });
     await seedMarketData('^NDX', 4500, 75, 4550, 4450);
 
     await evaluateAlerts(env);
 
     const events = await triggerEventsFor(alertId);
     expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ value_at_trigger: 75, high_at_trigger: null, low_at_trigger: null });
+    expect(events[0]).toMatchObject({
+      value_at_trigger: 75,
+      high_at_trigger: null,
+      low_at_trigger: null,
+    });
   });
 
   it('does not fire an armed "down" alert whose condition is not yet met', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('down-not-armed-yet@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'down', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'down',
+      armed: 1,
+    });
     await seedMarketData('^VIX', 25);
 
     await evaluateAlerts(env);
@@ -528,7 +708,12 @@ describe('evaluateAlerts', () => {
   it('fires an armed "up" alert when the value equals the threshold exactly (inclusive boundary)', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('up-boundary@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
     await seedMarketData('^VIX', 20);
 
     await evaluateAlerts(env);
@@ -540,7 +725,12 @@ describe('evaluateAlerts', () => {
   it('fires an armed "down" alert when the value equals the threshold exactly (inclusive boundary)', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('down-boundary@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'down', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'down',
+      armed: 1,
+    });
     await seedMarketData('^VIX', 20);
 
     await evaluateAlerts(env);
@@ -552,7 +742,12 @@ describe('evaluateAlerts', () => {
   it('does not re-arm a "down" PRICE alert until the value rises back past the margin', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('down-margin-not-enough@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'down', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'down',
+      armed: 1,
+    });
     await seedMarketData('^VIX', 15);
     await evaluateAlerts(env);
     expect((await getAlert(alertId)).armed).toBe(0);
@@ -571,7 +766,13 @@ describe('evaluateAlerts', () => {
   it('fires an RSI alert using the actual RSI value, not the coincidental raw price, when they would disagree', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('rsi-not-price-fallback@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^NDX', alertType: 'RSI', threshold: 70, direction: 'up', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^NDX',
+      alertType: 'RSI',
+      threshold: 70,
+      direction: 'up',
+      armed: 1,
+    });
     // RSI (75) crosses the threshold (70), but the raw index price (50) does
     // not — if resolveFiringValue ever silently fell back to price instead
     // of rsi here, this would incorrectly stay unfired.
@@ -585,10 +786,16 @@ describe('evaluateAlerts', () => {
     expect(events[0]).toMatchObject({ value_at_trigger: 75 });
   });
 
-  it('does not touch an unarmed RSI alert\'s armed state while rsi is still null', async () => {
+  it("does not touch an unarmed RSI alert's armed state while rsi is still null", async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('rsi-null-unarmed@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^NDX', alertType: 'RSI', threshold: 70, direction: 'up', armed: 0 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^NDX',
+      alertType: 'RSI',
+      threshold: 70,
+      direction: 'up',
+      armed: 0,
+    });
     await seedMarketData('^NDX', 4500, null);
 
     await evaluateAlerts(env);
@@ -602,8 +809,19 @@ describe('evaluateAlerts summary', () => {
   it('counts alertsEvaluated for every loaded alert; only a fired alert appears in emails', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('summary-counts@example.com');
-    const firingId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
-    await seedAlert(userId, { ticker: '^NDX', alertType: 'PRICE', threshold: 5000, direction: 'up', armed: 1 });
+    const firingId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
+    await seedAlert(userId, {
+      ticker: '^NDX',
+      alertType: 'PRICE',
+      threshold: 5000,
+      direction: 'up',
+      armed: 1,
+    });
     await seedMarketData('^VIX', 25);
     await seedMarketData('^NDX', 4500);
 
@@ -629,7 +847,12 @@ describe('evaluateAlerts summary', () => {
     const summary = await evaluateAlerts(env);
 
     expect(summary.emails).toEqual([
-      { alertId, ticker: '^VIX', status: 'failed', error: 'recipient not verified in Resend sandbox' },
+      {
+        alertId,
+        ticker: '^VIX',
+        status: 'failed',
+        error: 'recipient not verified in Resend sandbox',
+      },
     ]);
     expect(summary.errors).toEqual([]);
   });
@@ -637,7 +860,12 @@ describe('evaluateAlerts summary', () => {
   it('records a failed email (not errors) when the trigger_events write throws after a send attempt', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('summary-batch-throws@example.com');
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
     await seedMarketData('^VIX', 25);
     const batchSpy = vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('batch boom'));
 
@@ -692,9 +920,16 @@ describe('evaluateAlerts summary', () => {
     const userId = await seedUser('summary-rearm-throws@example.com');
     // Not armed, value already retreated past the margin — takes the re-arm
     // branch, which never sends an email at all.
-    const alertId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 0 });
+    const alertId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'up',
+      armed: 0,
+    });
     await seedMarketData('^VIX', 10);
-    const batchSpy = vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('re-arm write failed'));
+    const batchSpy = vi
+      .spyOn(env.DB, 'batch')
+      .mockRejectedValueOnce(new Error('re-arm write failed'));
 
     try {
       const summary = await evaluateAlerts(env);
@@ -708,7 +943,9 @@ describe('evaluateAlerts summary', () => {
   // SQLite is dynamically typed: a non-numeric `high` stored in a REAL column
   // comes back as text, so buildEmail throws on `.toFixed` for that one alert.
   async function seedBrokenHigh(ticker: string): Promise<void> {
-    await env.DB.prepare('INSERT INTO market_data (ticker, price, high, low, updated_at) VALUES (?, ?, ?, ?, unixepoch())')
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, high, low, updated_at) VALUES (?, ?, ?, ?, unixepoch())',
+    )
       .bind(ticker, 25, 'not-a-number', 5)
       .run();
   }
@@ -716,8 +953,18 @@ describe('evaluateAlerts summary', () => {
   it('records the throwing alert in errors and still evaluates the others', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('per-alert-throws@example.com');
-    const brokenId = await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'down', armed: 1 });
-    const healthyId = await seedAlert(userId, { ticker: '^NDX', threshold: 20, direction: 'up', armed: 1 });
+    const brokenId = await seedAlert(userId, {
+      ticker: '^VIX',
+      threshold: 20,
+      direction: 'down',
+      armed: 1,
+    });
+    const healthyId = await seedAlert(userId, {
+      ticker: '^NDX',
+      threshold: 20,
+      direction: 'up',
+      armed: 1,
+    });
     await seedBrokenHigh('^VIX');
     await seedMarketData('^NDX', 25);
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -784,7 +1031,13 @@ describe('buildEmail', () => {
   });
 
   it('uses the single-value line for an RSI alert, with no high/low/close lines', () => {
-    const rsiAlert = { ...basePriceAlert, alert_type: 'RSI' as const, rsi: 75, high: null, low: null };
+    const rsiAlert = {
+      ...basePriceAlert,
+      alert_type: 'RSI' as const,
+      rsi: 75,
+      high: null,
+      low: null,
+    };
     const { text } = buildEmail(rsiAlert, 75);
     expect(text).toContain('Wartość w dniu wyzwolenia:');
     expect(text).not.toContain('Maksimum dnia:');

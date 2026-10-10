@@ -11,6 +11,7 @@ const make = (id: number, ticker: string, instrumentType: string, alertType: str
   threshold: id,
   direction: 'up',
   active: true,
+  paused: false,
   notificationEmail: 'user@example.com',
   createdAt: 0,
   updatedAt: 0,
@@ -48,12 +49,18 @@ describe('filterAlerts', () => {
   });
 
   it('combines filters with AND', () => {
-    expect(ids(filterAlerts(ALERTS, { type: 'pl_stock', ticker: '', alertType: 'RSI' }))).toEqual([4]);
-    expect(ids(filterAlerts(ALERTS, { type: '', ticker: '^NDX', alertType: 'PRICE' }))).toEqual([1]);
+    expect(ids(filterAlerts(ALERTS, { type: 'pl_stock', ticker: '', alertType: 'RSI' }))).toEqual([
+      4,
+    ]);
+    expect(ids(filterAlerts(ALERTS, { type: '', ticker: '^NDX', alertType: 'PRICE' }))).toEqual([
+      1,
+    ]);
   });
 
   it('lets the ticker take precedence over the type', () => {
-    expect(ids(filterAlerts(ALERTS, { type: 'pl_stock', ticker: '^NDX', alertType: '' }))).toEqual([1, 2]);
+    expect(ids(filterAlerts(ALERTS, { type: 'pl_stock', ticker: '^NDX', alertType: '' }))).toEqual([
+      1, 2,
+    ]);
   });
 
   it('returns nothing when no alert matches', () => {

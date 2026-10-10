@@ -23,6 +23,7 @@ const ALERT: Alert = {
   threshold: 100,
   direction: 'up',
   active: true,
+  paused: false,
   notificationEmail: 'user@example.com',
   createdAt: 0,
   updatedAt: 0,
@@ -120,13 +121,17 @@ describe('AlertForm', () => {
   });
 
   it('accepts a pre-filled RSI threshold of 0, which the price rule would reject', async () => {
-    const { form } = await renderAlertForm({ dialogData: { alert: { ...ALERT, alertType: 'RSI', threshold: 0 } } });
+    const { form } = await renderAlertForm({
+      dialogData: { alert: { ...ALERT, alertType: 'RSI', threshold: 0 } },
+    });
 
     expect(form.controls.threshold.valid).toBe(true);
   });
 
   it('rejects a pre-filled RSI threshold above 100', async () => {
-    const { form } = await renderAlertForm({ dialogData: { alert: { ...ALERT, alertType: 'RSI', threshold: 150 } } });
+    const { form } = await renderAlertForm({
+      dialogData: { alert: { ...ALERT, alertType: 'RSI', threshold: 150 } },
+    });
 
     expect(form.controls.threshold.hasError('max')).toBe(true);
   });

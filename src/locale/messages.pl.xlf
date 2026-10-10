@@ -98,6 +98,10 @@
         <source>Failed to delete the alert. Please try again.</source>
         <target>Nie udało się usunąć alertu. Spróbuj ponownie.</target>
       </trans-unit>
+      <trans-unit id="alertList.pauseError" datatype="html">
+        <source>Failed to update the alert. Please try again.</source>
+        <target>Nie udało się zaktualizować alertu. Spróbuj ponownie.</target>
+      </trans-unit>
       <trans-unit id="alertList.sort.instrument" datatype="html">
         <source>Instrument</source>
         <target>Walor</target>
@@ -170,6 +174,10 @@
         <source>Inactive</source>
         <target>Nieaktywny</target>
       </trans-unit>
+      <trans-unit id="alertList.status.paused" datatype="html">
+        <source>Paused</source>
+        <target>Wstrzymany</target>
+      </trans-unit>
       <trans-unit id="alertList.detail.notificationEmail" datatype="html">
         <source>Notification email:</source>
         <target>E-mail powiadomień:</target>
@@ -185,6 +193,14 @@
       <trans-unit id="alertList.action.delete" datatype="html">
         <source>Delete alert</source>
         <target>Usuń alert</target>
+      </trans-unit>
+      <trans-unit id="alertList.action.resume" datatype="html">
+        <source>Resume alert</source>
+        <target>Wznów alert</target>
+      </trans-unit>
+      <trans-unit id="alertList.action.pause" datatype="html">
+        <source>Pause alert</source>
+        <target>Wstrzymaj alert</target>
       </trans-unit>
       <trans-unit id="alertList.emptyState" datatype="html">
         <source>No alerts yet — add your first one to get started.</source>

@@ -190,25 +190,25 @@ Existing rows get `paused = 0`. Apply migration 0016 to remote D1 before deployi
 
 #### Automated
 
-- [x] 1.1 Typecheck passes: `npm run typecheck`
-- [x] 1.2 Lint passes: `npm run lint`
-- [x] 1.3 Worker tests pass: `npm run test:worker`
+- [x] 1.1 Typecheck passes: `npm run typecheck` — aab5433
+- [x] 1.2 Lint passes: `npm run lint` — aab5433
+- [x] 1.3 Worker tests pass: `npm run test:worker` — aab5433
 
 #### Manual
 
-- [ ] 1.4 Local D1 accepts migration 0016 and `PATCH /api/alerts/:id` toggles `paused` on a throwaway alert
+- [x] 1.4 Local D1 accepts migration 0016 and `PATCH /api/alerts/:id` toggles `paused` on a throwaway alert
 
 ### Phase 2: Frontend — list toggle and status
 
 #### Automated
 
-- [ ] 2.1 Typecheck passes: `npm run typecheck`
-- [ ] 2.2 Lint passes: `npm run lint`
-- [ ] 2.3 Prettier check passes on changed files: `npx prettier --check <changed files>`
-- [ ] 2.4 Angular unit tests pass: `npm run test:ci`
-- [ ] 2.5 Pause e2e passes: `npx playwright test e2e/alerts-pause.spec.ts`
+- [x] 2.1 Typecheck passes: `npm run typecheck`
+- [x] 2.2 Lint passes: `npm run lint`
+- [x] 2.3 Prettier check passes on changed files: `npx prettier --check <changed files>`
+- [x] 2.4 Angular unit tests pass: `npm run test:ci`
+- [x] 2.5 Pause e2e passes: `npx playwright test e2e/alerts-pause.spec.ts`
 
 #### Manual
 
-- [ ] 2.6 Pausing and resuming an alert in the running app changes the button, the status and survives a reload
-- [ ] 2.7 Editing a paused alert keeps it paused
+- [x] 2.6 Pausing and resuming an alert in the running app changes the button, the status and survives a reload
+- [x] 2.7 Editing a paused alert keeps it paused

@@ -401,6 +401,9 @@
           <context context-type="linenumber">5,7</context>
         </context-group>
       </trans-unit>
+      <trans-unit id="alertList.pauseError" datatype="html">
+        <source>Failed to update the alert. Please try again.</source>
+      </trans-unit>
       <trans-unit id="alertList.sort.instrument" datatype="html">
         <source>Instrument</source>
         <context-group purpose="location">
@@ -516,6 +519,9 @@
           <context context-type="linenumber">86,89</context>
         </context-group>
       </trans-unit>
+      <trans-unit id="alertList.status.paused" datatype="html">
+        <source>Paused</source>
+      </trans-unit>
       <trans-unit id="alertList.detail.notificationEmail" datatype="html">
         <source>Notification email:</source>
         <context-group purpose="location">
@@ -543,6 +549,12 @@
           <context context-type="sourcefile">src/app/features/alerts/alert-list/alert-list.html</context>
           <context context-type="linenumber">102,104</context>
         </context-group>
+      </trans-unit>
+      <trans-unit id="alertList.action.resume" datatype="html">
+        <source>Resume alert</source>
+      </trans-unit>
+      <trans-unit id="alertList.action.pause" datatype="html">
+        <source>Pause alert</source>
       </trans-unit>
       <trans-unit id="alertList.emptyState" datatype="html">
         <source>No alerts yet — add your first one to get started.</source>

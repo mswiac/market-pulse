@@ -12,6 +12,7 @@ export interface Alert {
   threshold: number;
   direction: string;
   active: boolean;
+  paused: boolean;
   notificationEmail: string;
   createdAt: number;
   updatedAt: number;
@@ -47,9 +48,23 @@ export class AlertsService {
   }
 
   update(id: number, payload: CreateAlertPayload): Observable<Alert> {
-    return this.http.put<Alert>(`/api/alerts/${id}`, payload).pipe(
-      tap((updated) => this._alerts.update((alerts) => alerts.map((a) => (a.id === id ? updated : a)))),
-    );
+    return this.http
+      .put<Alert>(`/api/alerts/${id}`, payload)
+      .pipe(
+        tap((updated) =>
+          this._alerts.update((alerts) => alerts.map((a) => (a.id === id ? updated : a))),
+        ),
+      );
+  }
+
+  setPaused(id: number, paused: boolean): Observable<Alert> {
+    return this.http
+      .patch<Alert>(`/api/alerts/${id}`, { paused })
+      .pipe(
+        tap((updated) =>
+          this._alerts.update((alerts) => alerts.map((a) => (a.id === id ? updated : a))),
+        ),
+      );
   }
 
   delete(id: number): Observable<void> {

@@ -11,7 +11,10 @@ import { InstrumentsService } from '../../instruments/instruments.service';
 import { AlertForm } from '../alert-form/alert-form';
 import { filterAlerts } from '../alert-filter';
 import { Alert, AlertsService } from '../alerts.service';
-import { DeleteAlertConfirm, DeleteAlertConfirmData } from '../delete-alert-confirm/delete-alert-confirm';
+import {
+  DeleteAlertConfirm,
+  DeleteAlertConfirmData,
+} from '../delete-alert-confirm/delete-alert-confirm';
 
 const ALERT_TYPE_LABELS: Record<string, string> = {
   PRICE: $localize`:@@alertList.type.price:Price threshold`,
@@ -56,6 +59,7 @@ export class AlertList {
   protected readonly sortDirection = signal<SortDirection>('asc');
   protected readonly loadError = signal(false);
   protected readonly deleteError = signal(false);
+  protected readonly pauseError = signal(false);
 
   protected readonly filterType = signal('');
   protected readonly filterTicker = signal('');
@@ -126,6 +130,13 @@ export class AlertList {
     this.dialog.open(AlertForm, { width: '32rem', data: { alert } });
   }
 
+  protected togglePause(alert: Alert): void {
+    this.pauseError.set(false);
+    this.alertsService
+      .setPaused(alert.id, !alert.paused)
+      .subscribe({ error: () => this.pauseError.set(true) });
+  }
+
   protected deleteAlert(alert: Alert): void {
     const data: DeleteAlertConfirmData = {
       instrumentName: alert.instrumentName,
@@ -139,7 +150,9 @@ export class AlertList {
       .subscribe((confirmed) => {
         if (confirmed) {
           this.deleteError.set(false);
-          this.alertsService.delete(alert.id).subscribe({ error: () => this.deleteError.set(true) });
+          this.alertsService
+            .delete(alert.id)
+            .subscribe({ error: () => this.deleteError.set(true) });
         }
       });
   }
