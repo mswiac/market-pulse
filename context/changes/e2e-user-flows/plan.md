@@ -218,9 +218,9 @@ Specs are independent and parallel-safe (unique thresholds and emails).
 
 #### Automated
 
-- [x] 3.1 History smoke spec passes
-- [x] 3.2 Whole Playwright suite stays green
+- [x] 3.1 History smoke spec passes — 270ff28
+- [x] 3.2 Whole Playwright suite stays green — 270ff28
 
 #### Manual
 
-- [x] 3.3 Deliberate break makes the smoke test fail
+- [x] 3.3 Deliberate break makes the smoke test fail — 270ff28
