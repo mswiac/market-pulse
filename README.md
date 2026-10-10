@@ -119,6 +119,20 @@ other spec is modeled on. They drive the **real running app**. One-time setup:
   spec starts already authenticated via `storageState`. If specs suddenly
   redirect to `/login`, the saved session expired — delete the file and re-run.
 
+- **An admin account**: for specs under `e2e/admin/`. Use an account whose email
+  is listed in `ADMIN_EMAILS` in `.dev.vars` (your local dev admin works), and add
+  its credentials to the same `e2e/.env`:
+
+  ```
+  E2E_ADMIN_EMAIL=admin@example.test
+  E2E_ADMIN_PASSWORD=your-admin-password
+  ```
+
+  The `setup-admin` project logs in with these and saves
+  `playwright/.auth/admin.json`; the `chromium-admin` project runs the
+  `e2e/admin/` specs with it, while all other specs run as the non-admin user.
+  Without these variables the admin setup fails with a clear message.
+
 `playwright.config.ts` has a `webServer` block, so you don't need to start the
 dev servers yourself — if `:8787` / `:4200` aren't already up, Playwright boots
 them (`reuseExistingServer: true` means it reuses yours when they are).

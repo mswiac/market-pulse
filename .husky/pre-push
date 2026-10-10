@@ -43,6 +43,17 @@ if [ ! -f e2e/.env ]; then
   exit 0
 fi
 
+# The admin project (setup-admin) fails hard without admin credentials, so treat
+# them like the rest of the local setup: skip with a warning, never block. Only
+# the key names are checked (-q), values are never printed.
+for key in E2E_ADMIN_EMAIL E2E_ADMIN_PASSWORD; do
+  if [ -z "$(printenv "$key")" ] && ! grep -q "^$key=." e2e/.env; then
+    echo "pre-push › E2E-relevant changes, but $key is not set — SKIPPING E2E."
+    echo "          Add E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD (a local admin listed in ADMIN_EMAILS) to e2e/.env (see README)."
+    exit 0
+  fi
+done
+
 if [ ! -d "$HOME/.cache/ms-playwright" ]; then
   echo "pre-push › E2E-relevant changes, but Playwright browsers aren't installed — SKIPPING E2E."
   echo "          Run: npx playwright install chromium"
