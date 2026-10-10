@@ -2,12 +2,12 @@
   <p class="empty-state" i18n="@@alertList.loadError">Failed to load alerts.</p>
 } @else {
   @if (deleteError()) {
-    <p class="delete-error" i18n="@@alertList.deleteError">
+    <p class="action-error" i18n="@@alertList.deleteError">
       Failed to delete the alert. Please try again.
     </p>
   }
   @if (pauseError()) {
-    <p class="delete-error" i18n="@@alertList.pauseError">
+    <p class="action-error" i18n="@@alertList.pauseError">
       Failed to update the alert. Please try again.
     </p>
   }

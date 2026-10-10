@@ -921,7 +921,7 @@ describe('alerts endpoints', () => {
     expect(list[0]['paused']).toBe(false);
   });
 
-  it('pauses an alert, keeps it paused through an edit, and resumes it re-armed', async () => {
+  it('pauses an alert, keeps it paused through an edit, and resumes it still disarmed while the condition is met', async () => {
     const cookie = await registerAndLogIn('pause-resume@example.com');
     await seedMarketData('^VIX', 25, 0);
     // The current price (25) already meets the threshold, so the alert is created disarmed.
@@ -939,9 +939,42 @@ describe('alerts endpoints', () => {
     expect(edited.status).toBe(200);
     await expect(edited.json()).resolves.toMatchObject({ paused: true });
 
+    // Still past the threshold: resuming must not re-arm, or the next cron run would mail at once.
     const resumed = await setPaused(cookie, id, { paused: false });
     expect(resumed.status).toBe(200);
-    await expect(resumed.json()).resolves.toMatchObject({ id, paused: false, active: true });
+    await expect(resumed.json()).resolves.toMatchObject({ id, paused: false, active: false });
+  });
+
+  it('re-arms on resume once the price has retreated past the threshold', async () => {
+    const cookie = await registerAndLogIn('pause-resume-rearm@example.com');
+    await seedMarketData('^VIX', 25, 0);
+    const created = (await (
+      await createAlert(cookie, { threshold: 20, direction: 'up' })
+    ).json()) as Record<string, unknown>;
+    expect(created['active']).toBe(false);
+    const id = created['id'] as number;
+    await setPaused(cookie, id, { paused: true });
+
+    await env.DB.prepare(
+      'UPDATE market_data SET price = 10, updated_at = unixepoch() WHERE ticker = ?',
+    )
+      .bind('^VIX')
+      .run();
+
+    const resumed = await setPaused(cookie, id, { paused: false });
+    expect(resumed.status).toBe(200);
+    await expect(resumed.json()).resolves.toMatchObject({ paused: false, active: true });
+  });
+
+  it('returns 404 resuming a nonexistent alert without touching market data', async () => {
+    const cookie = await registerAndLogIn('resume-nonexistent@example.com');
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await setPaused(cookie, 999999, { paused: false });
+
+    expect(response.status).toBe(404);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('rejects a PATCH with a non-numeric alert id', async () => {

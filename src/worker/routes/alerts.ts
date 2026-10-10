@@ -344,8 +344,11 @@ alertsRoutes.put('/:id', async (c) => {
 });
 
 // Pause is its own endpoint rather than a field of the create/edit body, so an
-// edit (which recomputes `armed`) can never clear it. Resuming re-arms in the
-// same statement: a cron run must never see a resumed alert still disarmed.
+// edit (which recomputes `armed`) can never clear it. Resuming recomputes
+// `armed` against the current price, exactly like create/edit, so an alert
+// whose condition is already met comes back disarmed instead of mailing on the
+// next cron run; paused and armed change in one statement, so a cron run can
+// never see a resumed alert with a stale armed state.
 alertsRoutes.patch('/:id', async (c) => {
   const id = parseAlertId(c.req.param('id'));
   if (id === null) {
@@ -363,11 +366,40 @@ alertsRoutes.patch('/:id', async (c) => {
   }
 
   const userId = c.get('userId');
-  const paused = body.paused ? 1 : 0;
+  let update: D1PreparedStatement;
+  if (body.paused) {
+    update = c.env.DB.prepare('UPDATE alerts SET paused = 1 WHERE id = ? AND user_id = ?').bind(
+      id,
+      userId,
+    );
+  } else {
+    // Ownership check first, same reasoning as PUT: refreshing market data costs
+    // a Yahoo call that a missing or foreign alert id must not trigger.
+    const alert = await c.env.DB.prepare(
+      'SELECT ticker, alert_type, threshold, direction FROM alerts WHERE id = ? AND user_id = ?',
+    )
+      .bind(id, userId)
+      .first<{ ticker: string; alert_type: AlertType; threshold: number; direction: Direction }>();
+    const instrument = alert ? await lookupTicker(c.env.DB, alert.ticker) : null;
+    if (!alert || !instrument) {
+      return c.json({ error: 'alert not found', code: 'alert_not_found' }, 404);
+    }
+
+    await ensureFreshMarketData(c.env, instrument);
+    const armed = await computeArmed(
+      c.env.DB,
+      alert.ticker,
+      alert.alert_type,
+      alert.threshold,
+      alert.direction,
+    );
+    update = c.env.DB.prepare(
+      'UPDATE alerts SET paused = 0, armed = ? WHERE id = ? AND user_id = ?',
+    ).bind(armed, id, userId);
+  }
+
   const [, selectResult] = await c.env.DB.batch([
-    c.env.DB.prepare(
-      `UPDATE alerts SET paused = ?, armed = CASE WHEN ? = 0 THEN 1 ELSE armed END WHERE id = ? AND user_id = ?`,
-    ).bind(paused, paused, id, userId),
+    update,
     c.env.DB.prepare(`${ALERT_SELECT} WHERE a.id = ? AND a.user_id = ?`).bind(id, userId),
   ]);
 

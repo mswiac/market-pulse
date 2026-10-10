@@ -1,7 +1,7 @@
 ---
 change_id: manual-alert-pause
 title: Manually pause an alert without deleting it
-status: implemented
+status: impl_reviewed
 created: 2026-10-10
 updated: 2026-10-10
 archived_at: null
