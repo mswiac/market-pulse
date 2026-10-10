@@ -210,9 +210,9 @@ None. Links into the moved sections (`README.md#admin-panel` anchors) were grepp
 
 #### Automated
 
-- [x] 2.1 Every backfilled archive path exists
-- [x] 2.2 Each of the 14 change IDs appears in both table and Done
-- [x] 2.3 Existing roadmap rows unchanged (only frontmatter `updated` differs)
+- [x] 2.1 Every backfilled archive path exists — 7cb2bda
+- [x] 2.2 Each of the 14 change IDs appears in both table and Done — 7cb2bda
+- [x] 2.3 Existing roadmap rows unchanged (only frontmatter `updated` differs) — 7cb2bda
 
 #### Manual
 
@@ -223,10 +223,10 @@ None. Links into the moved sections (`README.md#admin-panel` anchors) were grepp
 
 #### Automated
 
-- [ ] 3.1 Stale phrases gone from test-plan.md
-- [ ] 3.2 Referenced archive paths exist
-- [ ] 3.3 Risk map and strategy rows untouched
-- [ ] 3.4 Diff contains only Markdown files
+- [x] 3.1 Stale phrases gone from test-plan.md
+- [x] 3.2 Referenced archive paths exist
+- [x] 3.3 Risk map and strategy rows untouched
+- [x] 3.4 Diff contains only Markdown files
 
 #### Manual
 

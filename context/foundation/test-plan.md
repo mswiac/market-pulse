@@ -28,6 +28,12 @@
 > as a 10xDevs Module 3 Lesson 4 practical exercise, not a
 > `/10x-test-plan --refresh`. Followed on the same day by CI wiring for
 > the suite (`.github/workflows/e2e.yml`, informational — issue #121).
+>
+> 2026-10-11 — targeted manual refresh (issue #207), not a full
+> `/10x-test-plan --refresh`: §3 Phase 5 marked shipped, Phase 6 row and
+> §4 e2e row updated to the real inventory (18 spec files, 38 tests), and
+> §8 ledger entries added for the work that was never recorded. Risk map
+> (§2) and strategy (§1, §5) unchanged.
 
 ## 1. Strategy
 
@@ -101,8 +107,8 @@ orchestrator updates Status as artifacts appear on disk.
 | 2 | Multi-provider + admin-delete data integrity | Verify risk #3's side-by-side coverage gap and risk #5's remote D1 cascade behavior via a one-time manual check | #3, #5 | unit + one-time manual remote D1 check | shipped | `context/archive/2026-08-23-multi-provider-admin-delete-integrity/` |
 | 3 | Frontend test bootstrap | First Angular component tests (Alert Form validators, admin panel forms) via Vitest, addressing risk #4 | #4 | component (Vitest) | shipped | `context/archive/2026-08-23-frontend-test-bootstrap/` |
 | 4 | Abuse-lens closure + local quality-gate hook | Close risks #6 and #7's narrow remaining gaps; add the still-open local post-edit hook | #6, #7 | integration + local tooling | shipped | `context/archive/2026-08-24-abuse-lens-closure/` |
-| 5 | Admin panel component coverage | Component tests (Vitest) for all 6 admin-panel components, closing risk #8 | #8 | component (Vitest) | not started | — |
-| 6 | Browser-level E2E smoke | Four Playwright specs for the risk facets only a rendered browser exercises — alert create→reload, auth-gate redirect, admin-gate redirect, alert delete confirm/cancel | #4 (browser facet), #6 (client-side auth facet, ×2) | e2e (Playwright, local dev server) | specs written + break-verified | — (10xDevs M3L4 exercise) |
+| 5 | Admin panel component coverage | Component tests (Vitest) for all 6 admin-panel components, closing risk #8 | #8 | component (Vitest) | shipped | `context/archive/2026-08-25-admin-panel-component-coverage/` |
+| 6 | Browser-level E2E | Playwright specs for the risk facets only a rendered browser exercises. Started with four smoke specs (alert create→reload, auth-gate redirect, admin-gate redirect, alert delete confirm/cancel); since extended to 18 spec files / 38 tests covering admin and user flows | #4 (browser facet), #6 (client-side auth facet, ×2) | e2e (Playwright, local dev server) | shipped (smoke set: 10xDevs M3L4 exercise; extension: `context/archive/2026-10-10-e2e-admin-account-infra/`, `…-e2e-user-flows/`, `…-e2e-admin-management/`, `…-e2e-admin-cron-run/`) | — |
 
 **Scope notes** (grounded in this refresh's planning decisions — see `context/archive/2026-08-22-test-plan-refresh-2026-08-22/plan.md`'s Key Discoveries):
 
@@ -182,6 +188,19 @@ orchestrator updates Status as artifacts appear on disk.
   `test/e2e-playwright-smoke` / PR #119. CI wiring (GitHub Actions,
   informational) added afterwards in `.github/workflows/e2e.yml` (issue #121).
 
+  **State (2026-10-11):** 18 spec files (38 tests) — 12 in `e2e/` run as the
+  non-admin user (the original smoke set plus `alerts-edit`, `alerts-filter`,
+  `alerts-pause`, `alerts-validation`, `alerts-current-value`, `dashboard`,
+  `history-smoke`, `instrument-picker`) and 6 in `e2e/admin/` run in the
+  `chromium-admin` project (`account-flow`, `add-instrument`,
+  `admin-gate-pass`, `cron-run`, `remove-instrument`, `remove-user`). Added by
+  four change folders: `e2e-admin-account-infra` (#183, the admin Playwright
+  project chain), `e2e-admin-cron-run` (#184), `e2e-admin-management` (#185)
+  and `e2e-user-flows` (#186), plus the e2e spec shipped with each feature
+  (e.g. `alerts-pause.spec.ts` with #199). All follow §6.6; cleanup runs
+  through the API in `afterEach`. Archived under
+  `context/archive/2026-10-10-e2e-*`.
+
 If phases must be sequenced under time pressure, Phase 1 is the top priority — it covers both the user's top-stated concern (risk #2) and the one confirmed real code gap.
 
 ## 4. Stack
@@ -195,7 +214,7 @@ signal at a fraction of the cost.
 | unit + integration (Worker) | Vitest + `@cloudflare/vitest-pool-workers` | latest | Workers runtime emulation; D1 binding available in test context; hardened by Stryker mutation testing (`npx stryker run`, scope `src/worker/**/*.ts` per `stryker.config.json`) — most recently PR #91 (2026-08-24/25) closed survivor gaps across all `src/worker/**` modules |
 | HTTP edge mocking (Stooq / Resend) | Vitest built-in mocks or MSW | latest | Mock only at the HTTP edge; never mock internal Worker modules |
 | Angular component tests | Vitest (not Karma — see §3 Phase 3 scope notes) | latest | `tsconfig.spec.json` already declares `vitest/globals`; no separate Angular-specific test runner (Karma) was introduced. Three component test files (`alert-form.spec.ts`, `register.spec.ts`, `login.spec.ts`), each hardened by a scoped Stryker pass — #114/#115/#116 for the submit-guard class, #110 for the broad whole-component sweep. Admin panel components covered separately (#113 / §3 Phase 5, risk #8) |
-| e2e | Playwright (local dev server, `development-pl` build) | latest | Two browser-level smoke scenarios only — auth-gate redirect and alert create→reload round trip (§3 Phase 6). Runs against `npm start` (or a `webServer` block), never the deployed Cloudflare shape (§7). `storageState` auth via a `setup` project. Seed exemplar + rules: `e2e/seed.spec.ts` and the `/10x-e2e` skill |
+| e2e | Playwright (local dev server, `development-pl` build) | latest | Browser-level specs for the user and admin flows (18 files, §3 Phase 6), starting from the auth-gate redirect and alert create→reload smoke pair. Runs against `npm start` (or a `webServer` block), never the deployed Cloudflare shape (§7). `storageState` auth via a `setup` project. Seed exemplar + rules: `e2e/seed.spec.ts` and the `/10x-e2e` skill |
 
 **Stack grounding tools (current session):**
 - Docs: none — not available in current session; stack evidence from local manifests only; checked: 2026-08-22
@@ -439,7 +458,7 @@ new Worker test files under `test/worker/` (matched only by
   in Phase 1 gives sufficient signal at MVP scale with a single user.
   Re-evaluate when multi-user concurrency or Cloudflare-specific routing
   becomes a documented risk. Local browser-level E2E via Playwright against
-  the dev server is now in scope for the two smoke scenarios in §3 Phase 6;
+  the dev server is now in scope for the specs in §3 Phase 6;
   this exclusion remains specifically about the deployed Cloudflare shape.
 - **D1 migration SQL correctness** — migrations are forward-only SQL with
   manual verification steps baked into each slice plan (local + remote
@@ -454,9 +473,14 @@ new Worker test files under `test/worker/` (matched only by
 - 2026-08-25 — PR #91 mutation-testing triage (commits `8a2884f^`..`07bef80`, 6 commits): test-only sweep closing Stryker survivor gaps across `src/worker/**` (session/auth, scheduled/admin routes, index/email, market-data/password, alert-evaluation, alerts/trigger-events/admin/resend/rsi). ~823 lines added across 14 `test/worker/*.test.ts` files. No production code changed, no risk-map delta from this sweep itself (Risk #8 is a separate, interview-sourced addition — see §2).
 - 2026-08-28 — added the browser-level E2E layer (§3 Phase 6, §4 stack row, §6.6): Playwright `e2e/seed.spec.ts` exemplar plus four smoke specs — alert create→reload, auth-gate redirect, admin-gate redirect, alert delete confirm/cancel. 10xDevs M3L4 practical exercise. No risk-map delta — all cover browser-only facets of existing risks #4 and #6. Every spec anti-pattern-reviewed and deliberate-break-verified; `auth-gate-redirect`, `admin-gate-redirect`, `delete-alert` generated via standalone `/10x-e2e` runs. Branch `test/e2e-playwright-smoke` / PR #119.
 - 2026-08-28 — wired the E2E suite into CI (issue #121, follow-up to #119): `.github/workflows/e2e.yml` runs the `e2e/` specs on GitHub Actions (PRs + pushes to `main`) against the same local dev servers + an ephemeral offline Miniflare D1, seeding a throwaway account via `POST /api/register`. Free (public repo). **Informational, not a required branch-protection check** — required gate stays `Workers Builds: marketpulse`. §3 Phase 6 Enforcement + §5 gate table updated; no risk-map delta.
-- 2026-10-10 — added admin account infrastructure to the E2E layer (issue #183): second Playwright project chain (`setup-admin` → `chromium-admin`, specs under `e2e/admin/`), CI registration of the admin account, and the §6.6 admin bullet. Enables the admin feature specs (#184, #185). No risk-map delta.
 - 2026-08-29 — closed the frontend `submitting`-flag / double-submit mutant follow-up series (#113 admin, #114 alert-form, #115 register, #116 login). #116 also gave `login.ts` its first-ever component spec — validator gates, happy path (`login()` args + `navigateByUrl('/')`), error message, and the double-submit guard. Test-only, per-component scoped Stryker (`login.ts:26-43`, 12/13 killed, `errorMessage.set(null)` the accepted survivor → #110); `login.html:31` `[disabled]` binding covered by a deliberate-break check. §3 Phase 3 scope-note updated. No risk-map delta — covers a client-side facet of Risk #4 (auth/form input validation). Branch `test/116-login-component-coverage`.
 - 2026-08-29 — broad Stryker mutation sweep of the three Angular form components (#110), the broad-triage half of the frontend mutation work (#114/#115/#116 were the narrow submit-guard half). Test-only, per-file multi-range `--mutate` skipping the `fb.nonNullable.group` initializer. Before/after: `alert-form.ts` 72.41→93.10%, `register.ts` 84.00→92.00%, `login.ts` 92.31→100.00%. New tests cover the success path (`create`/`update`/`register`/`login` never previously exercised on success — `dialogRef.close(true)` / `navigateByUrl('/')` / submitted-payload shape), the error-reset facet (`login.ts:32` now killed), and `alert-form`'s display helpers + `valueChanges` cascades. Residual survivors are documented equivalents (dialog-only `{ optional: true }`, `typeof`-guards redundant with `> 0` / `Number.isFinite`, mat-form-field-gated `emailError`/`markAsTouched`, `alert-form.ts:168` carried from #114). Three `[disabled]`-binding deliberate-break checks re-confirmed. No risk-map delta — client-side facet of Risk #4. Branch `test/110-app-component-mutation-sweep`.
+- 2026-09-11 — `admin-cron-trigger` (`POST /api/admin/cron/run` and the `/admin/cron-run` page): the manual cron run reuses the scheduled code path and is covered by worker tests (route auth, 401/403) and, from 2026-10-10, an e2e spec. No risk-map delta.
+- 2026-10-08/09 — cron architecture work (`cron-run-capacity`, `per-market-cron-triggers`, `admin-per-market-refresh`, `cron-failure-email`): evaluation moved to its own invocation, market-data fetching split per market group, admin refresh driven by per-market requests, and a failure email on cron problems. Covered by worker tests alongside each change (scheduled/admin/notification suites). Interacts with risks #2 and #7 (notification delivery, Workers Free budget) but changes neither their rating nor the risk map.
+- 2026-10-09 — `full-repo-stryker-run` and `worker-test-gaps` (test-only): a full-repo Stryker run with tests added for surviving mutants, and the remaining worker integration gaps closed. No production change, no risk-map delta.
+- 2026-10-10 — `manual-alert-pause` (#199): worker tests for the PATCH endpoint, edit-keeps-paused, resume re-arm and cron skip; component tests for the toggle; `e2e/alerts-pause.spec.ts`. No risk-map delta.
+- 2026-10-10 — added admin account infrastructure to the E2E layer (issue #183): second Playwright project chain (`setup-admin` → `chromium-admin`, specs under `e2e/admin/`), CI registration of the admin account, and the §6.6 admin bullet. Enables the admin feature specs (#184, #185). No risk-map delta.
+- 2026-10-10 — e2e series on top of the admin infrastructure: `e2e-admin-cron-run` (#184), `e2e-admin-management` (#185), `e2e-user-flows` (#186). See the §3 Phase 6 state (2026-10-11) for the inventory. No risk-map delta.
 
 Refresh (`/10x-test-plan --refresh`) when:
 
