@@ -132,4 +132,4 @@ Each spec makes a few API calls; registration hashes a password once per created
 - [x] 1.2 Each test fails when its risk is deliberately broken — e3744a0
 - [x] 1.3 No test data is left behind after a run — e3744a0
 - [x] 1.4 Typecheck and lint pass — e3744a0
-- [ ] 1.5 CI Playwright job is green on the PR
+- [x] 1.5 CI Playwright job is green on the PR
