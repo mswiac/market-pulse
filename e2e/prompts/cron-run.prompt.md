@@ -7,8 +7,9 @@ file carries only what they can't know.
 
 ```text
 We are adding E2E tests for this risk from context/foundation/test-plan.md:
-Risk #8 (admin panel UI handling destructive / irreversible actions), browser
-facet — the "Force data refresh" page can send real notification emails, so
+Risk #8 (admin panel UI handling destructive / irreversible actions), applied
+by analogy (Risk #8 names the delete-confirm dialogs; this page has the same
+shape) — the "Force data refresh" page can send real notification emails, so
 the confirm dialog must gate the run, and the run's outcome (including
 partial failures from #172) must be rendered truthfully for the admin.
 

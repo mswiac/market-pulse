@@ -106,7 +106,7 @@ None; all responses are fulfilled locally and instantly.
 
 #### Automated
 
-- [x] 1.1 The new spec passes in the admin project
-- [x] 1.2 Each test fails when its risk is deliberately broken
-- [x] 1.3 Typecheck and lint pass
+- [x] 1.1 The new spec passes in the admin project — 2bdaa07
+- [x] 1.2 Each test fails when its risk is deliberately broken — 2bdaa07
+- [x] 1.3 Typecheck and lint pass — 2bdaa07
 - [ ] 1.4 CI Playwright job is green on the PR
