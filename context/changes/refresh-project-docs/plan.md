@@ -203,8 +203,8 @@ None. Links into the moved sections (`README.md#admin-panel` anchors) were grepp
 
 #### Manual
 
-- [ ] 1.6 README reads as a coherent entry point and pause/resume mention is accurate
-- [ ] 1.7 No content lost from the removed sections
+- [x] 1.6 README reads as a coherent entry point and pause/resume mention is accurate
+- [x] 1.7 No content lost from the removed sections
 
 ### Phase 2: Roadmap backfill
 
@@ -216,19 +216,19 @@ None. Links into the moved sections (`README.md#admin-panel` anchors) were grepp
 
 #### Manual
 
-- [ ] 2.4 Outcome lines read accurately
-- [ ] 2.5 Table and Done ordering looks sensible
+- [x] 2.4 Outcome lines read accurately
+- [x] 2.5 Table and Done ordering looks sensible
 
 ### Phase 3: Test-plan targeted refresh
 
 #### Automated
 
-- [x] 3.1 Stale phrases gone from test-plan.md
-- [x] 3.2 Referenced archive paths exist
-- [x] 3.3 Risk map and strategy rows untouched
-- [x] 3.4 Diff contains only Markdown files
+- [x] 3.1 Stale phrases gone from test-plan.md — 8e1c9ae
+- [x] 3.2 Referenced archive paths exist — 8e1c9ae
+- [x] 3.3 Risk map and strategy rows untouched — 8e1c9ae
+- [x] 3.4 Diff contains only Markdown files — 8e1c9ae
 
 #### Manual
 
-- [ ] 3.5 Spec counts and Phase 5/6 statements match reality
-- [ ] 3.6 Ledger entries accurate and chronological
+- [x] 3.5 Spec counts and Phase 5/6 statements match reality
+- [x] 3.6 Ledger entries accurate and chronological
