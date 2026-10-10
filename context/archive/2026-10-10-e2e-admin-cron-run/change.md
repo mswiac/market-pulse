@@ -1,10 +1,10 @@
 ---
 change_id: e2e-admin-cron-run
 title: E2E for the Force data refresh admin page
-status: implemented
+status: archived
 created: 2026-10-10
 updated: 2026-10-10
-archived_at: null
+archived_at: 2026-10-10T17:35:03Z
 ---
 
 ## Notes
