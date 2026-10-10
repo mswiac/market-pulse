@@ -144,24 +144,24 @@ Existing local setups must add the two admin variables to the local e2e env file
 
 #### Automated
 
-- [x] 1.1 Config and setup compile and lint: `npm run lint`
-- [x] 1.2 Playwright lists the new projects and specs without error: `npx playwright test --list`
-- [x] 1.3 The user chain still passes with no admin specs yet: `npx playwright test --project=chromium`
+- [x] 1.1 Config and setup compile and lint: `npm run lint` — c964ca9
+- [x] 1.2 Playwright lists the new projects and specs without error: `npx playwright test --list` — c964ca9
+- [x] 1.3 The user chain still passes with no admin specs yet: `npx playwright test --project=chromium` — c964ca9
 
 #### Manual
 
-- [x] 1.4 Admin credentials added to the local e2e env file and setup-admin logs in successfully
-- [x] 1.5 The docs read correctly
+- [x] 1.4 Admin credentials added to the local e2e env file and setup-admin logs in successfully — c964ca9
+- [x] 1.5 The docs read correctly — c964ca9
 
 ### Phase 2: Admin passes the gate spec
 
 #### Automated
 
-- [ ] 2.1 The new spec passes: `npx playwright test --project=chromium-admin`
-- [ ] 2.2 The full suite passes (user and admin): `npx playwright test`
-- [ ] 2.3 Lint passes: `npm run lint`
+- [x] 2.1 The new spec passes: `npx playwright test --project=chromium-admin`
+- [x] 2.2 The full suite passes (user and admin): `npx playwright test`
+- [x] 2.3 Lint passes: `npm run lint`
 
 #### Manual
 
-- [ ] 2.4 Deliberate break of the admin gate turns the spec red and was reverted
+- [x] 2.4 Deliberate break of the admin gate turns the spec red and was reverted
 - [ ] 2.5 CI run on the PR is green, with the admin account registered
