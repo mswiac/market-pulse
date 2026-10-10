@@ -196,17 +196,17 @@ Existing rows get `paused = 0`. Apply migration 0016 to remote D1 before deployi
 
 #### Manual
 
-- [x] 1.4 Local D1 accepts migration 0016 and `PATCH /api/alerts/:id` toggles `paused` on a throwaway alert
+- [x] 1.4 Local D1 accepts migration 0016 and `PATCH /api/alerts/:id` toggles `paused` on a throwaway alert — c88e3d5
 
 ### Phase 2: Frontend — list toggle and status
 
 #### Automated
 
-- [x] 2.1 Typecheck passes: `npm run typecheck`
-- [x] 2.2 Lint passes: `npm run lint`
-- [x] 2.3 Prettier check passes on changed files: `npx prettier --check <changed files>`
-- [x] 2.4 Angular unit tests pass: `npm run test:ci`
-- [x] 2.5 Pause e2e passes: `npx playwright test e2e/alerts-pause.spec.ts`
+- [x] 2.1 Typecheck passes: `npm run typecheck` — c88e3d5
+- [x] 2.2 Lint passes: `npm run lint` — c88e3d5
+- [x] 2.3 Prettier check passes on changed files: `npx prettier --check <changed files>` — c88e3d5
+- [x] 2.4 Angular unit tests pass: `npm run test:ci` — c88e3d5
+- [x] 2.5 Pause e2e passes: `npx playwright test e2e/alerts-pause.spec.ts` — c88e3d5
 
 #### Manual
 
