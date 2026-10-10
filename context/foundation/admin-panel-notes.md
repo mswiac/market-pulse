@@ -1,7 +1,7 @@
 # Admin panel — deletion & side-effect details
 
 Exact backend behavior behind the admin panel's destructive/mutating actions
-(`src/worker/routes/admin.ts`). README's "Admin panel" section covers what
+(`src/worker/routes/admin.ts`). `app-overview.md`'s "Admin panel" section covers what
 each screen does; this note covers the mechanics worth knowing before calling
 these endpoints directly or changing them.
 

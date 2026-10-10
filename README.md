@@ -2,25 +2,9 @@
 
 MarketPulse is a stock market alert web app. Users set price- or RSI-based alerts and get an email notification when a threshold is crossed. The instrument registry ships seeded with the VIX and NASDAQ-100 indices, but an admin can add more instruments through the admin panel — US stocks and GPW-listed Polish stocks (fetched via a ticker + `.WA` suffix) are both supported. Market data for every registered instrument is fetched once a day from Yahoo Finance via a Cloudflare Cron Trigger, which also calculates RSI and evaluates every active alert.
 
-## Pages
+## What's in the app
 
-- **Dashboard** (`/`, the landing page after login) — one row per instrument from its latest close (date, close, high, low, RSI), filterable by type and instrument and sortable by column. Backed by `GET /api/instruments/latest`.
-- **Alerts** (`/alerts`) — the user's alerts with filters, and the "New alert" action.
-- **History** — triggered alerts (`/history/triggers`) and per-instrument price history (`/history`).
-
-## Admin panel
-
-Users whose email is listed in `ADMIN_EMAILS` get an "Admin" section in the app. Access is enforced both client-side (`adminGuard`) and server-side (`adminMiddleware`), which re-derives admin status from the `users` table on every request rather than trusting anything the client claims. It exposes:
-
-- **Fetch market data** (`/admin`) — manually backfills price history for one instrument over an arbitrary date range (up to 730 days), through the same Yahoo Finance fetch path the daily cron uses.
-- **Run the cron pipeline manually** (`/admin/cron-run`) — re-runs the full daily job on demand instead of waiting for the scheduled Cron Trigger. This sends real emails and mutates real alert state if a threshold is crossed.
-- **Add instrument** (`/admin/add-instrument`) — registers a new instrument (index, US stock, or GPW-listed Polish stock) beyond the seeded VIX/NASDAQ-100 pair.
-- **Remove instrument** (`/admin/remove-instrument`) — previews how many alerts reference the instrument, then deletes it and its dependent data.
-- **Remove user** (`/admin/remove-user`) — previews how many alerts and trigger events belong to the account, then deletes it; an admin cannot delete their own account.
-
-Exact deletion cascades and the mechanics of the manual cron run (the
-per-market fetch requests and the evaluation request) are documented in
-`context/foundation/admin-panel-notes.md`.
+A dashboard with the latest close of every instrument, an alerts page (filters, plus pause/resume so an alert can be switched off without deleting it), trigger and per-instrument price history, and an admin panel for admins. Full descriptions: [`context/foundation/app-overview.md`](context/foundation/app-overview.md).
 
 ## Running locally
 
@@ -42,7 +26,7 @@ RESEND_API_KEY=<a Resend API key, or a dummy value if you don't need real emails
 RESEND_VERIFIED_EMAIL=you@example.com
 ```
 
-`ADMIN_EMAILS` is a comma-separated list of emails that get admin panel access (see "Admin panel" above). The others are only exercised when an alert actually fires and tries to send an email.
+`ADMIN_EMAILS` is a comma-separated list of emails that get admin panel access (see `context/foundation/app-overview.md`). The others are only exercised when an alert actually fires and tries to send an email.
 
 ### Local D1 database
 
@@ -171,50 +155,10 @@ Deployment runs through **Cloudflare Workers Builds**, configured in the Cloudfl
 npm run migrate:remote
 ```
 
-## CI / quality gate
+## More documentation
 
-`main` has a required GitHub branch-protection status check named **`Workers Builds: marketpulse`**. It must pass before any PR can merge, and it runs the same `npm run ci` build command described above (typecheck + backend test suite + Angular build).
-
-This check is configured entirely in the Cloudflare dashboard as a GitHub-App-based status check — it is not defined by a `.github/workflows/` file, husky hook, or lint-staged config. If you need to re-verify it, check branch protection directly:
-
-```bash
-gh api repos/mswiac/market-pulse/branches/main/protection
-```
-
-There **are** two workflow files, both informational only — they report a
-status on PRs but are deliberately not part of branch protection:
-
-- `.github/workflows/e2e.yml` runs the Playwright E2E suite (see "End-to-end
-  tests" above). A flaky browser run never blocks a merge; promoting it to a
-  required check is a deferred decision (`context/foundation/test-plan.md`
-  §3 Phase 6).
-- `.github/workflows/ai-review.yml` runs the Claude Code Action on PRs to
-  `main`, scoring the diff against `.github/review-criteria.md` and posting a
-  single sticky PR comment (score table + advisory verdict). It skips PRs that
-  only touch `**/*.md` or `context/**` (its own `paths-ignore`), so a docs-only
-  PR gets no review comment. The verdict never fails the check — it's advisory
-  only; a hard merge gate on it is a deferred decision (see the workflow
-  file's own header comment).
-
-## Mutation testing
-
-[Stryker](https://stryker-mutator.io/) is set up as an optional, manual quality gate — it is **not** part of `npm run ci` and does not gate PRs. Run it by hand when you want to check whether a test suite actually catches bugs, not just executes the code. Two separate config profiles exist, since the Worker and Angular test setups need different Stryker runners:
-
-```bash
-# Worker (src/worker/**), on top of npm run test:worker
-npx stryker run                                              # full configured scope
-npx stryker run --mutate "src/worker/lib/rsi.ts"              # a single file — much faster, prefer this
-
-# Angular (src/app/**), on top of npm run test:ci
-npx stryker run stryker.config.app.json
-npx stryker run stryker.config.app.json --mutate "src/app/features/alerts/alert-form/alert-form.ts"
-```
-
-Full rationale for the two profiles (why the Angular one needs a different runner, and a deliberate `vitest.related: false` gotcha on the Worker side) lives in `context/foundation/stryker-notes.md` — read it before changing either config. Reports land at `reports/mutation/mutation.html` (gitignored).
-
-## Project structure notes
-
-- `context/` — the 10x-\* change-tracking structure: `context/changes/` holds in-flight work (research, plans, reviews), `context/archive/` holds completed work, and `context/foundation/` holds living project documents (roadmap, test plan, lessons learned).
-- `test/worker/` — the backend test suite (Vitest + `@cloudflare/vitest-pool-workers`), run via `npm run test:worker`.
-- `src/app/**/*.spec.ts` — Angular component tests (Vitest via `@angular/build:unit-test`), colocated with each component, run via `npm run test:ci`.
-- `e2e/` — Playwright browser-level tests (see "End-to-end tests" above); one scenario per file, `seed.spec.ts` is the exemplar the others follow.
+- [`context/foundation/app-overview.md`](context/foundation/app-overview.md) — pages and admin panel
+- [`context/foundation/admin-panel-notes.md`](context/foundation/admin-panel-notes.md) — deletion cascades and manual cron run mechanics
+- [`context/foundation/ci-and-repo-notes.md`](context/foundation/ci-and-repo-notes.md) — CI / quality gate and repository layout
+- [`context/foundation/stryker-notes.md`](context/foundation/stryker-notes.md) — mutation testing profiles
+- [`context/foundation/test-plan.md`](context/foundation/test-plan.md) — test strategy and rollout
