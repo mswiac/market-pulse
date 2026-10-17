@@ -483,23 +483,20 @@ describe('runFetchPhase result', () => {
     }
   });
 
-  it('treats an empty Yahoo window as ok and leaves the stored row alone', async () => {
+  it('treats an empty Yahoo window as ok and writes nothing', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody([], [])))),
     );
-    const before = await env.DB.prepare('SELECT COUNT(*) AS n FROM price_history').first<{
-      n: number;
-    }>();
 
     const summary = await runFetchPhase(env);
 
     expect(summary.tickers.length).toBeGreaterThan(0);
     expect(summary.tickers.every((t) => t.status === 'ok')).toBe(true);
-    const after = await env.DB.prepare('SELECT COUNT(*) AS n FROM price_history').first<{
-      n: number;
-    }>();
-    expect(after?.n).toBe(before?.n);
+    for (const table of ['price_history', 'market_data']) {
+      const row = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table}`).first<{ n: number }>();
+      expect(row?.n).toBe(0);
+    }
   });
 
   it('marks every ticker ok and reports no errors when the whole run succeeds', async () => {
