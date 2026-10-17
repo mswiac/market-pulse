@@ -1,10 +1,10 @@
 ---
 change_id: instrument-add-fetch-validate
 title: Fetch and validate market data when an instrument is added
-status: impl_reviewed
+status: archived
 created: 2026-10-17
 updated: 2026-10-17
-archived_at: null
+archived_at: 2026-10-17T17:26:23Z
 ---
 
 ## Notes
