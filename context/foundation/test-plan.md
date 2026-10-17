@@ -421,7 +421,10 @@ its rules file):
   credentials fail the admin setup loudly rather than skipping. In CI,
   `e2e.yml` registers `admin@ci.market-pulse.test` (already in the CI
   `ADMIN_EMAILS`). Specs that need a non-admin session (e.g.
-  `admin-gate-redirect.spec.ts`) stay in `e2e/`, not `e2e/admin/`.
+  `admin-gate-redirect.spec.ts`) stay in `e2e/`, not `e2e/admin/`. The Worker
+  must run with `SKIP_INSTRUMENT_VALIDATION=true` for these specs: adding an
+  instrument otherwise fetches Yahoo and rejects the made-up `E2E…` tickers
+  (CI sets it in `e2e.yml`; locally it goes in the Worker's local vars file).
 
 Generation workflow: `/10x-e2e` (PLAN → GENERATE from seed + rules → REVIEW
 against the five anti-patterns → VERIFY by deliberately breaking the

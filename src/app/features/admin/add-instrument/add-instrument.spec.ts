@@ -14,6 +14,7 @@ const CREATED: CreatedInstrument = {
   provider: 'yahoo',
   currency: 'USD',
   suffix: '',
+  currencyCorrectedFrom: null,
 };
 
 async function renderAddInstrument(
@@ -221,6 +222,54 @@ describe('AddInstrument', () => {
     expect(await screen.findByText('Something went wrong. Please try again.')).toBeTruthy();
   });
 
+  it('shows the mapped message for a symbol Yahoo does not know', async () => {
+    const { fixture } = await renderAddInstrument(() =>
+      throwError(() => new HttpErrorResponse({ status: 422, error: { code: 'instrument_symbol_not_found' } })),
+    );
+    const tickerInput = () => screen.getByLabelText('Ticker') as HTMLInputElement;
+    const nameInput = () => screen.getByLabelText('Company name') as HTMLInputElement;
+
+    fireEvent.input(tickerInput(), { target: { value: 'ZZZ' } });
+    fireEvent.input(nameInput(), { target: { value: 'Nope Corp' } });
+    fixture.detectChanges();
+    fireEvent.click(screen.getByRole('button', { name: 'Add instrument' }));
+    fixture.detectChanges();
+
+    expect(await screen.findByText('Yahoo has no data for this symbol. Check the ticker and suffix.')).toBeTruthy();
+  });
+
+  it('shows the retry message when the market data provider is unavailable', async () => {
+    const { fixture } = await renderAddInstrument(() =>
+      throwError(() => new HttpErrorResponse({ status: 502, error: { code: 'instrument_provider_unavailable' } })),
+    );
+    const tickerInput = () => screen.getByLabelText('Ticker') as HTMLInputElement;
+    const nameInput = () => screen.getByLabelText('Company name') as HTMLInputElement;
+
+    fireEvent.input(tickerInput(), { target: { value: 'ABC' } });
+    fireEvent.input(nameInput(), { target: { value: 'Foo Corp' } });
+    fixture.detectChanges();
+    fireEvent.click(screen.getByRole('button', { name: 'Add instrument' }));
+    fixture.detectChanges();
+
+    expect(await screen.findByText('The market data provider is temporarily unavailable. Please try again.')).toBeTruthy();
+  });
+
+  it('tells the admin when Yahoo corrected the entered currency', async () => {
+    const { fixture } = await renderAddInstrument(() => of({ ...CREATED, currency: 'PLN', currencyCorrectedFrom: 'USD' }));
+    const tickerInput = () => screen.getByLabelText('Ticker') as HTMLInputElement;
+    const nameInput = () => screen.getByLabelText('Company name') as HTMLInputElement;
+
+    fireEvent.input(tickerInput(), { target: { value: 'ABC' } });
+    fireEvent.input(nameInput(), { target: { value: 'Foo Corp' } });
+    fixture.detectChanges();
+    fireEvent.click(screen.getByRole('button', { name: 'Add instrument' }));
+    fixture.detectChanges();
+
+    expect(
+      await screen.findByText('Added instrument ABC. Currency corrected from USD to PLN (as reported by Yahoo).'),
+    ).toBeTruthy();
+  });
+
   it('keeps the submit button disabled and ignores a second submit while the create is in flight', async () => {
     const pending = new Subject<CreatedInstrument>();
     const { fixture, component, addInstrument } = await renderAddInstrument(() => pending);
@@ -236,7 +285,8 @@ describe('AddInstrument', () => {
     fireEvent.click(submitButton());
     fixture.detectChanges();
 
-    expect(submitButton().disabled).toBe(true);
+    const busyButton = screen.getByRole('button', { name: 'Checking data…' }) as HTMLButtonElement;
+    expect(busyButton.disabled).toBe(true);
 
     component.onSubmit();
 

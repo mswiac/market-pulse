@@ -42,6 +42,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   instrument_currency_invalid: $localize`:@@addInstrument.error.currencyInvalid:Currency must be a 3-letter code (e.g. USD, PLN).`,
   instrument_rsi_eligible_invalid: $localize`:@@addInstrument.error.rsiEligibleInvalid:Invalid RSI setting. Please try again.`,
   instrument_duplicate_ticker: $localize`:@@addInstrument.error.duplicateTicker:This ticker already exists.`,
+  instrument_symbol_not_found: $localize`:@@addInstrument.error.symbolNotFound:Yahoo has no data for this symbol. Check the ticker and suffix.`,
+  instrument_provider_unavailable: $localize`:@@addInstrument.error.providerUnavailable:The market data provider is temporarily unavailable. Please try again.`,
 };
 
 const GENERIC_ERROR = $localize`:@@addInstrument.error.generic:Something went wrong. Please try again.`;
@@ -160,7 +162,9 @@ export class AddInstrument {
   }
 
   private showResult(result: CreatedInstrument): void {
-    const message = $localize`:@@addInstrument.result.success:Added instrument ${result.ticker}:INTERPOLATION:.`;
+    const message = result.currencyCorrectedFrom
+      ? $localize`:@@addInstrument.result.currencyCorrected:Added instrument ${result.ticker}:TICKER:. Currency corrected from ${result.currencyCorrectedFrom}:FROM: to ${result.currency}:TO: (as reported by Yahoo).`
+      : $localize`:@@addInstrument.result.success:Added instrument ${result.ticker}:INTERPOLATION:.`;
     this.snackBar.open(message, undefined, { duration: SNACKBAR_DURATION_MS });
   }
 

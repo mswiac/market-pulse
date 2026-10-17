@@ -354,9 +354,17 @@
         <source>Add instrument</source>
         <target>Dodaj instrument</target>
       </trans-unit>
+      <trans-unit id="addInstrument.submitting" datatype="html">
+        <source>Checking data…</source>
+        <target>Sprawdzam dane…</target>
+      </trans-unit>
       <trans-unit id="addInstrument.result.success" datatype="html">
         <source>Added instrument <x id="INTERPOLATION" equiv-text="result.ticker"/>.</source>
         <target>Dodano instrument <x id="INTERPOLATION" equiv-text="result.ticker"/>.</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.result.currencyCorrected" datatype="html">
+        <source>Added instrument <x id="TICKER" equiv-text="result.ticker"/>. Currency corrected from <x id="FROM" equiv-text="result.currencyCorrectedFrom"/> to <x id="TO" equiv-text="result.currency"/> (as reported by Yahoo).</source>
+        <target>Dodano instrument <x id="TICKER" equiv-text="result.ticker"/>. Waluta poprawiona z <x id="FROM" equiv-text="result.currencyCorrectedFrom"/> na <x id="TO" equiv-text="result.currency"/> (według Yahoo).</target>
       </trans-unit>
       <trans-unit id="addInstrument.error.forbidden" datatype="html">
         <source>You don&apos;t have permission to do this.</source>
@@ -389,6 +397,14 @@
       <trans-unit id="addInstrument.error.duplicateTicker" datatype="html">
         <source>This ticker already exists.</source>
         <target>Ten ticker już istnieje.</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.error.symbolNotFound" datatype="html">
+        <source>Yahoo has no data for this symbol. Check the ticker and suffix.</source>
+        <target>Yahoo nie ma danych dla tego symbolu. Sprawdź ticker i sufiks.</target>
+      </trans-unit>
+      <trans-unit id="addInstrument.error.providerUnavailable" datatype="html">
+        <source>The market data provider is temporarily unavailable. Please try again.</source>
+        <target>Dostawca danych rynkowych jest chwilowo niedostępny. Spróbuj ponownie.</target>
       </trans-unit>
       <trans-unit id="addInstrument.error.generic" datatype="html">
         <source>Something went wrong. Please try again.</source>

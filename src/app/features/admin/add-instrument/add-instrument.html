@@ -43,8 +43,12 @@
       <span i18n="@@addInstrument.rsiEligible.label">Calculate RSI</span>
     </mat-checkbox>
 
-    <button mat-flat-button color="primary" type="button" [disabled]="!canSubmit()" (click)="onSubmit()" i18n="@@addInstrument.submit">
-      Add instrument
+    <button mat-flat-button color="primary" type="button" [disabled]="!canSubmit()" (click)="onSubmit()">
+      @if (submitting()) {
+        <span i18n="@@addInstrument.submitting">Checking data…</span>
+      } @else {
+        <span i18n="@@addInstrument.submit">Add instrument</span>
+      }
     </button>
   </mat-card>
 </div>

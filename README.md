@@ -117,6 +117,12 @@ other spec is modeled on. They drive the **real running app**. One-time setup:
   `e2e/admin/` specs with it, while all other specs run as the non-admin user.
   Without these variables the admin setup fails with a clear message.
 
+  The admin specs add instruments with made-up `E2E…` tickers. Adding an
+  instrument normally fetches ~300 days from Yahoo and rejects unknown symbols,
+  so the Worker running the e2e needs `SKIP_INSTRUMENT_VALIDATION=true` in its
+  local vars file (CI writes it for you). It turns the add-instrument endpoint
+  back into a plain insert, and it must never be set in production.
+
 `playwright.config.ts` has a `webServer` block, so you don't need to start the
 dev servers yourself — if `:8787` / `:4200` aren't already up, Playwright boots
 them (`reuseExistingServer: true` means it reuses yours when they are).

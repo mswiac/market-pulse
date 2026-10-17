@@ -327,11 +327,11 @@ No migration. Existing instruments are untouched; the skip flag is absent in pro
 
 #### Automated
 
-- [x] 2.1 Worker tests pass: `npm run test:worker`
-- [x] 2.2 Type checking passes: `npm run typecheck`
-- [x] 2.3 Linting passes: `npm run lint`
-- [x] 2.4 The RSI stored at creation equals the history endpoint's newest RSI for the same ticker (parity test)
-- [x] 2.5 A rejected or failed add leaves no rows in `instruments`, `price_history` or `market_data`
+- [x] 2.1 Worker tests pass: `npm run test:worker` — 655f185
+- [x] 2.2 Type checking passes: `npm run typecheck` — 655f185
+- [x] 2.3 Linting passes: `npm run lint` — 655f185
+- [x] 2.4 The RSI stored at creation equals the history endpoint's newest RSI for the same ticker (parity test) — 655f185
+- [x] 2.5 A rejected or failed add leaves no rows in `instruments`, `price_history` or `market_data` — 655f185
 
 #### Manual
 
@@ -342,10 +342,10 @@ No migration. Existing instruments are untouched; the skip flag is absent in pro
 
 #### Automated
 
-- [ ] 3.1 Angular tests pass: `npm run test:ci`
-- [ ] 3.2 Type checking passes: `npm run typecheck`
-- [ ] 3.3 Linting passes: `npm run lint`
-- [ ] 3.4 i18n extraction is clean and `messages.pl.xlf` has a target for every new id: `npm run extract-i18n`
+- [x] 3.1 Angular tests pass: `npm run test:ci`
+- [x] 3.2 Type checking passes: `npm run typecheck`
+- [x] 3.3 Linting passes: `npm run lint`
+- [x] 3.4 i18n extraction is clean and `messages.pl.xlf` has a target for every new id: `npm run extract-i18n`
 - [ ] 3.5 Admin e2e pass locally with the flag set: `npx playwright test --project=chromium-admin`
 
 #### Manual
