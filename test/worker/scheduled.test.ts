@@ -483,6 +483,25 @@ describe('runFetchPhase result', () => {
     }
   });
 
+  it('treats an empty Yahoo window as ok and leaves the stored row alone', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody([], [])))),
+    );
+    const before = await env.DB.prepare('SELECT COUNT(*) AS n FROM price_history').first<{
+      n: number;
+    }>();
+
+    const summary = await runFetchPhase(env);
+
+    expect(summary.tickers.length).toBeGreaterThan(0);
+    expect(summary.tickers.every((t) => t.status === 'ok')).toBe(true);
+    const after = await env.DB.prepare('SELECT COUNT(*) AS n FROM price_history').first<{
+      n: number;
+    }>();
+    expect(after?.n).toBe(before?.n);
+  });
+
   it('marks every ticker ok and reports no errors when the whole run succeeds', async () => {
     vi.stubGlobal(
       'fetch',
@@ -861,6 +880,8 @@ describe('alert-scoped, history-backed fetch phase', () => {
     expect(
       summary.tickers.some((t) => t.error === 'Error: fetch attempt budget exhausted for this run'),
     ).toBe(true);
+    // No ticker may print an empty "last error" suffix.
+    expect(summary.tickers.some((t) => t.error?.includes('last error: undefined'))).toBe(false);
   });
 });
 

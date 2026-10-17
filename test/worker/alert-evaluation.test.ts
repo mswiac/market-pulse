@@ -1129,10 +1129,11 @@ describe('evaluateAlerts grouping', () => {
     });
     await seedMarketData('^NDX', 20, 50);
 
-    await evaluateAlerts(env);
+    const summary = await evaluateAlerts(env);
 
     expect((await getAlert(near)).armed).toBe(1);
     expect((await getAlert(far)).armed).toBe(0);
+    expect(summary.errors).toEqual([]);
   });
 });
 
