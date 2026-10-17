@@ -97,9 +97,9 @@ No migration. Deploy is required for Cloudflare to re-register the triggers (`np
 
 #### Automated
 
-- [x] 1.1 Worker tests pass
-- [x] 1.2 Type checking passes
-- [x] 1.3 Linting passes
+- [x] 1.1 Worker tests pass — bd9b80a
+- [x] 1.2 Type checking passes — bd9b80a
+- [x] 1.3 Linting passes — bd9b80a
 
 #### Manual
 

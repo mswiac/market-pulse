@@ -1,7 +1,7 @@
 ---
 change_id: cron-mon-fri
 title: Fix cron triggers running Sunday-Thursday instead of Monday-Friday
-status: implementing
+status: impl_reviewed
 created: 2026-10-17
 updated: 2026-10-17
 archived_at: null
