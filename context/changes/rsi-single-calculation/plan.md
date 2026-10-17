@@ -179,17 +179,17 @@ No schema change. Stored `market_data.rsi` values are corrected by the next refr
 
 #### Manual
 
-- [x] 1.6 History page and dashboard show the same RSI for TSM, near 34.2
+- [x] 1.6 History page and dashboard show the same RSI for TSM, near 34.2 — 020f8e5
 
 ### Phase 2: Refresh and cron write the same RSI
 
 #### Automated
 
-- [x] 2.1 Parity test: market_data.rsi equals the newest /history RSI and the dashboard RSI
-- [x] 2.2 Regression test for the TSM-style case passes
-- [x] 2.3 Existing scheduled, alerts and admin tests pass
-- [x] 2.4 Type checking passes
-- [x] 2.5 Linting passes
+- [x] 2.1 Parity test: market_data.rsi equals the newest /history RSI and the dashboard RSI — 020f8e5
+- [x] 2.2 Regression test for the TSM-style case passes — 020f8e5
+- [x] 2.3 Existing scheduled, alerts and admin tests pass — 020f8e5
+- [x] 2.4 Type checking passes — 020f8e5
+- [x] 2.5 Linting passes — 020f8e5
 
 #### Manual
 
