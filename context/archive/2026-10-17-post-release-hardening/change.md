@@ -1,10 +1,10 @@
 ---
 change_id: post-release-hardening
 title: Post-release hardening: mutation sweep, e2e assertion, docs
-status: impl_reviewed
+status: archived
 created: 2026-10-17
-updated: 2026-10-17
-archived_at: null
+updated: 2026-10-18
+archived_at: 2026-10-17T22:24:13Z
 ---
 
 ## Notes
