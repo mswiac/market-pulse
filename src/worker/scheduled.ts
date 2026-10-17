@@ -36,9 +36,9 @@ export async function runFetchPhase(
 // handling is needed. Evaluation runs once, a few minutes after the last
 // fetch, in its own invocation; Cloudflare gives no ordering guarantee between
 // invocations, which is why evaluateAlerts checks market_data freshness itself.
-export const PL_FETCH_CRON = '30 16 * * 1-5';
-export const US_FETCH_CRON = '0 23 * * 1-5';
-export const EVALUATE_CRON = '15 23 * * 1-5';
+export const PL_FETCH_CRON = '30 16 * * MON-FRI';
+export const US_FETCH_CRON = '0 23 * * MON-FRI';
+export const EVALUATE_CRON = '15 23 * * MON-FRI';
 
 export const FETCH_CRON_TYPES: Record<string, string[]> = {
   [PL_FETCH_CRON]: [...MARKET_TYPES.pl],

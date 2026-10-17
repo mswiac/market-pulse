@@ -1028,6 +1028,13 @@ describe('cron expressions', () => {
 
     expect(declared).toEqual([PL_FETCH_CRON, US_FETCH_CRON, EVALUATE_CRON]);
   });
+
+  // Cloudflare numbers weekdays from Sunday, so `1-5` means SUN-THU.
+  it('run on named weekdays, not on numeric day ranges', () => {
+    for (const cron of [PL_FETCH_CRON, US_FETCH_CRON, EVALUATE_CRON]) {
+      expect(cron.split(' ')[4]).toBe('MON-FRI');
+    }
+  });
 });
 
 describe('cron routing', () => {
