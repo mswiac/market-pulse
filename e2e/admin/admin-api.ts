@@ -6,6 +6,7 @@
 // sets a session cookie, which would otherwise replace the admin session in the
 // page's own context.
 
+import { execFileSync } from 'node:child_process';
 import { expect, type APIRequestContext, type Playwright } from '@playwright/test';
 
 export function uniqueSuffix(): string {
@@ -20,18 +21,17 @@ export function instrumentName(ticker: string): string {
   return `E2E Instrument ${ticker}`;
 }
 
-export async function createInstrument(request: APIRequestContext, ticker: string): Promise<void> {
-  const res = await request.post('/api/admin/instruments', {
-    data: {
-      type: 'us_stock',
-      ticker,
-      name: instrumentName(ticker),
-      currency: 'USD',
-      rsiEligible: false,
-      suffix: '',
-    },
+// Seeds straight into the local D1 file the e2e worker serves, because POST
+// /api/admin/instruments asks Yahoo about the symbol and the made-up E2E…
+// tickers would be rejected (and e2e must not call Yahoo). The ticker comes
+// from uniqueTicker(), so it is plain A-Z0-9 and safe to inline into SQL.
+export function createInstrument(ticker: string): void {
+  const sql =
+    `INSERT INTO instruments (ticker, name, type, rsi_eligible, provider, currency, suffix) ` +
+    `VALUES ('${ticker}', '${instrumentName(ticker)}', 'us_stock', 0, 'yahoo', 'USD', '')`;
+  execFileSync('npx', ['wrangler', 'd1', 'execute', 'marketpulse-db', '--local', '--command', sql], {
+    stdio: 'pipe',
   });
-  expect(res.status()).toBe(201);
 }
 
 export async function deleteInstrument(request: APIRequestContext, ticker: string): Promise<void> {

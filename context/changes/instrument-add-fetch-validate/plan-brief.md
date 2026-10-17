@@ -25,7 +25,7 @@ Adding a real instrument stores about 200 sessions and a `market_data` row with 
 | Currency mismatch | Store Yahoo's currency and tell the admin | Consistent with "Yahoo wins"; user confirmed | Frame + Plan |
 | Yahoo outage on add | Refuse and ask to retry (502) | Never create an unvalidated instrument | Plan |
 | Waiting feedback | Button text "Checking data…" | Adds a few seconds to the request | Plan |
-| E2E | Worker flag `SKIP_INSTRUMENT_VALIDATION` set only in CI / local worker vars | E2E cannot stub the worker's own Yahoo calls | Plan |
+| E2E | Browser-mocked add response + instruments seeded directly into local D1 (no worker flag) | E2E must not call Yahoo and the worker's own Yahoo calls cannot be stubbed from the browser | Plan (revised in Phase 3) |
 | RSI definition | Extract a shared `rsiFromCloses` used by cron and seed | Keeps one RSI definition (#211) | Plan |
 
 ## Scope
@@ -44,14 +44,13 @@ Adding a real instrument stores about 200 sessions and a `market_data` row with 
 | --- | --- | --- |
 | 1. Failure kinds | `not_found` vs `provider` on the fetch error, incl. wrapped network errors | Misclassifying an ambiguous Yahoo response |
 | 2. Seed path and endpoint | Atomic create with history, RSI and currency rule; new codes; tests | The RSI trigger and batch order; existing add tests need a Yahoo stub |
-| 3. Form, e2e, docs | Messages, button label, translations, CI flag, docs | Local e2e fails until the developer adds the flag to their worker vars |
+| 3. Form, e2e, docs | Messages, button label, translations, browser-mocked add spec, D1-seeded e2e instruments, docs | Seeding via `wrangler d1 execute` needs a migrated local D1 and adds a few seconds per test |
 
 **Prerequisites:** #211 merged (done). **Estimated effort:** ~3 sessions across 3 phases; no migration.
 
 ## Open Risks & Assumptions
 
 - The not-found signal rests on an unofficial endpoint (HTTP 404 / `Not Found`); an all-null series is treated as not-found.
-- The skip flag must never be set in production.
 - CPU of the add request is unmeasured; check Observability after deploy.
 
 ## Success Criteria (Summary)

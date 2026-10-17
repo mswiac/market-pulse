@@ -97,10 +97,9 @@ shows the new states and CI/e2e are adapted. No migration.
   must be `null` for `rsiEligible = false`. The duplicate-ticker check runs
   before the Yahoo call so a duplicate costs no subrequest; the batch still
   maps a `UNIQUE` error to 409 for the concurrent-create race.
-- **Timing & lifecycle** — the validation skip flag
-  (`SKIP_INSTRUMENT_VALIDATION=true`) turns the endpoint back into today's
-  plain insert. It must never be set in production; it lives only in the CI
-  worker vars and the developer's local worker vars file.
+- **Timing & lifecycle** — e2e never calls Yahoo and there is no validation
+  skip switch: the add-instrument spec mocks the endpoint response in the
+  browser and other admin specs seed instruments straight into the local D1.
 
 ## Phase 1: Fetch layer tells failure kinds apart
 
@@ -187,7 +186,7 @@ keeping one RSI definition and one currency rule.
 
 **Intent**: Use the seed function after the existing body validation and a duplicate pre-check, and map outcomes to responses.
 
-**Contract**: duplicate ticker -> 409 `instrument_duplicate_ticker` before any Yahoo call (batch `UNIQUE` error still maps to 409). `symbol_not_found` -> 422 `instrument_symbol_not_found`; `provider_unavailable` -> 502 `instrument_provider_unavailable`. 201 body is the existing instrument shape plus `currencyCorrectedFrom: string | null`. When `env.SKIP_INSTRUMENT_VALIDATION === 'true'` the route performs today's plain insert (response gets `currencyCorrectedFrom: null`). `Env` in `src/worker/index.ts` gains optional `SKIP_INSTRUMENT_VALIDATION?: string`.
+**Contract**: duplicate ticker -> 409 `instrument_duplicate_ticker` before any Yahoo call (batch `UNIQUE` error still maps to 409). `symbol_not_found` -> 422 `instrument_symbol_not_found`; `provider_unavailable` -> 502 `instrument_provider_unavailable`. 201 body is the existing instrument shape plus `currencyCorrectedFrom: string | null`.
 
 #### 4. Tests
 
@@ -252,9 +251,9 @@ Show the new outcomes in the add form and keep e2e independent of live Yahoo.
 
 **Files**: `.github/workflows/e2e.yml`, `README.md` (e2e / local worker section), `context/foundation/test-plan.md` only if it lists e2e prerequisites
 
-**Intent**: Run e2e with validation skipped, document the flag, and state that it must not be set in production.
+**Intent**: Keep e2e independent of Yahoo without any production switch, and document how.
 
-**Contract**: add `SKIP_INSTRUMENT_VALIDATION=true` to the CI worker vars written in `e2e.yml`; document that a developer running e2e locally must add the same line to their local worker vars file (the pre-push hook runs e2e). The e2e specs themselves keep their `E2E…` tickers and need no change.
+**Contract**: `e2e/admin/add-instrument.spec.ts` mocks `POST /api/admin/instruments` with `page.route` and asserts the request payload and each outcome message (success, currency correction, 422, 502, in-flight button). `createInstrument` in `e2e/admin/admin-api.ts` inserts a made-up `E2E…` instrument directly into the local D1 via `wrangler d1 execute --local`, used by `remove-instrument.spec.ts`. README and test-plan describe this. No worker flag, no CI or local vars change.
 
 ### Success Criteria:
 
@@ -264,14 +263,13 @@ Show the new outcomes in the add form and keep e2e independent of live Yahoo.
 - Type checking passes: `npm run typecheck`
 - Linting passes: `npm run lint`
 - i18n extraction is clean and `messages.pl.xlf` has a target for every new id: `npm run extract-i18n`
-- Admin e2e pass locally with the flag set: `npx playwright test --project=chromium-admin`
+- Admin e2e pass locally: `npx playwright test --project=chromium-admin`
 
 #### Manual Verification:
 
 - The add form shows "Checking data…" on the button while a real add is running
 - An unknown symbol shows the not-found message and a simulated Yahoo outage shows the retry message
 - Adding a PL stock with the wrong currency shows the corrected-currency notice and stores Yahoo's currency
-- Local worker vars file has `SKIP_INSTRUMENT_VALIDATION=true` before running e2e locally
 - After `npm run deploy`, adding a real instrument in production seeds history and RSI (no migration needed)
 
 ---
@@ -284,7 +282,7 @@ Show the new outcomes in the add form and keep e2e independent of live Yahoo.
 
 ### Integration Tests:
 
-- Worker route tests with a stubbed Yahoo `fetch` against the test D1; e2e with the skip flag so they never depend on live Yahoo.
+- Worker route tests with a stubbed Yahoo `fetch` against the test D1; e2e mock the add response in the browser and seed instruments into the local D1, so they never depend on live Yahoo.
 
 ### Manual Testing Steps:
 
@@ -321,7 +319,7 @@ No migration. Existing instruments are untouched; the skip flag is absent in pro
 
 #### Manual
 
-- [ ] 1.5 Cron and backfill behavior is unchanged (existing `scheduled` and `admin` tests still pass without edits)
+- [x] 1.5 Cron and backfill behavior is unchanged (existing `scheduled` and `admin` tests still pass without edits)
 
 ### Phase 2: Seed path and endpoint
 
@@ -335,23 +333,22 @@ No migration. Existing instruments are untouched; the skip flag is absent in pro
 
 #### Manual
 
-- [ ] 2.6 Locally, adding a real ticker stores about 200 history rows and the same RSI on the dashboard and the instrument history page
-- [ ] 2.7 Locally, adding a made-up symbol is rejected and nothing is stored
+- [x] 2.6 Locally, adding a real ticker stores about 200 history rows and the same RSI on the dashboard and the instrument history page
+- [x] 2.7 Locally, adding a made-up symbol is rejected and nothing is stored
 
 ### Phase 3: Form states, e2e and docs
 
 #### Automated
 
-- [x] 3.1 Angular tests pass: `npm run test:ci`
-- [x] 3.2 Type checking passes: `npm run typecheck`
-- [x] 3.3 Linting passes: `npm run lint`
-- [x] 3.4 i18n extraction is clean and `messages.pl.xlf` has a target for every new id: `npm run extract-i18n`
-- [ ] 3.5 Admin e2e pass locally with the flag set: `npx playwright test --project=chromium-admin`
+- [x] 3.1 Angular tests pass: `npm run test:ci` — ad77a81
+- [x] 3.2 Type checking passes: `npm run typecheck` — ad77a81
+- [x] 3.3 Linting passes: `npm run lint` — ad77a81
+- [x] 3.4 i18n extraction is clean and `messages.pl.xlf` has a target for every new id: `npm run extract-i18n` — ad77a81
+- [x] 3.5 Admin e2e pass locally: `npx playwright test --project=chromium-admin`
 
 #### Manual
 
-- [ ] 3.6 The add form shows "Checking data…" on the button while a real add is running
-- [ ] 3.7 An unknown symbol shows the not-found message and a simulated Yahoo outage shows the retry message
-- [ ] 3.8 Adding a PL stock with the wrong currency shows the corrected-currency notice and stores Yahoo's currency
-- [ ] 3.9 Local worker vars file has `SKIP_INSTRUMENT_VALIDATION=true` before running e2e locally
-- [ ] 3.10 After `npm run deploy`, adding a real instrument in production seeds history and RSI (no migration needed)
+- [x] 3.6 The add form shows "Checking data…" on the button while a real add is running
+- [x] 3.7 An unknown symbol shows the not-found message and a simulated Yahoo outage shows the retry message
+- [x] 3.8 Adding a PL stock with the wrong currency shows the corrected-currency notice and stores Yahoo's currency
+- [ ] 3.9 After `npm run deploy`, adding a real instrument in production seeds history and RSI (no migration needed)

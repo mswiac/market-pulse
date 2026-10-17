@@ -901,24 +901,6 @@ describe('POST /api/admin/instruments', () => {
     expect(response.status).toBe(409);
     expect(fetchMock).not.toHaveBeenCalled();
   });
-
-  it('skips the Yahoo fetch and inserts only the instrument when SKIP_INSTRUMENT_VALIDATION is true', async () => {
-    const cookie = await logInAsAdmin();
-    const fetchMock = stubYahooSeries();
-    const mutableEnv = env as { SKIP_INSTRUMENT_VALIDATION?: string };
-    const previous = mutableEnv.SKIP_INSTRUMENT_VALIDATION;
-    mutableEnv.SKIP_INSTRUMENT_VALIDATION = 'true';
-    try {
-      const response = await addInstrument(cookie, validNewInstrument({ ticker: 'TEST.SKIP' }));
-
-      expect(response.status).toBe(201);
-      expect(((await response.json()) as { currencyCorrectedFrom: string | null }).currencyCorrectedFrom).toBeNull();
-    } finally {
-      mutableEnv.SKIP_INSTRUMENT_VALIDATION = previous;
-    }
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(await countRows('TEST.SKIP')).toEqual({ instruments: 1, history: 0, market: 0 });
-  });
 });
 
 describe('GET /api/admin/instruments/:ticker/impact', () => {

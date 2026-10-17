@@ -80,7 +80,6 @@ jobs:
         run: |
           cat > .dev.vars <<'EOF'
           ADMIN_EMAILS=admin@ci.market-pulse.test
-          SKIP_INSTRUMENT_VALIDATION=true
           PASSWORD_PEPPER=ci-only-not-a-real-pepper
           RESEND_API_KEY=dummy-ci-key
           RESEND_VERIFIED_EMAIL=noreply@ci.market-pulse.test

@@ -6,7 +6,7 @@
 // e2e/admin/admin-gate-pass.spec.ts and e2e/delete-alert.spec.ts.
 //
 // Nothing is mocked: UI → GET .../impact → dialog → DELETE → local D1. Each test
-// creates its own run-unique instrument through the admin API and afterEach
+// seeds its own run-unique instrument into the local D1 and afterEach
 // deletes it (a 404 after a successful UI delete is fine).
 //
 // Runs only in the `chromium-admin` project. The dev server runs the
@@ -23,9 +23,9 @@ import {
 
 let ticker: string;
 
-test.beforeEach(async ({ request }) => {
+test.beforeEach(() => {
   ticker = uniqueTicker();
-  await createInstrument(request, ticker);
+  createInstrument(ticker);
 });
 
 test.afterEach(async ({ request }) => {

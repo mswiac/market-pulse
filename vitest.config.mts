@@ -17,9 +17,6 @@ export default defineConfig(async () => {
             RESEND_API_KEY: "test-resend-api-key",
             RESEND_VERIFIED_EMAIL: "verified@example.com",
             ADMIN_EMAILS: "admin@example.com,admin2@example.com",
-            // Pinned so a developer's local worker vars (which enable the skip
-            // for e2e) cannot switch Yahoo validation off in these tests.
-            SKIP_INSTRUMENT_VALIDATION: "false",
           },
         },
       }),

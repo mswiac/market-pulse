@@ -173,16 +173,6 @@ async function parseInstrumentBody(c: { req: { json: () => Promise<unknown> } })
 // Yahoo already covers GPW equities via a `.WA` ticker suffix instead).
 const PROVIDER = 'yahoo';
 
-interface InsertedInstrumentRow {
-  ticker: string;
-  name: string;
-  type: string;
-  rsiEligible: number;
-  provider: string;
-  currency: string;
-  suffix: string;
-}
-
 adminRoutes.post('/instruments', async (c) => {
   const body = await parseInstrumentBody(c);
   if (!body) {
@@ -223,18 +213,6 @@ adminRoutes.post('/instruments', async (c) => {
   const suffix = typeof body.suffix === 'string' ? body.suffix.trim() : '';
 
   try {
-    if (c.env.SKIP_INSTRUMENT_VALIDATION === 'true') {
-      const row = await c.env.DB.prepare(
-        `INSERT INTO instruments (ticker, name, type, rsi_eligible, provider, currency, suffix)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
-         RETURNING ticker, name, type, rsi_eligible AS rsiEligible, provider, currency, suffix`,
-      )
-        .bind(ticker, name, type, rsiEligible ? 1 : 0, PROVIDER, currency, suffix)
-        .first<InsertedInstrumentRow>();
-
-      return c.json({ ...row, rsiEligible: !!row!.rsiEligible, currencyCorrectedFrom: null }, 201);
-    }
-
     // Checked before the Yahoo call so a duplicate costs no subrequest; the
     // UNIQUE handler below still covers two concurrent creates.
     const existing = await c.env.DB.prepare('SELECT 1 FROM instruments WHERE ticker = ?').bind(ticker).first();

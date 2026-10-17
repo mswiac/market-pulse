@@ -422,9 +422,11 @@ its rules file):
   `e2e.yml` registers `admin@ci.market-pulse.test` (already in the CI
   `ADMIN_EMAILS`). Specs that need a non-admin session (e.g.
   `admin-gate-redirect.spec.ts`) stay in `e2e/`, not `e2e/admin/`. The Worker
-  must run with `SKIP_INSTRUMENT_VALIDATION=true` for these specs: adding an
-  instrument otherwise fetches Yahoo and rejects the made-up `E2E…` tickers
-  (CI sets it in `e2e.yml`; locally it goes in the Worker's local vars file).
+  never calls Yahoo from these specs: `add-instrument.spec.ts` mocks the
+  `POST /api/admin/instruments` response in the browser, and specs that need an
+  existing instrument seed a made-up `E2E…` ticker straight into the local D1
+  (`createInstrument` in `e2e/admin/admin-api.ts`), because the real endpoint
+  would reject it.
 
 Generation workflow: `/10x-e2e` (PLAN → GENERATE from seed + rules → REVIEW
 against the five anti-patterns → VERIFY by deliberately breaking the
