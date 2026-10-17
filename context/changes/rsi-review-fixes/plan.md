@@ -180,11 +180,11 @@ Make `/history` use the shared loader, add the index behind the floor subquery, 
 
 #### Automated
 
-- [x] 1.1 fullWindow refresh stores the long-series RSI equal to the history endpoint
-- [x] 1.2 Loader failure reports an error for RSI tickers, leaves their market_data unchanged and still refreshes non-RSI tickers
-- [x] 1.3 Existing scheduled, alerts and admin tests pass
-- [x] 1.4 Type checking passes
-- [x] 1.5 Linting passes
+- [x] 1.1 fullWindow refresh stores the long-series RSI equal to the history endpoint — e0647dc
+- [x] 1.2 Loader failure reports an error for RSI tickers, leaves their market_data unchanged and still refreshes non-RSI tickers — e0647dc
+- [x] 1.3 Existing scheduled, alerts and admin tests pass — e0647dc
+- [x] 1.4 Type checking passes — e0647dc
+- [x] 1.5 Linting passes — e0647dc
 
 #### Manual
 
@@ -194,11 +194,11 @@ Make `/history` use the shared loader, add the index behind the floor subquery, 
 
 #### Automated
 
-- [ ] 2.1 Chunking, floor boundary and history vs latest parity tests pass
-- [ ] 2.2 Migration 0017 applies cleanly to a fresh local database
-- [ ] 2.3 Existing worker tests pass
-- [ ] 2.4 Type checking passes
-- [ ] 2.5 Linting passes
+- [x] 2.1 Chunking, floor boundary and history vs latest parity tests pass
+- [x] 2.2 Migration 0017 applies cleanly to a fresh local database
+- [x] 2.3 Existing worker tests pass
+- [x] 2.4 Type checking passes
+- [x] 2.5 Linting passes
 
 #### Manual
 
