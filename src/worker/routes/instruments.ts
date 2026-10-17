@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../index';
 import type { InstrumentRow } from '../lib/instruments';
 import { sessionMiddleware } from '../lib/session';
-import { buildHistory, LOOKBACK_DAYS, type PriceRow } from '../lib/price-history';
+import { buildHistory, loadRecentPriceRows, RSI_INPUT_SESSIONS, type PriceRow } from '../lib/price-history';
 
 type Variables = { userId: number };
 
@@ -37,29 +37,7 @@ instrumentsRoutes.get('/latest', async (c) => {
     'SELECT ticker, name, type, currency, rsi_eligible AS rsiEligible FROM instruments',
   ).all<{ ticker: string; name: string; type: string; currency: string; rsiEligible: number }>();
 
-  // One query for every ticker (a per-instrument loop would burn the Workers
-  // Free subrequest budget): the newest LOOKBACK_DAYS rows per ticker. The date
-  // floor (LOOKBACK_DAYS trading days fit well inside 70 calendar days) keeps the
-  // window function from scanning the whole table; an instrument whose last close
-  // is older than the floor shows no data.
-  const { results: rows } = await c.env.DB.prepare(
-    `SELECT ticker, date, close, high, low FROM (
-       SELECT ticker, date, close, high, low,
-              ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY date DESC) AS rn
-       FROM price_history
-       WHERE date >= (SELECT date(MAX(date), '-70 days') FROM price_history)
-     ) WHERE rn <= ?
-     ORDER BY ticker, date DESC`,
-  )
-    .bind(LOOKBACK_DAYS)
-    .all<PriceRow & { ticker: string }>();
-
-  const byTicker = new Map<string, PriceRow[]>();
-  for (const { ticker, ...row } of rows) {
-    const list = byTicker.get(ticker);
-    if (list) list.push(row);
-    else byTicker.set(ticker, [row]);
-  }
+  const byTicker = await loadRecentPriceRows(c.env.DB, null);
 
   const latest = instruments.map((instrument) => {
     const rsiEligible = !!instrument.rsiEligible;
@@ -95,7 +73,7 @@ instrumentsRoutes.get('/:ticker/history', async (c) => {
   const { results } = await c.env.DB.prepare(
     'SELECT date, close, high, low FROM price_history WHERE ticker = ? ORDER BY date DESC LIMIT ?',
   )
-    .bind(ticker, LOOKBACK_DAYS)
+    .bind(ticker, RSI_INPUT_SESSIONS)
     .all<PriceRow>();
 
   const rsiEligible = !!instrument.rsi_eligible;

@@ -140,8 +140,8 @@ describe('instrument history endpoint', () => {
 
   it('returns rsiEligible: true, currency: USD, and populates rsi once enough lookback exists for ^NDX', async () => {
     const cookie = await registerAndLogIn('history-ndx-full@example.com');
-    // Exactly 30 (display) + 14 (lookback) closes — every displayed day has enough history for RSI.
-    const closes = Array.from({ length: 44 }, (_, i) => 4000 + i);
+    // Exactly 30 (display) + 150 (warm-up) closes — every displayed day has a converged RSI.
+    const closes = Array.from({ length: 180 }, (_, i) => 4000 + i);
     const highs = closes.map((c) => c + 10);
     const lows = closes.map((c) => c - 10);
     await seedPriceHistory('^NDX', closes, highs, lows);
@@ -168,9 +168,9 @@ describe('instrument history endpoint', () => {
     expect(lastDay.low).toBe(lastDay.close - 10);
   });
 
-  it('caps history at 30 entries even when more than 44 rows of price_history exist', async () => {
+  it('caps history at 30 entries even when more than 180 rows of price_history exist', async () => {
     const cookie = await registerAndLogIn('history-ndx-overflow@example.com');
-    await seedPriceHistory('^NDX', Array.from({ length: 60 }, (_, i) => 4000 + i));
+    await seedPriceHistory('^NDX', Array.from({ length: 200 }, (_, i) => 4000 + i));
 
     const response = await getHistory('^NDX', cookie);
     const body = (await response.json()) as { history: unknown[] };
@@ -179,7 +179,7 @@ describe('instrument history endpoint', () => {
 
   it('returns fewer than 30 entries with a partial rsi ramp-up when less history exists', async () => {
     const cookie = await registerAndLogIn('history-ndx-partial@example.com');
-    // Mirrors current production reality: ~22 days of history, well short of the 44-day full lookback.
+    // Mirrors current production reality: ~22 days of history, well short of the 180-session full input.
     await seedPriceHistory('^NDX', Array.from({ length: 22 }, (_, i) => 4000 + i));
 
     const response = await getHistory('^NDX', cookie);
@@ -248,7 +248,7 @@ describe('latest instruments endpoint', () => {
 
   it('matches the newest entry of the history endpoint, including rsi', async () => {
     const cookie = await registerAndLogIn('latest-parity@example.com');
-    await seedPriceHistory('^NDX', Array.from({ length: 60 }, (_, i) => 4000 + (i % 7) * 13 + i));
+    await seedPriceHistory('^NDX', Array.from({ length: 200 }, (_, i) => 4000 + (i % 7) * 13 + i));
 
     const latest = ((await (await getLatest(cookie)).json()) as Latest[]).find((row) => row.ticker === '^NDX')!;
     const history = (await (await getHistory('^NDX', cookie)).json()) as {
@@ -263,7 +263,7 @@ describe('latest instruments endpoint', () => {
   it('shows no data for an instrument whose last close is older than the scan floor', async () => {
     const cookie = await registerAndLogIn('latest-stale@example.com');
     await seedPriceHistory('^NDX', [4000, 4010]);
-    await env.DB.prepare('INSERT INTO price_history (ticker, date, close) VALUES (?, ?, ?)').bind('^VIX', '2019-06-01', 20).run();
+    await env.DB.prepare('INSERT INTO price_history (ticker, date, close) VALUES (?, ?, ?)').bind('^VIX', '2019-01-01', 20).run();
 
     const body = (await (await getLatest(cookie)).json()) as Latest[];
     expect(body.find((row) => row.ticker === '^NDX')!.close).toBe(4010);
