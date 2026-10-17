@@ -6,6 +6,7 @@ What the MarketPulse UI offers to users and admins. For local setup and deployme
 
 - **Dashboard** (`/`, the landing page after login) — one row per instrument from its latest close (date, close, high, low, RSI), filterable by type and instrument and sortable by column. Backed by `GET /api/instruments/latest`.
 - **Alerts** (`/alerts`) — the user's alerts with filters, and the "New alert" action. Each alert has a Pause / Resume button: a paused alert shows a "Paused" status and is skipped entirely by the daily cron (no emails, no re-arm) until it is resumed. Editing an alert never changes its paused state.
+  Alerts that fire together for one user on one instrument (same type, direction and notification email) are sent as one email naming the deepest crossed threshold; the trigger history still keeps one row per alert.
 - **History** — triggered alerts (`/history/triggers`) and per-instrument price history (`/history`).
 
 ## Admin panel

@@ -116,21 +116,21 @@ Test-only change; the mutation run itself is the verification. Deliberate-break 
 
 #### Automated
 
-- [x] 1.1 Worker tests pass
-- [x] 1.2 Typecheck passes
-- [x] 1.3 Lint passes
-- [x] 1.4 Stryker re-run shows no unexplained survivors in grouping, deepest-threshold or failure-handling logic
+- [x] 1.1 Worker tests pass — 97410a6
+- [x] 1.2 Typecheck passes — 97410a6
+- [x] 1.3 Lint passes — 97410a6
+- [x] 1.4 Stryker re-run shows no unexplained survivors in grouping, deepest-threshold or failure-handling logic — 97410a6
 
 #### Manual
 
-- [x] 1.5 Survivor triage list reviewed
+- [x] 1.5 Survivor triage list reviewed — 97410a6
 
 ### Phase 2: Documentation
 
 #### Automated
 
-- [ ] 2.1 Lint passes
+- [x] 2.1 Lint passes
 
 #### Manual
 
-- [ ] 2.2 Docs read correctly and match the shipped behaviour
+- [x] 2.2 Docs read correctly and match the shipped behaviour
