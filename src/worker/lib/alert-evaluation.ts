@@ -140,13 +140,14 @@ interface PendingSend {
 
 // The alert whose threshold was crossed furthest: the lowest for "down", the
 // highest for "up". Ties are interchangeable (the email is identical).
-function deepestAlert(alerts: AlertEvalRow[]): AlertEvalRow {
-  return alerts.reduce((deepest, alert) => {
+function deepestAlert(items: FiringAlert[]): FiringAlert {
+  return items.reduce((deepest, item) => {
+    const { direction, threshold } = item.alert;
     const deeper =
-      alert.direction === 'down'
-        ? alert.threshold < deepest.threshold
-        : alert.threshold > deepest.threshold;
-    return deeper ? alert : deepest;
+      direction === 'down'
+        ? threshold < deepest.alert.threshold
+        : threshold > deepest.alert.threshold;
+    return deeper ? item : deepest;
   });
 }
 
@@ -160,10 +161,8 @@ function groupFiringAlerts(firing: FiringAlert[]): PendingSend[] {
     else groups.set(key, [item]);
   }
   return [...groups.values()].map((items) => {
-    const alerts = items.map((item) => item.alert);
-    const representative = deepestAlert(alerts);
-    const { value, input } = items.find((item) => item.alert === representative) ?? items[0];
-    return { alerts, value, input };
+    const { value, input } = deepestAlert(items);
+    return { alerts: items.map((item) => item.alert), value, input };
   });
 }
 
