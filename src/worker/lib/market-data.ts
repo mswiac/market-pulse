@@ -165,8 +165,15 @@ export function buildCurrencyCorrection(
   storedCurrency: string,
   fetchedCurrency: string | null,
 ): D1PreparedStatement | null {
-  if (!fetchedCurrency || !CURRENCY_PATTERN.test(fetchedCurrency) || fetchedCurrency === storedCurrency) return null;
-  return db.prepare('UPDATE instruments SET currency = ? WHERE ticker = ?').bind(fetchedCurrency, ticker);
+  const resolved = resolveCurrency(storedCurrency, fetchedCurrency);
+  if (resolved === storedCurrency) return null;
+  return db.prepare('UPDATE instruments SET currency = ? WHERE ticker = ?').bind(resolved, ticker);
+}
+
+// The single currency rule: Yahoo's code wins when it is well-formed, else the
+// entered/stored one stays.
+export function resolveCurrency(enteredCurrency: string, fetchedCurrency: string | null): string {
+  return fetchedCurrency && CURRENCY_PATTERN.test(fetchedCurrency) ? fetchedCurrency : enteredCurrency;
 }
 
 // Pure statement-building — no db.batch() call here, so this stays testable

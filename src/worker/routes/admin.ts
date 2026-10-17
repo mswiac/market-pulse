@@ -6,6 +6,7 @@ import { sessionMiddleware } from '../lib/session';
 import { evaluateAlerts } from '../lib/alert-evaluation';
 import { MARKET_TYPES, type Market } from '../lib/instruments';
 import { runFetchPhase, type CronRunSummary } from '../scheduled';
+import { seedInstrument } from '../lib/instrument-seed';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_RANGE_DAYS = 730;
@@ -222,15 +223,33 @@ adminRoutes.post('/instruments', async (c) => {
   const suffix = typeof body.suffix === 'string' ? body.suffix.trim() : '';
 
   try {
-    const row = await c.env.DB.prepare(
-      `INSERT INTO instruments (ticker, name, type, rsi_eligible, provider, currency, suffix)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
-       RETURNING ticker, name, type, rsi_eligible AS rsiEligible, provider, currency, suffix`,
-    )
-      .bind(ticker, name, type, rsiEligible ? 1 : 0, PROVIDER, currency, suffix)
-      .first<InsertedInstrumentRow>();
+    if (c.env.SKIP_INSTRUMENT_VALIDATION === 'true') {
+      const row = await c.env.DB.prepare(
+        `INSERT INTO instruments (ticker, name, type, rsi_eligible, provider, currency, suffix)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         RETURNING ticker, name, type, rsi_eligible AS rsiEligible, provider, currency, suffix`,
+      )
+        .bind(ticker, name, type, rsiEligible ? 1 : 0, PROVIDER, currency, suffix)
+        .first<InsertedInstrumentRow>();
 
-    return c.json({ ...row, rsiEligible: !!row!.rsiEligible }, 201);
+      return c.json({ ...row, rsiEligible: !!row!.rsiEligible, currencyCorrectedFrom: null }, 201);
+    }
+
+    // Checked before the Yahoo call so a duplicate costs no subrequest; the
+    // UNIQUE handler below still covers two concurrent creates.
+    const existing = await c.env.DB.prepare('SELECT 1 FROM instruments WHERE ticker = ?').bind(ticker).first();
+    if (existing) {
+      return c.json({ error: 'instrument already exists', code: 'instrument_duplicate_ticker' }, 409);
+    }
+
+    const seeded = await seedInstrument(c.env, { ticker, name, type, rsiEligible, provider: PROVIDER, currency, suffix });
+    if (!seeded.ok) {
+      return seeded.reason === 'symbol_not_found'
+        ? c.json({ error: 'Yahoo has no data for this symbol', code: 'instrument_symbol_not_found' }, 422)
+        : c.json({ error: 'market data provider is unavailable', code: 'instrument_provider_unavailable' }, 502);
+    }
+
+    return c.json({ ...seeded.instrument, currencyCorrectedFrom: seeded.currencyCorrectedFrom }, 201);
   } catch (err) {
     if (err instanceof Error && err.message.includes('UNIQUE')) {
       return c.json({ error: 'instrument already exists', code: 'instrument_duplicate_ticker' }, 409);

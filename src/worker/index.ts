@@ -13,6 +13,9 @@ export interface Env {
   RESEND_API_KEY: string;
   RESEND_VERIFIED_EMAIL: string;
   ADMIN_EMAILS: string;
+  // Set to 'true' only in the e2e worker vars: POST /api/admin/instruments
+  // then skips the Yahoo fetch. Must never be set in production.
+  SKIP_INSTRUMENT_VALIDATION?: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();

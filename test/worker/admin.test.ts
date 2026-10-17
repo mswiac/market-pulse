@@ -159,6 +159,42 @@ function validNewInstrument(overrides: Record<string, unknown> = {}): Record<str
   };
 }
 
+function isoDaysAgo(days: number): string {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+// A Yahoo answer for a not-yet-stored symbol: ~300 days of weekday closes with
+// enough movement for a non-trivial RSI.
+function seedSeriesBody(currency = 'USD', count?: number) {
+  let timestamps = weekdayTimestampsBetween(isoDaysAgo(300), isoDaysAgo(1));
+  if (count !== undefined) timestamps = timestamps.slice(-count);
+  const closes = timestamps.map((_, i) => Math.round((100 + 8 * Math.sin(i / 6) + i * 0.03) * 100) / 100);
+  return yahooBody(timestamps, closes, currency);
+}
+
+function stubYahooSeries(currency = 'USD', count?: number) {
+  const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, seedSeriesBody(currency, count))));
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
+async function countRows(ticker: string): Promise<{ instruments: number; history: number; market: number }> {
+  const count = async (table: string) =>
+    (await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ticker = ?`).bind(ticker).first<{ n: number }>())!.n;
+  return { instruments: await count('instruments'), history: await count('price_history'), market: await count('market_data') };
+}
+
+// Instruments created through the endpoint now also own price_history and
+// market_data rows, which the shared D1 binding would otherwise keep.
+async function cleanUpTestInstruments(): Promise<void> {
+  vi.unstubAllGlobals();
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM price_history WHERE ticker LIKE 'TEST%'"),
+    env.DB.prepare("DELETE FROM market_data WHERE ticker LIKE 'TEST%'"),
+    env.DB.prepare("DELETE FROM instruments WHERE ticker LIKE 'TEST%'"),
+  ]);
+}
+
 interface PriceHistoryRow {
   ticker: string;
   date: string;
@@ -476,9 +512,11 @@ describe('POST /api/admin/market-data', () => {
 });
 
 describe('POST /api/admin/instruments', () => {
-  afterEach(async () => {
-    await env.DB.prepare('DELETE FROM instruments WHERE ticker LIKE ?').bind('TEST%').run();
+  beforeEach(() => {
+    stubYahooSeries();
   });
+
+  afterEach(cleanUpTestInstruments);
 
   it('returns 401 with no session', async () => {
     const response = await addInstrument(null, validNewInstrument());
@@ -626,6 +664,8 @@ describe('POST /api/admin/instruments', () => {
   it('creates a pl_stock instrument with an explicit suffix, provider always yahoo, visible via GET /api/instruments without suffix/provider', async () => {
     const cookie = await logInAsAdmin();
 
+    stubYahooSeries('PLN');
+
     const response = await addInstrument(
       cookie,
       validNewInstrument({
@@ -648,6 +688,7 @@ describe('POST /api/admin/instruments', () => {
       provider: 'yahoo',
       currency: 'PLN',
       suffix: '.WA',
+      currencyCorrectedFrom: null,
     });
 
     const listResponse = await exports.default.fetch(`${BASE_URL}/api/instruments`, { headers: { Cookie: cookie } });
@@ -708,12 +749,187 @@ describe('POST /api/admin/instruments', () => {
     const json = (await response.json()) as { code: string };
     expect(json.code).toBe('instrument_duplicate_ticker');
   });
+
+  it('seeds price_history and market_data in one go, with the same RSI the history endpoint shows', async () => {
+    const cookie = await logInAsAdmin();
+    const fetchMock = stubYahooSeries('USD');
+
+    const response = await addInstrument(cookie, validNewInstrument({ ticker: 'TEST.SEED' }));
+
+    expect(response.status).toBe(201);
+    const created = (await response.json()) as { currency: string; currencyCorrectedFrom: string | null };
+    expect(created.currency).toBe('USD');
+    expect(created.currencyCorrectedFrom).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    const expectedRows = (seedSeriesBody().chart.result[0].timestamp as number[]).length;
+    const counts = await countRows('TEST.SEED');
+    expect(counts).toEqual({ instruments: 1, history: expectedRows, market: 1 });
+    expect(expectedRows).toBeGreaterThan(180);
+
+    const market = await env.DB.prepare('SELECT price, rsi FROM market_data WHERE ticker = ?')
+      .bind('TEST.SEED')
+      .first<{ price: number; rsi: number | null }>();
+    expect(market?.rsi).not.toBeNull();
+
+    const historyResponse = await exports.default.fetch(`${BASE_URL}/api/instruments/TEST.SEED/history`, { headers: { Cookie: cookie } });
+    const history = (await historyResponse.json()) as { history: { close: number; rsi: number | null }[] };
+    const newest = history.history.at(-1)!;
+    expect(newest.rsi).toBe(market!.rsi);
+    expect(newest.close).toBe(market!.price);
+  });
+
+  it('asks Yahoo for ticker + suffix over about 300 days ending tomorrow, with one attempt', async () => {
+    const cookie = await logInAsAdmin();
+    const fetchMock = stubYahooSeries('PLN');
+
+    await addInstrument(
+      cookie,
+      validNewInstrument({ type: 'pl_stock', ticker: 'TEST.WIN', currency: 'PLN', suffix: '.WA' }),
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(decodeURIComponent(url.pathname)).toContain('TEST.WIN.WA');
+    const day = 24 * 60 * 60;
+    const nowS = Date.now() / 1000;
+    expect(Number(url.searchParams.get('period1'))).toBeGreaterThan(nowS - 301 * day);
+    expect(Number(url.searchParams.get('period1'))).toBeLessThan(nowS - 298 * day);
+    expect(Number(url.searchParams.get('period2'))).toBeGreaterThan(nowS);
+  });
+
+  it('stores a null RSI for an instrument that is not RSI-eligible, without tripping the eligibility trigger', async () => {
+    const cookie = await logInAsAdmin();
+
+    const response = await addInstrument(cookie, validNewInstrument({ ticker: 'TEST.NORSI', type: 'index', rsiEligible: false }));
+
+    expect(response.status).toBe(201);
+    const market = await env.DB.prepare('SELECT rsi FROM market_data WHERE ticker = ?').bind('TEST.NORSI').first<{ rsi: number | null }>();
+    expect(market?.rsi).toBeNull();
+  });
+
+  it('stores Yahoo\'s currency and reports the correction when it differs from the entered one', async () => {
+    const cookie = await logInAsAdmin();
+    stubYahooSeries('PLN');
+
+    const response = await addInstrument(cookie, validNewInstrument({ ticker: 'TEST.CUR', currency: 'USD' }));
+
+    expect(response.status).toBe(201);
+    const created = (await response.json()) as { currency: string; currencyCorrectedFrom: string | null };
+    expect(created.currency).toBe('PLN');
+    expect(created.currencyCorrectedFrom).toBe('USD');
+    const row = await env.DB.prepare('SELECT currency FROM instruments WHERE ticker = ?').bind('TEST.CUR').first<{ currency: string }>();
+    expect(row?.currency).toBe('PLN');
+  });
+
+  it('ignores a malformed currency from Yahoo and keeps the entered one', async () => {
+    const cookie = await logInAsAdmin();
+    stubYahooSeries('pln-ish');
+
+    const response = await addInstrument(cookie, validNewInstrument({ ticker: 'TEST.BADCUR', currency: 'USD' }));
+
+    expect(response.status).toBe(201);
+    const created = (await response.json()) as { currency: string; currencyCorrectedFrom: string | null };
+    expect(created.currency).toBe('USD');
+    expect(created.currencyCorrectedFrom).toBeNull();
+  });
+
+  it('accepts an instrument with fewer than 15 sessions, with a null RSI', async () => {
+    const cookie = await logInAsAdmin();
+    stubYahooSeries('USD', 10);
+
+    const response = await addInstrument(cookie, validNewInstrument({ ticker: 'TEST.THIN' }));
+
+    expect(response.status).toBe(201);
+    const counts = await countRows('TEST.THIN');
+    expect(counts).toEqual({ instruments: 1, history: 10, market: 1 });
+    const market = await env.DB.prepare('SELECT rsi FROM market_data WHERE ticker = ?').bind('TEST.THIN').first<{ rsi: number | null }>();
+    expect(market?.rsi).toBeNull();
+  });
+
+  it('rejects an unknown symbol (Yahoo HTTP 404) with 422 instrument_symbol_not_found and writes nothing', async () => {
+    const cookie = await logInAsAdmin();
+    const body = { chart: { result: null, error: { code: 'Not Found', description: 'No data found, symbol may be delisted' } } };
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(404, body))));
+
+    const response = await addInstrument(cookie, validNewInstrument({ ticker: 'TEST.NOPE' }));
+
+    expect(response.status).toBe(422);
+    expect(((await response.json()) as { code: string }).code).toBe('instrument_symbol_not_found');
+    expect(await countRows('TEST.NOPE')).toEqual({ instruments: 0, history: 0, market: 0 });
+  });
+
+  it('rejects a symbol with an empty Yahoo series with 422 instrument_symbol_not_found', async () => {
+    const cookie = await logInAsAdmin();
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody([], [])))));
+
+    const response = await addInstrument(cookie, validNewInstrument({ ticker: 'TEST.EMPTY' }));
+
+    expect(response.status).toBe(422);
+    expect(((await response.json()) as { code: string }).code).toBe('instrument_symbol_not_found');
+    expect(await countRows('TEST.EMPTY')).toEqual({ instruments: 0, history: 0, market: 0 });
+  });
+
+  it('reports a Yahoo outage (HTTP 500) as 502 instrument_provider_unavailable and writes nothing', async () => {
+    const cookie = await logInAsAdmin();
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(500, {}))));
+
+    const response = await addInstrument(cookie, validNewInstrument({ ticker: 'TEST.DOWN' }));
+
+    expect(response.status).toBe(502);
+    expect(((await response.json()) as { code: string }).code).toBe('instrument_provider_unavailable');
+    expect(await countRows('TEST.DOWN')).toEqual({ instruments: 0, history: 0, market: 0 });
+  });
+
+  it('reports a network failure or timeout as 502 instrument_provider_unavailable and writes nothing', async () => {
+    const cookie = await logInAsAdmin();
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new DOMException('The operation timed out', 'TimeoutError')));
+
+    const response = await addInstrument(cookie, validNewInstrument({ ticker: 'TEST.TIMEOUT' }));
+
+    expect(response.status).toBe(502);
+    expect(((await response.json()) as { code: string }).code).toBe('instrument_provider_unavailable');
+    expect(await countRows('TEST.TIMEOUT')).toEqual({ instruments: 0, history: 0, market: 0 });
+  });
+
+  it('answers a duplicate ticker with 409 before calling Yahoo', async () => {
+    const cookie = await logInAsAdmin();
+    const fetchMock = stubYahooSeries();
+
+    const response = await addInstrument(cookie, validNewInstrument({ type: 'index', ticker: '^VIX', currency: 'USD' }));
+
+    expect(response.status).toBe(409);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('skips the Yahoo fetch and inserts only the instrument when SKIP_INSTRUMENT_VALIDATION is true', async () => {
+    const cookie = await logInAsAdmin();
+    const fetchMock = stubYahooSeries();
+    const mutableEnv = env as { SKIP_INSTRUMENT_VALIDATION?: string };
+    const previous = mutableEnv.SKIP_INSTRUMENT_VALIDATION;
+    mutableEnv.SKIP_INSTRUMENT_VALIDATION = 'true';
+    try {
+      const response = await addInstrument(cookie, validNewInstrument({ ticker: 'TEST.SKIP' }));
+
+      expect(response.status).toBe(201);
+      expect(((await response.json()) as { currencyCorrectedFrom: string | null }).currencyCorrectedFrom).toBeNull();
+    } finally {
+      mutableEnv.SKIP_INSTRUMENT_VALIDATION = previous;
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(await countRows('TEST.SKIP')).toEqual({ instruments: 1, history: 0, market: 0 });
+  });
 });
 
 describe('GET /api/admin/instruments/:ticker/impact', () => {
   const TICKER = 'TESTIMPACT';
 
+  beforeEach(() => {
+    stubYahooSeries();
+  });
+
   afterEach(async () => {
+    vi.unstubAllGlobals();
     await env.DB.prepare('DELETE FROM alerts WHERE ticker = ?').bind(TICKER).run();
     await env.DB.prepare('DELETE FROM instruments WHERE ticker = ?').bind(TICKER).run();
   });
@@ -773,7 +989,12 @@ describe('GET /api/admin/instruments/:ticker/impact', () => {
 describe('DELETE /api/admin/instruments/:ticker', () => {
   const TICKER = 'TESTDELETE';
 
+  beforeEach(() => {
+    stubYahooSeries();
+  });
+
   afterEach(async () => {
+    vi.unstubAllGlobals();
     await env.DB.prepare('DELETE FROM trigger_events WHERE ticker = ?').bind(TICKER).run();
     await env.DB.prepare('DELETE FROM alerts WHERE ticker = ?').bind(TICKER).run();
     await env.DB.prepare('DELETE FROM price_history WHERE ticker = ?').bind(TICKER).run();
@@ -820,8 +1041,10 @@ describe('DELETE /api/admin/instruments/:ticker', () => {
       .bind(userId1, TICKER)
       .first<{ id: number }>();
 
-    await env.DB.prepare('INSERT INTO price_history (ticker, date, close) VALUES (?, ?, ?)').bind(TICKER, '2026-01-05', 100).run();
-    await env.DB.prepare('INSERT INTO market_data (ticker, price) VALUES (?, ?)').bind(TICKER, 100).run();
+    // Adding the instrument already seeded its price_history and market_data.
+    const seeded = await countRows(TICKER);
+    expect(seeded.history).toBeGreaterThan(0);
+    expect(seeded.market).toBe(1);
     await env.DB.prepare(
       `INSERT INTO trigger_events (user_id, alert_id, ticker, alert_type, direction, threshold, value_at_trigger, notification_email, email_status)
        VALUES (?, ?, ?, 'PRICE', 'up', 100, 101, 'alerts@example.com', 'sent')`,

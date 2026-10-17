@@ -314,10 +314,10 @@ No migration. Existing instruments are untouched; the skip flag is absent in pro
 
 #### Automated
 
-- [x] 1.1 Worker tests pass: `npm run test:worker`
-- [x] 1.2 Type checking passes: `npm run typecheck`
-- [x] 1.3 Linting passes: `npm run lint`
-- [x] 1.4 New failure-kind tests cover 404, chart error, 5xx, 429, network error, abort and all-null closes
+- [x] 1.1 Worker tests pass: `npm run test:worker` — c660ad4
+- [x] 1.2 Type checking passes: `npm run typecheck` — c660ad4
+- [x] 1.3 Linting passes: `npm run lint` — c660ad4
+- [x] 1.4 New failure-kind tests cover 404, chart error, 5xx, 429, network error, abort and all-null closes — c660ad4
 
 #### Manual
 
@@ -327,11 +327,11 @@ No migration. Existing instruments are untouched; the skip flag is absent in pro
 
 #### Automated
 
-- [ ] 2.1 Worker tests pass: `npm run test:worker`
-- [ ] 2.2 Type checking passes: `npm run typecheck`
-- [ ] 2.3 Linting passes: `npm run lint`
-- [ ] 2.4 The RSI stored at creation equals the history endpoint's newest RSI for the same ticker (parity test)
-- [ ] 2.5 A rejected or failed add leaves no rows in `instruments`, `price_history` or `market_data`
+- [x] 2.1 Worker tests pass: `npm run test:worker`
+- [x] 2.2 Type checking passes: `npm run typecheck`
+- [x] 2.3 Linting passes: `npm run lint`
+- [x] 2.4 The RSI stored at creation equals the history endpoint's newest RSI for the same ticker (parity test)
+- [x] 2.5 A rejected or failed add leaves no rows in `instruments`, `price_history` or `market_data`
 
 #### Manual
 

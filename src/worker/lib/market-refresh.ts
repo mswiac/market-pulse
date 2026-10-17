@@ -9,7 +9,7 @@ import {
   type MarketDataUpsertRow,
   type PriceHistoryRow,
 } from './market-data';
-import { latestRsi, loadRecentPriceRows, RSI_INPUT_SESSIONS } from './price-history';
+import { loadRecentPriceRows, rsiFromCloses } from './price-history';
 
 export interface TickerResult {
   ticker: string;
@@ -163,17 +163,10 @@ export async function refreshInstruments(
       let rsi: number | null = null;
       if (rsi_eligible) {
         // Fetched closes win over stored ones for the same date, so a
-        // revised bar is reflected in this run's RSI. Truncating to the
-        // newest RSI_INPUT_SESSIONS after the merge makes the input identical
-        // to what the history endpoints read right after this write.
+        // revised bar is reflected in this run's RSI.
         const merged = new Map(storedCloses ?? []);
         for (const c of closes) merged.set(c.date, c.close);
-        rsi = latestRsi(
-          [...merged.entries()]
-            .sort(([a], [b]) => a.localeCompare(b))
-            .slice(-RSI_INPUT_SESSIONS)
-            .map(([, close]) => close),
-        );
+        rsi = rsiFromCloses(merged);
       }
       const latest = closes[closes.length - 1];
 
