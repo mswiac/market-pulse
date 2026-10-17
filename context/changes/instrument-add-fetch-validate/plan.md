@@ -99,7 +99,7 @@ shows the new states and CI/e2e are adapted. No migration.
   maps a `UNIQUE` error to 409 for the concurrent-create race.
 - **Timing & lifecycle** — e2e never calls Yahoo and there is no validation
   skip switch: the add-instrument spec mocks the endpoint response in the
-  browser and other admin specs seed instruments straight into the local D1.
+  browser, and the remove-instrument spec mocks its list, impact and delete calls.
 
 ## Phase 1: Fetch layer tells failure kinds apart
 
@@ -253,7 +253,7 @@ Show the new outcomes in the add form and keep e2e independent of live Yahoo.
 
 **Intent**: Keep e2e independent of Yahoo without any production switch, and document how.
 
-**Contract**: `e2e/admin/add-instrument.spec.ts` mocks `POST /api/admin/instruments` with `page.route` and asserts the request payload and each outcome message (success, currency correction, 422, 502, in-flight button). `createInstrument` in `e2e/admin/admin-api.ts` inserts a made-up `E2E…` instrument directly into the local D1 via `wrangler d1 execute --local`, used by `remove-instrument.spec.ts`. README and test-plan describe this. No worker flag, no CI or local vars change.
+**Contract**: `e2e/admin/add-instrument.spec.ts` mocks `POST /api/admin/instruments` with `page.route` and asserts the request payload and each outcome message (success, currency correction, 422, 502, in-flight button). `e2e/admin/remove-instrument.spec.ts` mocks the instrument list, the impact preview and the DELETE with a small stateful stub (seeding the local D1 from a second process raced the Worker with `SQLITE_BUSY`, so it was dropped). README and test-plan describe this. No worker flag, no CI or local vars change.
 
 ### Success Criteria:
 
@@ -282,7 +282,7 @@ Show the new outcomes in the add form and keep e2e independent of live Yahoo.
 
 ### Integration Tests:
 
-- Worker route tests with a stubbed Yahoo `fetch` against the test D1; e2e mock the add response in the browser and seed instruments into the local D1, so they never depend on live Yahoo.
+- Worker route tests with a stubbed Yahoo `fetch` against the test D1; e2e mock the add and remove calls in the browser, so they never depend on live Yahoo.
 
 ### Manual Testing Steps:
 

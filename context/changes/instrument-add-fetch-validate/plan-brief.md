@@ -25,7 +25,7 @@ Adding a real instrument stores about 200 sessions and a `market_data` row with 
 | Currency mismatch | Store Yahoo's currency and tell the admin | Consistent with "Yahoo wins"; user confirmed | Frame + Plan |
 | Yahoo outage on add | Refuse and ask to retry (502) | Never create an unvalidated instrument | Plan |
 | Waiting feedback | Button text "Checking data…" | Adds a few seconds to the request | Plan |
-| E2E | Browser-mocked add response + instruments seeded directly into local D1 (no worker flag) | E2E must not call Yahoo and the worker's own Yahoo calls cannot be stubbed from the browser | Plan (revised in Phase 3) |
+| E2E | Browser-mocked add and remove calls (no worker flag, no DB writes from e2e) | E2E must not call Yahoo and the worker's own Yahoo calls cannot be stubbed from the browser | Plan (revised in Phase 3) |
 | RSI definition | Extract a shared `rsiFromCloses` used by cron and seed | Keeps one RSI definition (#211) | Plan |
 
 ## Scope
@@ -44,7 +44,7 @@ Adding a real instrument stores about 200 sessions and a `market_data` row with 
 | --- | --- | --- |
 | 1. Failure kinds | `not_found` vs `provider` on the fetch error, incl. wrapped network errors | Misclassifying an ambiguous Yahoo response |
 | 2. Seed path and endpoint | Atomic create with history, RSI and currency rule; new codes; tests | The RSI trigger and batch order; existing add tests need a Yahoo stub |
-| 3. Form, e2e, docs | Messages, button label, translations, browser-mocked add spec, D1-seeded e2e instruments, docs | Seeding via `wrangler d1 execute` needs a migrated local D1 and adds a few seconds per test |
+| 3. Form, e2e, docs | Messages, button label, translations, browser-mocked add and remove specs, docs | Mocks can drift from the real API shapes; the worker tests cover the real endpoints |
 
 **Prerequisites:** #211 merged (done). **Estimated effort:** ~3 sessions across 3 phases; no migration.
 

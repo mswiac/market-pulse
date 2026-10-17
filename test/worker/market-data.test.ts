@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MarketDataFetchError, buildCurrencyCorrection, fetchDailyCloses, upsertPriceHistory } from '../../src/worker/lib/market-data';
+import { MarketDataFetchError, buildCurrencyCorrection, fetchDailyCloses, resolveCurrency, upsertPriceHistory } from '../../src/worker/lib/market-data';
 
 const FROM = '2026-01-01';
 const TO = '2026-01-31';
@@ -342,5 +342,23 @@ describe('buildCurrencyCorrection', () => {
     expect(buildCurrencyCorrection(db, 'CDR', 'USD', 'pln')).toBeNull();
     expect(buildCurrencyCorrection(db, 'CDR', 'USD', 'PLZLOTY')).toBeNull();
     expect(buildCurrencyCorrection(db, 'CDR', 'USD', '')).toBeNull();
+  });
+});
+
+describe('resolveCurrency', () => {
+  it('returns the fetched code when it is a well-formed 3-letter code', () => {
+    expect(resolveCurrency('USD', 'PLN')).toBe('PLN');
+  });
+
+  it('keeps the entered code when the fetched one equals it', () => {
+    expect(resolveCurrency('PLN', 'PLN')).toBe('PLN');
+  });
+
+  it('keeps the entered code when nothing was fetched', () => {
+    expect(resolveCurrency('PLN', null)).toBe('PLN');
+  });
+
+  it.each(['', 'pln', 'PL', 'PLNX', 'P1N'])('ignores the malformed fetched code %j', (fetched) => {
+    expect(resolveCurrency('PLN', fetched)).toBe('PLN');
   });
 });
