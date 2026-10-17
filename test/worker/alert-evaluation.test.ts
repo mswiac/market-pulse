@@ -356,9 +356,10 @@ describe('evaluateAlerts', () => {
     const fetchSpy = vi.fn().mockImplementation(async () => jsonResponse(200, { data: [] }));
     vi.stubGlobal('fetch', fetchSpy);
     const userId = await seedUser('single-request@example.com');
+    const otherUserId = await seedUser('single-request-other@example.com');
     const alertIds = [
       await seedAlert(userId, { ticker: '^VIX', threshold: 20, direction: 'up', armed: 1 }),
-      await seedAlert(userId, { ticker: '^VIX', threshold: 21, direction: 'up', armed: 1 }),
+      await seedAlert(otherUserId, { ticker: '^VIX', threshold: 21, direction: 'up', armed: 1 }),
       await seedAlert(userId, { ticker: '^NDX', threshold: 20, direction: 'up', armed: 1 }),
     ];
     const rearmId = await seedAlert(userId, {
@@ -458,9 +459,10 @@ describe('evaluateAlerts', () => {
   it('chunks more than 100 firing alerts into several Resend requests', async () => {
     const fetchSpy = vi.fn().mockImplementation(async () => jsonResponse(200, { data: [] }));
     vi.stubGlobal('fetch', fetchSpy);
-    const userId = await seedUser('many-alerts@example.com');
     const alertIds: number[] = [];
+    // One user per alert: alerts of one user and ticker would be merged into one email.
     for (let threshold = 1; threshold <= 101; threshold++) {
+      const userId = await seedUser(`many-alerts-${threshold}@example.com`);
       alertIds.push(
         await seedAlert(userId, { ticker: '^VIX', threshold, direction: 'up', armed: 1 }),
       );
@@ -802,6 +804,219 @@ describe('evaluateAlerts', () => {
 
     expect((await getAlert(alertId)).armed).toBe(0);
     expect(await triggerEventsFor(alertId)).toHaveLength(0);
+  });
+});
+
+describe('evaluateAlerts grouping', () => {
+  function sentBodies(
+    fetchSpy: ReturnType<typeof vi.fn>,
+  ): Array<{ subject: string; text: string }> {
+    return fetchSpy.mock.calls.flatMap(
+      (call) =>
+        JSON.parse((call[1] as RequestInit).body as string) as Array<{
+          subject: string;
+          text: string;
+        }>,
+    );
+  }
+
+  function stubFetchCapturing(): ReturnType<typeof vi.fn> {
+    const fetchSpy = vi.fn().mockImplementation(async () => jsonResponse(200, { data: [] }));
+    vi.stubGlobal('fetch', fetchSpy);
+    return fetchSpy;
+  }
+
+  it('sends one email with the deepest threshold for RSI "down" alerts, disarming all and keeping one event each', async () => {
+    const fetchSpy = stubFetchCapturing();
+    const userId = await seedUser('group-rsi-down@example.com');
+    const ids = [
+      await seedAlert(userId, {
+        ticker: '^NDX',
+        alertType: 'RSI',
+        threshold: 40,
+        direction: 'down',
+      }),
+      await seedAlert(userId, {
+        ticker: '^NDX',
+        alertType: 'RSI',
+        threshold: 39,
+        direction: 'down',
+      }),
+      await seedAlert(userId, {
+        ticker: '^NDX',
+        alertType: 'RSI',
+        threshold: 38,
+        direction: 'down',
+      }),
+    ];
+    await seedMarketData('^NDX', 20, 37);
+
+    const summary = await evaluateAlerts(env);
+
+    const bodies = sentBodies(fetchSpy);
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0].text).toContain('Próg: 38.00');
+    expect(bodies[0].text).toContain('37.00');
+    for (const id of ids) {
+      expect((await getAlert(id)).armed).toBe(0);
+      const events = await triggerEventsFor(id);
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({ email_status: 'sent', value_at_trigger: 37 });
+    }
+    expect(summary.emails.map((e) => e.alertId).sort()).toEqual([...ids].sort());
+    expect(summary.emails.every((e) => e.status === 'sent')).toBe(true);
+  });
+
+  it('picks the highest threshold for an "up" group', async () => {
+    const fetchSpy = stubFetchCapturing();
+    const userId = await seedUser('group-rsi-up@example.com');
+    await seedAlert(userId, { ticker: '^NDX', alertType: 'RSI', threshold: 60, direction: 'up' });
+    await seedAlert(userId, { ticker: '^NDX', alertType: 'RSI', threshold: 62, direction: 'up' });
+    await seedAlert(userId, { ticker: '^NDX', alertType: 'RSI', threshold: 61, direction: 'up' });
+    await seedMarketData('^NDX', 20, 65);
+
+    await evaluateAlerts(env);
+
+    const bodies = sentBodies(fetchSpy);
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0].text).toContain('Próg: 62.00');
+  });
+
+  it("groups PRICE alerts and reports the lowest crossed threshold with the day's low", async () => {
+    const fetchSpy = stubFetchCapturing();
+    const userId = await seedUser('group-price@example.com');
+    const ids = [
+      await seedAlert(userId, { threshold: 100, direction: 'down' }),
+      await seedAlert(userId, { threshold: 99, direction: 'down' }),
+      await seedAlert(userId, { threshold: 98, direction: 'down' }),
+    ];
+    await seedMarketData('^VIX', 105, null, 106, 97);
+
+    await evaluateAlerts(env);
+
+    const bodies = sentBodies(fetchSpy);
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0].text).toContain('Próg: 98.00');
+    expect(bodies[0].text).toContain('Minimum dnia: 97.00');
+    for (const id of ids) {
+      expect((await getAlert(id)).armed).toBe(0);
+      expect(await triggerEventsFor(id)).toHaveLength(1);
+    }
+  });
+
+  it('does not merge alerts that differ in ticker, type, direction, user or notification email', async () => {
+    const fetchSpy = stubFetchCapturing();
+    const userA = await seedUser('group-split-a@example.com');
+    const userB = await seedUser('group-split-b@example.com');
+    // The base alert is (userA, ^NDX, PRICE, down); each other one differs from it in one key part.
+    const base = { ticker: '^NDX', alertType: 'PRICE', threshold: 40, direction: 'down' } as const;
+    await seedAlert(userA, base);
+    await seedAlert(userA, { ...base, ticker: '^VIX' });
+    await seedAlert(userA, { ...base, alertType: 'RSI' });
+    await seedAlert(userA, { ...base, direction: 'up', threshold: 20 });
+    await seedAlert(userB, base);
+    await seedAlert(userA, {
+      ...base,
+      threshold: 41,
+      notificationEmail: 'someone-else@example.com',
+    });
+    await seedMarketData('^VIX', 30, null);
+    await seedMarketData('^NDX', 30, 30);
+
+    const summary = await evaluateAlerts(env);
+
+    // The unverified-email alert is rejected before reaching Resend; the other five stay separate.
+    expect(sentBodies(fetchSpy)).toHaveLength(5);
+    expect(summary.emails).toHaveLength(6);
+  });
+
+  it('leaves every alert of the group armed, with failed events, on a transient send failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('simulated network failure')));
+    const userId = await seedUser('group-transient@example.com');
+    const ids = [
+      await seedAlert(userId, {
+        ticker: '^NDX',
+        alertType: 'RSI',
+        threshold: 40,
+        direction: 'down',
+      }),
+      await seedAlert(userId, {
+        ticker: '^NDX',
+        alertType: 'RSI',
+        threshold: 39,
+        direction: 'down',
+      }),
+    ];
+    await seedMarketData('^NDX', 20, 37);
+
+    const summary = await evaluateAlerts(env);
+
+    for (const id of ids) {
+      expect((await getAlert(id)).armed).toBe(1);
+      const events = await triggerEventsFor(id);
+      expect(events).toHaveLength(1);
+      expect(events[0].email_status).toBe('failed');
+    }
+    expect(summary.emails.every((e) => e.status === 'failed')).toBe(true);
+  });
+
+  it('disarms the whole group and records the same failure on a permanent send failure', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('group-permanent@example.com');
+    const ids = [
+      await seedAlert(userId, {
+        ticker: '^NDX',
+        alertType: 'RSI',
+        threshold: 40,
+        direction: 'down',
+        notificationEmail: 'someone-else@example.com',
+      }),
+      await seedAlert(userId, {
+        ticker: '^NDX',
+        alertType: 'RSI',
+        threshold: 39,
+        direction: 'down',
+        notificationEmail: 'someone-else@example.com',
+      }),
+    ];
+    await seedMarketData('^NDX', 20, 37);
+
+    await evaluateAlerts(env);
+
+    for (const id of ids) {
+      expect((await getAlert(id)).armed).toBe(0);
+      const events = await triggerEventsFor(id);
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({
+        email_status: 'failed',
+        email_error: 'recipient not verified in Resend sandbox',
+      });
+    }
+  });
+
+  it('re-arms each alert of a group on its own once it retreats past its margin', async () => {
+    stubFetchAlwaysSucceeds();
+    const userId = await seedUser('group-rearm@example.com');
+    const near = await seedAlert(userId, {
+      ticker: '^NDX',
+      alertType: 'RSI',
+      threshold: 40,
+      direction: 'down',
+      armed: 0,
+    });
+    const far = await seedAlert(userId, {
+      ticker: '^NDX',
+      alertType: 'RSI',
+      threshold: 55,
+      direction: 'down',
+      armed: 0,
+    });
+    await seedMarketData('^NDX', 20, 50);
+
+    await evaluateAlerts(env);
+
+    expect((await getAlert(near)).armed).toBe(1);
+    expect((await getAlert(far)).armed).toBe(0);
   });
 });
 
