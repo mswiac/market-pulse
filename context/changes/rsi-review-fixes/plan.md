@@ -46,6 +46,7 @@ Two phases. Phase 1 fixes the two write-side divergences in `market-refresh.ts`,
 
 - **Loader failure must not become a silent fallback.** When `loadRecentPriceRows` throws, RSI-eligible tickers get `status: 'error'` and are skipped before any Yahoo fetch (no fetch attempts spent, nothing written for them). Non-RSI tickers (VIX) are not loaded at all, so they are unaffected and still refreshed.
 - **`fullWindow` keeps its fetch window but gains stored history.** In the `fullWindow` case the stored closes are loaded like in the cron path, then merged with the 30-day fetch (fetched wins), truncated and passed through `rsiFromCloses`. This adds one D1 query to a user-facing request; the alert path already tolerates a refresh failure.
+- **Known limitation (accepted in review).** If the stored-history read fails during alert create/edit, the refresh is skipped (RSI tickers are not fetched or written) and the initial armed state is computed from the existing `market_data` row, or defaults to armed when there is none. The cron later refreshes the data but never recomputes `armed`, so at worst one alert mail arrives for a condition that was already true at creation. Writing only the fresh price on such a failure was rejected: it needs a separate upsert variant, helps price alerts only, and contradicts the "no write on failed read" rule.
 
 ## Phase 1: Consistent RSI in the refresh paths
 
@@ -188,19 +189,19 @@ Make `/history` use the shared loader, add the index behind the floor subquery, 
 
 #### Manual
 
-- [ ] 1.6 Creating an RSI alert on a stale ticker leaves currentRsi equal to the dashboard and history RSI
+- [x] 1.6 Creating an RSI alert on a stale ticker leaves currentRsi equal to the dashboard and history RSI
 
 ### Phase 2: One read path, index, remaining test gaps
 
 #### Automated
 
-- [x] 2.1 Chunking, floor boundary and history vs latest parity tests pass
-- [x] 2.2 Migration 0017 applies cleanly to a fresh local database
-- [x] 2.3 Existing worker tests pass
-- [x] 2.4 Type checking passes
-- [x] 2.5 Linting passes
+- [x] 2.1 Chunking, floor boundary and history vs latest parity tests pass — 5b67619
+- [x] 2.2 Migration 0017 applies cleanly to a fresh local database — 5b67619
+- [x] 2.3 Existing worker tests pass — 5b67619
+- [x] 2.4 Type checking passes — 5b67619
+- [x] 2.5 Linting passes — 5b67619
 
 #### Manual
 
-- [ ] 2.6 History page and dashboard show the same RSI for a ticker
+- [x] 2.6 History page and dashboard show the same RSI for a ticker
 - [ ] 2.7 After deploy, npm run migrate:remote applies 0017 without error

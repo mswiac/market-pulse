@@ -296,6 +296,22 @@ describe('latest instruments endpoint', () => {
     expect(vix.rsi).toBeNull();
   });
 
+  it('matches the history endpoint when the age floor cuts into the ticker series', async () => {
+    const cookie = await registerAndLogIn('latest-parity-floor@example.com');
+    // ^NDX has 60 daily closes from 2020-01-01; a newer ^VIX row at 2020-11-16
+    // puts the floor at 2020-01-21, so only the last 40 ^NDX rows feed the RSI.
+    await seedPriceHistory('^NDX', Array.from({ length: 60 }, (_, i) => 4000 + (i % 5) * 9 + i));
+    await env.DB.prepare('INSERT INTO price_history (ticker, date, close) VALUES (?, ?, ?)').bind('^VIX', '2020-11-16', 20).run();
+
+    const latest = ((await (await getLatest(cookie)).json()) as Latest[]).find((row) => row.ticker === '^NDX')!;
+    const history = (await (await getHistory('^NDX', cookie)).json()) as { history: { date: string; rsi: number | null }[] };
+    const newest = history.history[history.history.length - 1];
+
+    expect(typeof latest.rsi).toBe('number');
+    expect(latest.rsi).toBe(newest.rsi);
+    expect(latest.date).toBe(newest.date);
+  });
+
   it('matches the newest entry of the history endpoint, including rsi', async () => {
     const cookie = await registerAndLogIn('latest-parity@example.com');
     await seedPriceHistory(
