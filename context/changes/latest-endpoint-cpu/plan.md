@@ -165,9 +165,9 @@ The gain from `.raw()` and from dropping `buildHistory` is estimated from readin
 
 #### Automated
 
-- [x] 1.1 Types check: `npm run typecheck`
-- [x] 1.2 Lint passes: `npm run lint`
-- [x] 1.3 Worker tests pass (including the existing `/latest` parity tests): `npm run test:worker`
+- [x] 1.1 Types check: `npm run typecheck` — d3abd95
+- [x] 1.2 Lint passes: `npm run lint` — d3abd95
+- [x] 1.3 Worker tests pass (including the existing `/latest` parity tests): `npm run test:worker` — d3abd95
 
 #### Manual
 
