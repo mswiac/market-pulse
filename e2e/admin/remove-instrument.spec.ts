@@ -20,7 +20,13 @@ import { test, expect, type Page } from '@playwright/test';
 import { instrumentName, uniqueTicker } from './admin-api';
 
 let ticker: string;
-let instruments: { ticker: string; name: string; type: string; rsiEligible: boolean; currency: string }[];
+let instruments: {
+  ticker: string;
+  name: string;
+  type: string;
+  rsiEligible: boolean;
+  currency: string;
+}[];
 let deletes: string[];
 
 test.beforeEach(async ({ page }) => {
@@ -29,7 +35,13 @@ test.beforeEach(async ({ page }) => {
   // its "no instruments" state instead of the picker.
   instruments = [
     { ticker, name: instrumentName(ticker), type: 'us_stock', rsiEligible: false, currency: 'USD' },
-    { ticker: 'E2EKEEP', name: 'E2E Instrument Kept', type: 'us_stock', rsiEligible: false, currency: 'USD' },
+    {
+      ticker: 'E2EKEEP',
+      name: 'E2E Instrument Kept',
+      type: 'us_stock',
+      rsiEligible: false,
+      currency: 'USD',
+    },
   ];
   deletes = [];
 
@@ -41,11 +53,17 @@ test.beforeEach(async ({ page }) => {
     (url) => url.pathname === `/api/admin/instruments/${ticker}/impact`,
     (route) => route.fulfill({ json: { ticker, alertsCount: 2 } }),
   );
+  // Records every DELETE the page sends, for any ticker, so a delete aimed at
+  // the wrong instrument cannot go unnoticed.
+  page.on('request', (request) => {
+    if (request.method() === 'DELETE' && request.url().includes('/api/admin/instruments/')) {
+      deletes.push(new URL(request.url()).pathname);
+    }
+  });
   await page.route(
     (url) => url.pathname === `/api/admin/instruments/${ticker}`,
     (route) => {
       if (route.request().method() !== 'DELETE') return route.continue();
-      deletes.push(route.request().url());
       instruments = instruments.filter((i) => i.ticker !== ticker);
       return route.fulfill({ json: { ticker, alertsDeleted: 2 } });
     },
@@ -75,6 +93,7 @@ test.describe('remove instrument admin screen (test-plan.md Risk #8 — destruct
     await dialog.getByRole('button', { name: 'Usuń', exact: true }).click();
     await removed;
     await expect(page.getByText(`Usunięto ${ticker}`)).toBeVisible();
+    expect(deletes).toEqual([`/api/admin/instruments/${ticker}`]);
 
     // The screen re-reads the list after the delete, so the picker no longer
     // finds the ticker.
@@ -93,6 +112,7 @@ test.describe('remove instrument admin screen (test-plan.md Risk #8 — destruct
     // The screen is usable again (submit re-enabled) and no delete was sent.
     await expect(page.getByRole('button', { name: 'Usuń instrument' })).toBeEnabled();
     expect(deletes).toHaveLength(0);
-    expect(instruments.map((i) => i.ticker)).toContain(ticker);
+    await page.getByRole('combobox', { name: 'Instrument' }).fill(ticker);
+    await expect(page.getByRole('option', { name: new RegExp(`^${ticker} `) })).toBeVisible();
   });
 });

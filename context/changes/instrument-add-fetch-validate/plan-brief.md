@@ -30,7 +30,7 @@ Adding a real instrument stores about 200 sessions and a `market_data` row with 
 
 ## Scope
 
-**In scope:** fetch failure kinds; seed path + endpoint; form messages, label, translations; CI/e2e flag and docs; worker/frontend tests.
+**In scope:** fetch failure kinds; seed path + endpoint; form messages, label, translations; e2e mocks and docs; worker/frontend tests.
 
 **Out of scope:** the admin "fetch market data" form, the 30-day cron/alert windows, treating "too few sessions" as an error, DB-level guards, alert/cron logic.
 

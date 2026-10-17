@@ -55,8 +55,9 @@ From the frame brief (`frame.md`, confidence HIGH):
 - A currency different from Yahoo's is stored as Yahoo's, and the 201 response
   and the snackbar say so.
 - The add form shows "Checking data…" on the button while the request runs.
-- E2E keep working through a worker flag that skips validation, set only in
-  CI and in the developer's local worker vars.
+- E2E keep working without calling Yahoo: the add and remove specs mock the
+  endpoint calls in the browser, and there is no validation switch in the
+  Worker.
 
 ### Key Discoveries:
 
@@ -194,7 +195,7 @@ keeping one RSI definition and one currency rule.
 
 **Intent**: Cover the new path and adapt the existing add tests.
 
-**Contract**: the success-path add tests (trim, suffix, pl/us stock, lowercase, rsiEligible false, duplicate, plus dependent impact/delete blocks) get a stubbed Yahoo `fetch` using the file's existing `jsonResponse`/`yahooBody` helpers. New cases: rows written (about 200 `price_history`, one `market_data`), RSI equals `buildHistory`'s newest RSI for the same ticker, RSI `null` for `rsiEligible: false`, currency corrected (response field + stored value), invalid Yahoo currency ignored, 404 -> 422 with nothing written, 5xx and network error -> 502 with nothing written, empty series -> 422, duplicate -> 409 without a Yahoo call, skip flag -> plain insert without a fetch, fewer than 15 sessions -> 201 with `rsi` null.
+**Contract**: the success-path add tests (trim, suffix, pl/us stock, lowercase, rsiEligible false, duplicate, plus dependent impact/delete blocks) get a stubbed Yahoo `fetch` using the file's existing `jsonResponse`/`yahooBody` helpers. New cases: rows written (about 200 `price_history`, one `market_data`), RSI equals `buildHistory`'s newest RSI for the same ticker, RSI `null` for `rsiEligible: false`, currency corrected (response field + stored value), invalid Yahoo currency ignored, 404 -> 422 with nothing written, 5xx and network error -> 502 with nothing written, empty series -> 422, duplicate -> 409 without a Yahoo call, fewer than 15 sessions -> 201 with `rsi` null.
 
 ### Success Criteria:
 
@@ -296,7 +297,7 @@ One Yahoo fetch (about 200 points) plus one batch of about 15 statements per add
 
 ## Migration Notes
 
-No migration. Existing instruments are untouched; the skip flag is absent in production, so validation is on there by default.
+No migration. Existing instruments are untouched; validation is always on, there is no switch to turn it off.
 
 ## References
 
