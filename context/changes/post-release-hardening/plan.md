@@ -129,8 +129,8 @@ Test-only change; the mutation run itself is the verification. Deliberate-break 
 
 #### Automated
 
-- [x] 2.1 Lint passes
+- [x] 2.1 Lint passes — 8966e51
 
 #### Manual
 
-- [x] 2.2 Docs read correctly and match the shipped behaviour
+- [x] 2.2 Docs read correctly and match the shipped behaviour — 8966e51
