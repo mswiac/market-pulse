@@ -20,33 +20,6 @@ export function instrumentName(ticker: string): string {
   return `E2E Instrument ${ticker}`;
 }
 
-export async function createInstrument(request: APIRequestContext, ticker: string): Promise<void> {
-  const res = await request.post('/api/admin/instruments', {
-    data: {
-      type: 'us_stock',
-      ticker,
-      name: instrumentName(ticker),
-      currency: 'USD',
-      rsiEligible: false,
-      suffix: '',
-    },
-  });
-  expect(res.status()).toBe(201);
-}
-
-export async function deleteInstrument(request: APIRequestContext, ticker: string): Promise<void> {
-  // 404 when the test already removed it — that is the success path. Anything
-  // else would silently leave rows behind, so fail loudly.
-  const res = await request.delete(`/api/admin/instruments/${encodeURIComponent(ticker)}`);
-  expect([200, 404]).toContain(res.status());
-}
-
-export async function listInstrumentTickers(request: APIRequestContext): Promise<string[]> {
-  const res = await request.get('/api/instruments');
-  expect(res.ok()).toBeTruthy();
-  return ((await res.json()) as { ticker: string }[]).map((i) => i.ticker);
-}
-
 export interface RegisteredUser {
   id: number;
   email: string;

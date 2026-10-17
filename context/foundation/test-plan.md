@@ -421,7 +421,13 @@ its rules file):
   credentials fail the admin setup loudly rather than skipping. In CI,
   `e2e.yml` registers `admin@ci.market-pulse.test` (already in the CI
   `ADMIN_EMAILS`). Specs that need a non-admin session (e.g.
-  `admin-gate-redirect.spec.ts`) stay in `e2e/`, not `e2e/admin/`.
+  `admin-gate-redirect.spec.ts`) stay in `e2e/`, not `e2e/admin/`. The Worker
+  never calls Yahoo from these specs: `add-instrument.spec.ts` mocks the
+  `POST /api/admin/instruments` response in the browser, and
+  `remove-instrument.spec.ts` mocks the instrument list, impact preview and
+  delete. Nothing writes instruments into the local D1: the real endpoint would
+  ask Yahoo, and a second process writing to the file races the Worker
+  (`SQLITE_BUSY`).
 
 Generation workflow: `/10x-e2e` (PLAN → GENERATE from seed + rules → REVIEW
 against the five anti-patterns → VERIFY by deliberately breaking the

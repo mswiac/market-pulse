@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MarketDataFetchError, buildCurrencyCorrection, fetchDailyCloses, upsertPriceHistory } from '../../src/worker/lib/market-data';
+import { MarketDataFetchError, buildCurrencyCorrection, fetchDailyCloses, resolveCurrency, upsertPriceHistory } from '../../src/worker/lib/market-data';
 
 const FROM = '2026-01-01';
 const TO = '2026-01-31';
@@ -81,6 +81,74 @@ describe('fetchDailyCloses', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, body)));
 
     await expect(fetchDailyCloses('^BADSYMBOL', FROM, TO)).rejects.toThrow(/chart error/);
+  });
+
+  describe('failure kinds', () => {
+    const notFoundBody = { chart: { result: null, error: { code: 'Not Found', description: 'No data found, symbol may be delisted' } } };
+
+    async function kindOf(promise: Promise<unknown>): Promise<string> {
+      const err = await promise.then(
+        () => null,
+        (e: unknown) => e,
+      );
+      expect(err).toBeInstanceOf(MarketDataFetchError);
+      return (err as MarketDataFetchError).kind;
+    }
+
+    it('classifies the real Yahoo unknown-symbol answer (HTTP 404 + Not Found body) as not_found', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(404, notFoundBody)));
+
+      expect(await kindOf(fetchDailyCloses('ZZZZNOPE9', FROM, TO))).toBe('not_found');
+    });
+
+    it('classifies a Not Found chart error delivered with HTTP 200 as not_found', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, notFoundBody)));
+
+      expect(await kindOf(fetchDailyCloses('ZZZZNOPE9', FROM, TO))).toBe('not_found');
+    });
+
+    it('classifies a chart error with another code as provider', async () => {
+      const body = { chart: { result: null, error: { code: 'Internal Server Error', description: 'boom' } } };
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, body)));
+
+      expect(await kindOf(fetchDailyCloses('^VIX', FROM, TO))).toBe('provider');
+    });
+
+    it.each([500, 502, 429])('classifies HTTP %i as provider', async (status) => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(status, {})));
+
+      expect(await kindOf(fetchDailyCloses('^VIX', FROM, TO))).toBe('provider');
+    });
+
+    it('wraps a network error in a provider MarketDataFetchError', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('fetch failed')));
+
+      expect(await kindOf(fetchDailyCloses('^VIX', FROM, TO))).toBe('provider');
+    });
+
+    it('wraps an aborted request in a provider MarketDataFetchError', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new DOMException('The operation was aborted', 'AbortError')));
+
+      expect(await kindOf(fetchDailyCloses('^VIX', FROM, TO, AbortSignal.abort()))).toBe('provider');
+    });
+
+    it('classifies invalid JSON, an unexpected shape and non-ascending timestamps as provider', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('<html>', { status: 200 })));
+      expect(await kindOf(fetchDailyCloses('^VIX', FROM, TO))).toBe('provider');
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, {})));
+      expect(await kindOf(fetchDailyCloses('^VIX', FROM, TO))).toBe('provider');
+
+      const body = validChartBody([1767706600, 1767620200], [101.25, 100.5]);
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, body)));
+      expect(await kindOf(fetchDailyCloses('^VIX', FROM, TO))).toBe('provider');
+    });
+
+    it('classifies a series where every close is null as not_found', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, validChartBody([1767620200], [null]))));
+
+      expect(await kindOf(fetchDailyCloses('^VIX', FROM, TO))).toBe('not_found');
+    });
   });
 
   it('throws MarketDataFetchError when the response body is not valid JSON', async () => {
@@ -274,5 +342,23 @@ describe('buildCurrencyCorrection', () => {
     expect(buildCurrencyCorrection(db, 'CDR', 'USD', 'pln')).toBeNull();
     expect(buildCurrencyCorrection(db, 'CDR', 'USD', 'PLZLOTY')).toBeNull();
     expect(buildCurrencyCorrection(db, 'CDR', 'USD', '')).toBeNull();
+  });
+});
+
+describe('resolveCurrency', () => {
+  it('returns the fetched code when it is a well-formed 3-letter code', () => {
+    expect(resolveCurrency('USD', 'PLN')).toBe('PLN');
+  });
+
+  it('keeps the entered code when the fetched one equals it', () => {
+    expect(resolveCurrency('PLN', 'PLN')).toBe('PLN');
+  });
+
+  it('keeps the entered code when nothing was fetched', () => {
+    expect(resolveCurrency('PLN', null)).toBe('PLN');
+  });
+
+  it.each(['', 'pln', 'PL', 'PLNX', 'P1N'])('ignores the malformed fetched code %j', (fetched) => {
+    expect(resolveCurrency('PLN', fetched)).toBe('PLN');
   });
 });

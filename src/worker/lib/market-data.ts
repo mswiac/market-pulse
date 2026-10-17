@@ -5,8 +5,16 @@ export interface DailyClose {
   low: number | null;
 }
 
+// `not_found` means Yahoo does not know the symbol (or has no quotes for it);
+// everything else, including network errors and timeouts, is `provider`, so a
+// transient outage is never mistaken for a bad ticker.
+export type MarketDataFetchErrorKind = 'not_found' | 'provider';
+
 export class MarketDataFetchError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly kind: MarketDataFetchErrorKind = 'provider',
+  ) {
     super(message);
     this.name = 'MarketDataFetchError';
   }
@@ -53,16 +61,25 @@ export async function fetchDailyCloses(
   const period2 = toUnixSeconds(to);
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=1d`;
 
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
-    },
-    signal,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
+      },
+      signal,
+    });
+  } catch (err) {
+    throw new MarketDataFetchError(`Yahoo request failed for ${symbol}: ${String(err)}`);
+  }
 
   if (!response.ok) {
-    throw new MarketDataFetchError(`Yahoo request failed for ${symbol}: HTTP ${response.status}`);
+    // Yahoo answers an unknown symbol with HTTP 404 (body: chart.error "Not Found").
+    throw new MarketDataFetchError(
+      `Yahoo request failed for ${symbol}: HTTP ${response.status}`,
+      response.status === 404 ? 'not_found' : 'provider',
+    );
   }
 
   let body: YahooChartResponse;
@@ -73,7 +90,11 @@ export async function fetchDailyCloses(
   }
 
   if (body.chart?.error) {
-    throw new MarketDataFetchError(`Yahoo chart error for ${symbol}: ${JSON.stringify(body.chart.error)}`);
+    const code = (body.chart.error as { code?: unknown } | null)?.code;
+    throw new MarketDataFetchError(
+      `Yahoo chart error for ${symbol}: ${JSON.stringify(body.chart.error)}`,
+      code === 'Not Found' ? 'not_found' : 'provider',
+    );
   }
 
   const result = body.chart?.result?.[0];
@@ -121,7 +142,7 @@ export async function fetchDailyCloses(
   }
 
   if (dailyCloses.length === 0) {
-    throw new MarketDataFetchError(`Yahoo response for ${symbol} contained no valid closes`);
+    throw new MarketDataFetchError(`Yahoo response for ${symbol} contained no valid closes`, 'not_found');
   }
 
   return { closes: dailyCloses, currency };
@@ -144,8 +165,15 @@ export function buildCurrencyCorrection(
   storedCurrency: string,
   fetchedCurrency: string | null,
 ): D1PreparedStatement | null {
-  if (!fetchedCurrency || !CURRENCY_PATTERN.test(fetchedCurrency) || fetchedCurrency === storedCurrency) return null;
-  return db.prepare('UPDATE instruments SET currency = ? WHERE ticker = ?').bind(fetchedCurrency, ticker);
+  const resolved = resolveCurrency(storedCurrency, fetchedCurrency);
+  if (resolved === storedCurrency) return null;
+  return db.prepare('UPDATE instruments SET currency = ? WHERE ticker = ?').bind(resolved, ticker);
+}
+
+// The single currency rule: Yahoo's code wins when it is well-formed, else the
+// entered/stored one stays.
+export function resolveCurrency(enteredCurrency: string, fetchedCurrency: string | null): string {
+  return fetchedCurrency && CURRENCY_PATTERN.test(fetchedCurrency) ? fetchedCurrency : enteredCurrency;
 }
 
 // Pure statement-building — no db.batch() call here, so this stays testable

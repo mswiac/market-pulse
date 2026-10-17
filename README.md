@@ -117,6 +117,13 @@ other spec is modeled on. They drive the **real running app**. One-time setup:
   `e2e/admin/` specs with it, while all other specs run as the non-admin user.
   Without these variables the admin setup fails with a clear message.
 
+  E2E never calls Yahoo. `POST /api/admin/instruments` fetches ~300 days from
+  Yahoo and rejects unknown symbols, so the add-instrument spec mocks that one
+  response in the browser (`page.route`), and the remove-instrument spec mocks
+  the instrument list, impact preview and delete the same way. Specs do not
+  write instruments into the local D1: a second process writing to it races
+  the Worker's own writes (`SQLITE_BUSY`).
+
 `playwright.config.ts` has a `webServer` block, so you don't need to start the
 dev servers yourself — if `:8787` / `:4200` aren't already up, Playwright boots
 them (`reuseExistingServer: true` means it reuses yours when they are).

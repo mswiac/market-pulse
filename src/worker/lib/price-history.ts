@@ -16,7 +16,7 @@ export const RSI_INPUT_SESSIONS = HISTORY_DAYS + RSI_WARMUP_SESSIONS;
 // window query from scanning the whole table. 180 sessions fit well inside it
 // even across long holiday gaps; a ticker whose last close is older than the
 // floor shows no data.
-const RSI_INPUT_MAX_AGE_DAYS = 300;
+export const RSI_INPUT_MAX_AGE_DAYS = 300;
 // One IN (...) list per chunk stays far below D1's 100-parameter cap.
 const TICKERS_PER_QUERY = 90;
 
@@ -33,6 +33,18 @@ export interface HistoryEntry extends PriceRow {
 
 export function latestRsi(closesAscending: number[]): number | null {
   return calculateRSISeries(closesAscending, RSI_PERIOD).at(-1) ?? null;
+}
+
+// Merge-friendly entry point for writers: sorts by date, keeps the newest
+// RSI_INPUT_SESSIONS closes (the same input the history endpoints read back)
+// and returns the latest RSI.
+export function rsiFromCloses(closesByDate: Map<string, number>): number | null {
+  return latestRsi(
+    [...closesByDate.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-RSI_INPUT_SESSIONS)
+      .map(([, close]) => close),
+  );
 }
 
 // Newest RSI_INPUT_SESSIONS rows per ticker, newest first, in one query per

@@ -17,6 +17,9 @@ export interface CreatedInstrument {
   provider: string;
   currency: string;
   suffix: string;
+  // Set when Yahoo reported a different currency than the one entered; the
+  // stored value is then Yahoo's.
+  currencyCorrectedFrom: string | null;
 }
 
 export interface InstrumentImpact {

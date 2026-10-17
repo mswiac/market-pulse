@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { buildHistory, HISTORY_DAYS, latestRsi, loadRecentPriceRows, RSI_INPUT_SESSIONS } from '../../src/worker/lib/price-history';
+import { buildHistory, HISTORY_DAYS, latestRsi, loadRecentPriceRows, RSI_INPUT_SESSIONS, rsiFromCloses } from '../../src/worker/lib/price-history';
 
 // Reference values were computed independently in Python (Wilder's RSI, seeded
 // with the simple mean of the first 14 changes, then smoothed) over this exact
@@ -19,6 +19,33 @@ describe('latestRsi', () => {
 
   it('returns null when fewer than period + 1 closes are provided', () => {
     expect(latestRsi(CLOSES_180.slice(0, 14))).toBeNull();
+  });
+});
+
+describe('rsiFromCloses', () => {
+  function byDate(closes: number[]): Map<string, number> {
+    return new Map(closes.map((close, i) => [`d${String(i).padStart(4, '0')}`, close]));
+  }
+
+  it('equals latestRsi over the same closes in date order', () => {
+    expect(rsiFromCloses(byDate(CLOSES_180))).toBe(latestRsi(CLOSES_180));
+  });
+
+  it('sorts by date regardless of insertion order', () => {
+    const shuffled = new Map([...byDate(CLOSES_180)].reverse());
+
+    expect(rsiFromCloses(shuffled)).toBe(latestRsi(CLOSES_180));
+  });
+
+  it('uses only the newest RSI_INPUT_SESSIONS closes', () => {
+    const older = Array.from({ length: 40 }, (_, i) => 500 - i * 3);
+    const all = byDate([...older, ...CLOSES_180]);
+
+    expect(rsiFromCloses(all)).toBe(latestRsi(CLOSES_180));
+  });
+
+  it('returns null with too few closes', () => {
+    expect(rsiFromCloses(byDate(CLOSES_180.slice(0, 14)))).toBeNull();
   });
 });
 

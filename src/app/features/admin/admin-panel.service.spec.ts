@@ -56,6 +56,7 @@ describe('AdminService', () => {
       provider: 'yahoo',
       currency: 'USD',
       suffix: '',
+      currencyCorrectedFrom: null,
     } satisfies CreatedInstrument);
   });
 
