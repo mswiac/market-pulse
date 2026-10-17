@@ -518,10 +518,6 @@
         <source>Low</source>
         <target>Minimum</target>
       </trans-unit>
-      <trans-unit id="dashboard.column.rsi" datatype="html">
-        <source>RSI</source>
-        <target>RSI</target>
-      </trans-unit>
       <trans-unit id="dashboard.noMatches" datatype="html">
         <source>No instruments match the selected filters.</source>
         <target>Żaden walor nie pasuje do wybranych filtrów.</target>
