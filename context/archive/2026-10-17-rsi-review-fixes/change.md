@@ -1,10 +1,10 @@
 ---
 change_id: rsi-review-fixes
 title: Close the remaining divergent RSI paths found in the #211 review
-status: impl_reviewed
+status: archived
 created: 2026-10-17
 updated: 2026-10-17
-archived_at: null
+archived_at: 2026-10-17T18:24:07Z
 ---
 
 ## Notes
