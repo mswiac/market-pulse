@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../index';
 import type { InstrumentRow } from '../lib/instruments';
 import { sessionMiddleware } from '../lib/session';
-import { buildHistory, loadRecentPriceRows } from '../lib/price-history';
+import { buildHistory, loadLatestSnapshots, loadRecentPriceRows } from '../lib/price-history';
 
 type Variables = { userId: number };
 
@@ -47,11 +47,14 @@ instrumentsRoutes.get('/latest', async (c) => {
     'SELECT ticker, name, type, currency, rsi_eligible AS rsiEligible FROM instruments',
   ).all<{ ticker: string; name: string; type: string; currency: string; rsiEligible: number }>();
 
-  const byTicker = await loadRecentPriceRows(c.env.DB, null);
+  const snapshots = await loadLatestSnapshots(
+    c.env.DB,
+    new Set(instruments.filter((instrument) => instrument.rsiEligible).map((instrument) => instrument.ticker)),
+  );
 
   const latest = instruments.map((instrument) => {
     const rsiEligible = !!instrument.rsiEligible;
-    const newest = buildHistory(byTicker.get(instrument.ticker) ?? [], rsiEligible).at(-1);
+    const newest = snapshots.get(instrument.ticker);
     return {
       ticker: instrument.ticker,
       name: instrument.name,

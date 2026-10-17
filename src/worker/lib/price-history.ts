@@ -47,6 +47,23 @@ export function rsiFromCloses(closesByDate: Map<string, number>): number | null 
   );
 }
 
+// Shared by every loader so the RSI input window cannot drift between them.
+// Rows are ordered ticker, then newest first. `null` selects every ticker.
+function recentRowsStatement(db: D1Database, group: string[] | null): D1PreparedStatement {
+  const tickerFilter = group === null ? '' : `AND ticker IN (${group.map(() => '?').join(', ')})`;
+  return db
+    .prepare(
+      `SELECT ticker, date, close, high, low FROM (
+         SELECT ticker, date, close, high, low,
+                ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY date DESC) AS rn
+         FROM price_history
+         WHERE date >= (SELECT date(MAX(date), '-${RSI_INPUT_MAX_AGE_DAYS} days') FROM price_history) ${tickerFilter}
+       ) WHERE rn <= ?
+       ORDER BY ticker, date DESC`,
+    )
+    .bind(...(group ?? []), RSI_INPUT_SESSIONS);
+}
+
 // Newest RSI_INPUT_SESSIONS rows per ticker, newest first, in one query per
 // ticker chunk (a per-ticker loop would burn the Workers Free subrequest
 // budget). `null` loads every ticker.
@@ -54,19 +71,7 @@ export async function loadRecentPriceRows(db: D1Database, tickers: string[] | nu
   const byTicker = new Map<string, PriceRow[]>();
   const groups = tickers === null ? [null] : chunk(tickers, TICKERS_PER_QUERY);
   for (const group of groups) {
-    const tickerFilter = group === null ? '' : `AND ticker IN (${group.map(() => '?').join(', ')})`;
-    const { results } = await db
-      .prepare(
-        `SELECT ticker, date, close, high, low FROM (
-           SELECT ticker, date, close, high, low,
-                  ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY date DESC) AS rn
-           FROM price_history
-           WHERE date >= (SELECT date(MAX(date), '-${RSI_INPUT_MAX_AGE_DAYS} days') FROM price_history) ${tickerFilter}
-         ) WHERE rn <= ?
-         ORDER BY ticker, date DESC`,
-      )
-      .bind(...(group ?? []), RSI_INPUT_SESSIONS)
-      .all<PriceRow & { ticker: string }>();
+    const { results } = await recentRowsStatement(db, group).all<PriceRow & { ticker: string }>();
     for (const { ticker, ...row } of results) {
       const list = byTicker.get(ticker);
       if (list) list.push(row);
@@ -74,6 +79,51 @@ export async function loadRecentPriceRows(db: D1Database, tickers: string[] | nu
     }
   }
   return byTicker;
+}
+
+export interface LatestSnapshot {
+  date: string;
+  close: number;
+  high: number | null;
+  low: number | null;
+  rsi: number | null;
+}
+
+type RawPriceRow = [ticker: string, date: string, close: number, high: number | null, low: number | null];
+
+// Equal to `buildHistory(rows, eligible).at(-1)` per ticker, but folded from
+// `.raw()` rows to spare Worker CPU on the dashboard path. A ticker without
+// rows is absent from the map; `rsi` stays null outside `rsiTickers`.
+export async function loadLatestSnapshots(
+  db: D1Database,
+  rsiTickers: ReadonlySet<string>,
+): Promise<Map<string, LatestSnapshot>> {
+  const rows = await recentRowsStatement(db, null).raw<RawPriceRow>();
+  const snapshots = new Map<string, LatestSnapshot>();
+
+  let ticker: string | null = null;
+  let snapshot: LatestSnapshot | null = null;
+  let eligible = false;
+  let closesNewestFirst: number[] = [];
+  const flush = () => {
+    if (ticker === null || snapshot === null) return;
+    if (eligible) snapshot.rsi = latestRsi(closesNewestFirst.reverse());
+    snapshots.set(ticker, snapshot);
+  };
+
+  for (const [rowTicker, date, close, high, low] of rows) {
+    if (rowTicker !== ticker) {
+      flush();
+      ticker = rowTicker;
+      snapshot = { date, close, high, low, rsi: null };
+      eligible = rsiTickers.has(rowTicker);
+      closesNewestFirst = [];
+    }
+    if (eligible) closesNewestFirst.push(close);
+  }
+  flush();
+
+  return snapshots;
 }
 
 // Rows arrive newest-first (so a LIMIT keeps the most recent days); RSI
