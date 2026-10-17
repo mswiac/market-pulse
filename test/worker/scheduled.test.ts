@@ -13,6 +13,7 @@ import worker from '../../src/worker/index';
 // directly instead of going through worker.scheduled(...).
 import { refreshInstruments } from '../../src/worker/lib/market-refresh';
 import { EVALUATE_CRON, handleCron, PL_FETCH_CRON, runFetchPhase, US_FETCH_CRON } from '../../src/worker/scheduled';
+import { buildHistory, loadRecentPriceRows } from '../../src/worker/lib/price-history';
 import { calculateRSI } from '../../src/worker/lib/rsi';
 import wranglerToml from '../../wrangler.toml?raw';
 
@@ -568,6 +569,72 @@ describe('alert-scoped, history-backed fetch phase', () => {
     const row = await env.DB.prepare('SELECT rsi FROM market_data WHERE ticker = ?').bind('^NDX').first<{ rsi: number }>();
     const chronological = [...closeByDaysAgo].sort(([a], [b]) => b - a).map(([, close]) => close);
     expect(row?.rsi).toBeCloseTo(calculateRSI(chronological) as number, 10);
+  });
+
+  // A long decline, a rally, then a fade: the RSI over only the last 23 closes
+  // (what the cron used to store) is ~16 points higher than the converged
+  // value over the full 180-close input.
+  function longSeries(): number[] {
+    const closes: number[] = [];
+    for (let i = 0; i <= 180; i++) {
+      if (i <= 157) closes.push(300 - 0.8 * i + (i % 2 ? 1 : 0));
+      else if (i <= 168) closes.push(closes[closes.length - 1] + 3.0);
+      else closes.push(closes[closes.length - 1] + (i % 2 ? -1.0 : 0.4));
+    }
+    return closes;
+  }
+
+  async function seedStoredLongSeries(closes: number[]): Promise<void> {
+    // closes[0..179] are stored (181..2 days ago); closes[180] is fetched as yesterday's bar.
+    await env.DB.batch(
+      closes.slice(0, 180).map((close, i) =>
+        env.DB.prepare('INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, NULL, NULL)').bind(
+          '^NDX',
+          isoDate(utcDaysAgo(181 - i)),
+          close,
+        ),
+      ),
+    );
+  }
+
+  it('stores the converged RSI over the newest 180 closes, not the short-window value, and matches the history read', async () => {
+    const closes = longSeries();
+    await seedStoredLongSeries(closes);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody([utcDaysAgo(1)], [closes[180]])))),
+    );
+
+    await runScheduled();
+
+    const row = await env.DB.prepare('SELECT rsi FROM market_data WHERE ticker = ?').bind('^NDX').first<{ rsi: number }>();
+    // Independent Python reference over closes[1..180] (Wilder RSI(14)).
+    expect(row?.rsi).toBeCloseTo(65.24347749591092, 8);
+    // The pre-fix value over the last 23 closes only.
+    expect(Math.abs((row?.rsi as number) - (calculateRSI(closes.slice(-23)) as number))).toBeGreaterThan(10);
+
+    const history = buildHistory([...(await loadRecentPriceRows(env.DB, ['^NDX'])).get('^NDX')!], true);
+    expect(history.at(-1)?.rsi).toBe(row?.rsi);
+  });
+
+  it('lets a revised fetched close win over the stored one for the same date', async () => {
+    const closes = longSeries();
+    await seedStoredLongSeries(closes);
+    const revised = closes[179] + 5;
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve(jsonResponse(200, yahooBody([utcDaysAgo(2), utcDaysAgo(1)], [revised, closes[180]]))),
+        ),
+    );
+
+    await runScheduled();
+
+    const row = await env.DB.prepare('SELECT rsi FROM market_data WHERE ticker = ?').bind('^NDX').first<{ rsi: number }>();
+    const expected = calculateRSI([...closes.slice(1, 179), revised, closes[180]]) as number;
+    expect(row?.rsi).toBeCloseTo(expected, 8);
   });
 
   it('falls back to the long window for an RSI-eligible ticker with thin stored history', async () => {

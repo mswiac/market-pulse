@@ -4,13 +4,12 @@ import {
   buildCurrencyCorrection,
   buildMarketDataUpserts,
   buildPriceHistoryUpserts,
-  chunk,
   fetchDailyCloses,
   type DailyClosesResult,
   type MarketDataUpsertRow,
   type PriceHistoryRow,
 } from './market-data';
-import { calculateRSI } from './rsi';
+import { latestRsi, loadRecentPriceRows, RSI_INPUT_SESSIONS } from './price-history';
 
 export interface TickerResult {
   ticker: string;
@@ -32,10 +31,11 @@ const RETRY_DELAY_MS = 300;
 // self-corrects a not-yet-final daily bar (the upsert is idempotent). Seven
 // days spans a long holiday weekend, so the window is never empty.
 const SHORT_LOOKBACK_DAYS = 7;
-// Used for RSI history and as the Yahoo window for a ticker whose stored
-// history is too thin to seed RSI.
+// The Yahoo window for a ticker whose stored history is too thin to seed RSI
+// (also used by alert create/edit refreshes). The RSI input itself comes from
+// stored history, not from this window — see price-history.ts.
 const LONG_LOOKBACK_DAYS = 30;
-// calculateRSI needs period + 1 closes (see rsi.ts).
+// RSI needs period + 1 closes (see rsi.ts).
 const MIN_CLOSES_FOR_RSI = 15;
 // Workers Free allows 50 subrequests per invocation and D1 queries count
 // toward it. Fetch attempts are capped below that so the fixed D1 calls always
@@ -43,10 +43,6 @@ const MIN_CLOSES_FOR_RSI = 15;
 // Each cron fetch trigger and each admin per-market fetch request gets this
 // budget on its own.
 const MAX_FETCH_ATTEMPTS_PER_RUN = 40;
-// A bound-parameter budget: one IN (...) list per chunk stays far below D1's
-// 100-parameter cap.
-const TICKERS_PER_HISTORY_QUERY = 90;
-
 function dateToIsoDateString(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
@@ -99,30 +95,14 @@ async function fetchWithRetry(
   throw lastError;
 }
 
-// One query per chunk of tickers instead of one per ticker. A failure here
-// is not fatal: callers treat a missing history as "thin" and fall back to
-// the long Yahoo window, which is slower but yields the same RSI.
+// A failure here is not fatal: callers treat a missing history as "thin" and
+// fall back to the long Yahoo window, which is slower but yields the same RSI.
 async function loadStoredCloses(db: D1Database, tickers: string[]): Promise<Map<string, Map<string, number>>> {
   const byTicker = new Map<string, Map<string, number>>();
   if (tickers.length === 0) return byTicker;
   try {
-    const since = daysAgo(LONG_LOOKBACK_DAYS);
-    for (const group of chunk(tickers, TICKERS_PER_HISTORY_QUERY)) {
-      const { results } = await db
-        .prepare(
-          `SELECT ticker, date, close FROM price_history
-           WHERE date >= ? AND ticker IN (${group.map(() => '?').join(', ')})`,
-        )
-        .bind(since, ...group)
-        .all<{ ticker: string; date: string; close: number }>();
-      for (const { ticker, date, close } of results) {
-        let closes = byTicker.get(ticker);
-        if (!closes) {
-          closes = new Map();
-          byTicker.set(ticker, closes);
-        }
-        closes.set(date, close);
-      }
+    for (const [ticker, rows] of await loadRecentPriceRows(db, tickers)) {
+      byTicker.set(ticker, new Map(rows.map((row) => [row.date, row.close])));
     }
   } catch (err) {
     console.error('market-data-pipeline: failed to read stored closes, falling back to long fetch window', err);
@@ -183,10 +163,17 @@ export async function refreshInstruments(
       let rsi: number | null = null;
       if (rsi_eligible) {
         // Fetched closes win over stored ones for the same date, so a
-        // revised bar is reflected in this run's RSI.
+        // revised bar is reflected in this run's RSI. Truncating to the
+        // newest RSI_INPUT_SESSIONS after the merge makes the input identical
+        // to what the history endpoints read right after this write.
         const merged = new Map(storedCloses ?? []);
         for (const c of closes) merged.set(c.date, c.close);
-        rsi = calculateRSI([...merged.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, close]) => close));
+        rsi = latestRsi(
+          [...merged.entries()]
+            .sort(([a], [b]) => a.localeCompare(b))
+            .slice(-RSI_INPUT_SESSIONS)
+            .map(([, close]) => close),
+        );
       }
       const latest = closes[closes.length - 1];
 
