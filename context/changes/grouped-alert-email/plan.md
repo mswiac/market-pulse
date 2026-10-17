@@ -117,9 +117,9 @@ Fewer emails per run lowers the Resend batch size; the D1 statement count is unc
 
 #### Automated
 
-- [x] 1.1 Worker tests pass: `npm run test:worker` — 1f6d9db
-- [x] 1.2 Type checking passes: `npm run typecheck` — 1f6d9db
-- [x] 1.3 Linting passes: `npm run lint` — 1f6d9db
+- [x] 1.1 Worker tests pass: `npm run test:worker` — 6fcc857
+- [x] 1.2 Type checking passes: `npm run typecheck` — 6fcc857
+- [x] 1.3 Linting passes: `npm run lint` — 6fcc857
 
 #### Manual
 
