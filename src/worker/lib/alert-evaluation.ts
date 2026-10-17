@@ -125,10 +125,45 @@ export interface AlertEvaluationSummary {
   errors: string[];
 }
 
-interface PendingSend {
+interface FiringAlert {
   alert: AlertEvalRow;
   value: number;
   input: SendEmailInput;
+}
+
+// Alerts that fire together share one email and one send result.
+interface PendingSend {
+  alerts: AlertEvalRow[];
+  value: number;
+  input: SendEmailInput;
+}
+
+// The alert whose threshold was crossed furthest: the lowest for "down", the
+// highest for "up". Ties are interchangeable (the email is identical).
+function deepestAlert(items: FiringAlert[]): FiringAlert {
+  return items.reduce((deepest, item) => {
+    const { direction, threshold } = item.alert;
+    const deeper =
+      direction === 'down'
+        ? threshold < deepest.alert.threshold
+        : threshold > deepest.alert.threshold;
+    return deeper ? item : deepest;
+  });
+}
+
+function groupFiringAlerts(firing: FiringAlert[]): PendingSend[] {
+  const groups = new Map<string, FiringAlert[]>();
+  for (const item of firing) {
+    const { user_id, ticker, alert_type, direction, notification_email } = item.alert;
+    const key = JSON.stringify([user_id, ticker, alert_type, direction, notification_email]);
+    const group = groups.get(key);
+    if (group) group.push(item);
+    else groups.set(key, [item]);
+  }
+  return [...groups.values()].map((items) => {
+    const { value, input } = deepestAlert(items);
+    return { alerts: items.map((item) => item.alert), value, input };
+  });
 }
 
 function updateByIds(db: D1Database, armed: 0 | 1, ids: number[]): D1PreparedStatement[] {
@@ -160,7 +195,7 @@ export async function evaluateAlerts(env: Env): Promise<AlertEvaluationSummary> 
 
   const emails: AlertEvaluationSummary['emails'] = [];
   const errors: string[] = [];
-  const pendingSends: PendingSend[] = [];
+  const firing: FiringAlert[] = [];
   const rearmIds: number[] = [];
   const nowSeconds = Math.floor(Date.now() / 1000);
   const staleAges = new Map<string, number>();
@@ -189,8 +224,10 @@ export async function evaluateAlerts(env: Env): Promise<AlertEvaluationSummary> 
         if (firingValue === null || !conditionMet(alert.direction, firingValue, alert.threshold))
           continue;
 
+        // Built per alert, inside the per-alert try, so one malformed row
+        // stays out of its group instead of failing the whole run.
         const { subject, text } = buildEmail(alert, value);
-        pendingSends.push({ alert, value, input: { to: alert.notification_email, subject, text } });
+        firing.push({ alert, value, input: { to: alert.notification_email, subject, text } });
       } else if (hasRetreatedPastMargin(alert.direction, value, alert.threshold, margin)) {
         rearmIds.push(alert.id);
       }
@@ -209,6 +246,7 @@ export async function evaluateAlerts(env: Env): Promise<AlertEvaluationSummary> 
     );
   }
 
+  const pendingSends = groupFiringAlerts(firing);
   const sendResults =
     pendingSends.length > 0
       ? await sendAlertEmailBatch(
@@ -218,14 +256,14 @@ export async function evaluateAlerts(env: Env): Promise<AlertEvaluationSummary> 
       : [];
 
   // A transient send failure (network-level, not a permanent rejection like
-  // an unverified recipient) leaves the alert armed so tomorrow's cron run
-  // retries the notification naturally, instead of requiring a full
-  // re-arm-then-re-cross cycle.
+  // an unverified recipient) leaves every alert of the group armed so
+  // tomorrow's cron run retries the notification naturally, instead of
+  // requiring a full re-arm-then-re-cross cycle.
   const disarmIds: number[] = [];
-  const eventRows = pendingSends.map(({ alert, value }, i) => {
+  const eventRows = pendingSends.flatMap(({ alerts: group, value }, i) => {
     const result = sendResults[i];
-    if (!(!result.ok && result.transient === true)) disarmIds.push(alert.id);
-    return [
+    if (!(!result.ok && result.transient === true)) disarmIds.push(...group.map((a) => a.id));
+    return group.map((alert) => [
       alert.user_id,
       alert.id,
       alert.ticker,
@@ -238,7 +276,7 @@ export async function evaluateAlerts(env: Env): Promise<AlertEvaluationSummary> 
       alert.notification_email,
       result.ok ? 'sent' : 'failed',
       result.ok ? null : result.error,
-    ];
+    ]);
   });
 
   const statements: D1PreparedStatement[] = [
@@ -263,26 +301,28 @@ export async function evaluateAlerts(env: Env): Promise<AlertEvaluationSummary> 
     }
   }
 
-  pendingSends.forEach(({ alert }, i) => {
+  pendingSends.forEach(({ alerts: group }, i) => {
     const result = sendResults[i];
-    if (writeError !== null) {
-      // The mail may already have gone out, but its record and the disarm
-      // did not land — report it as failed, as a single failed write always has.
-      emails.push({
-        alertId: alert.id,
-        ticker: alert.ticker,
-        status: 'failed',
-        error: String(writeError),
-      });
-    } else if (result.ok) {
-      emails.push({ alertId: alert.id, ticker: alert.ticker, status: 'sent' });
-    } else {
-      emails.push({
-        alertId: alert.id,
-        ticker: alert.ticker,
-        status: 'failed',
-        error: result.error,
-      });
+    for (const alert of group) {
+      if (writeError !== null) {
+        // The mail may already have gone out, but its record and the disarm
+        // did not land — report it as failed, as a single failed write always has.
+        emails.push({
+          alertId: alert.id,
+          ticker: alert.ticker,
+          status: 'failed',
+          error: String(writeError),
+        });
+      } else if (result.ok) {
+        emails.push({ alertId: alert.id, ticker: alert.ticker, status: 'sent' });
+      } else {
+        emails.push({
+          alertId: alert.id,
+          ticker: alert.ticker,
+          status: 'failed',
+          error: result.error,
+        });
+      }
     }
   });
   if (writeError !== null) {
