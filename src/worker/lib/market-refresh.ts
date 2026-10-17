@@ -84,7 +84,12 @@ async function fetchWithRetry(
     }
     budget.attempts++;
     try {
-      return await fetchDailyCloses(symbol, from, to, timeoutMs === undefined ? undefined : AbortSignal.timeout(timeoutMs));
+      return await fetchDailyCloses(
+        symbol,
+        from,
+        to,
+        timeoutMs === undefined ? undefined : AbortSignal.timeout(timeoutMs),
+      );
     } catch (err) {
       lastError = err;
       if (attempt < retryAttempts) {
@@ -95,18 +100,16 @@ async function fetchWithRetry(
   throw lastError;
 }
 
-// A failure here is not fatal: callers treat a missing history as "thin" and
-// fall back to the long Yahoo window, which is slower but yields the same RSI.
-async function loadStoredCloses(db: D1Database, tickers: string[]): Promise<Map<string, Map<string, number>>> {
+// Throws on a D1 error: a short-window RSI written over the stored one is
+// worse than no refresh, so callers must not fall back to fetched closes alone.
+async function loadStoredCloses(
+  db: D1Database,
+  tickers: string[],
+): Promise<Map<string, Map<string, number>>> {
   const byTicker = new Map<string, Map<string, number>>();
   if (tickers.length === 0) return byTicker;
-  try {
-    for (const [ticker, rows] of await loadRecentPriceRows(db, tickers)) {
-      byTicker.set(ticker, new Map(rows.map((row) => [row.date, row.close])));
-    }
-  } catch (err) {
-    console.error('market-data-pipeline: failed to read stored closes, falling back to long fetch window', err);
-    byTicker.clear();
+  for (const [ticker, rows] of await loadRecentPriceRows(db, tickers)) {
+    byTicker.set(ticker, new Map(rows.map((row) => [row.date, row.close])));
   }
   return byTicker;
 }
@@ -115,7 +118,8 @@ async function loadStoredCloses(db: D1Database, tickers: string[]): Promise<Map<
 // refreshes a stale ticker), where a single attempt and a `timeoutMs` keep the user's request
 // from hanging on a slow provider, and `fullWindow` fetches the whole 30
 // days: a ticker that was not refreshed for weeks has a gap in its stored
-// history that the short window would not fill.
+// history that the short window would not fill. Stored history still feeds
+// RSI in every case, so the result matches the cron's.
 export async function refreshInstruments(
   env: Env,
   instruments: InstrumentRow[],
@@ -127,12 +131,17 @@ export async function refreshInstruments(
 ): Promise<FetchPhaseResult> {
   const tickers: TickerResult[] = [];
   const budget: FetchBudget = { attempts: 0 };
-  const stored = fullWindow
-    ? new Map<string, Map<string, number>>()
-    : await loadStoredCloses(
-        env.DB,
-        instruments.filter((i) => i.rsi_eligible).map((i) => i.ticker),
-      );
+  let stored = new Map<string, Map<string, number>>();
+  let loadFailure: string | null = null;
+  try {
+    stored = await loadStoredCloses(
+      env.DB,
+      instruments.filter((i) => i.rsi_eligible).map((i) => i.ticker),
+    );
+  } catch (err) {
+    console.error('market-data-pipeline: failed to read stored closes, skipping RSI tickers', err);
+    loadFailure = String(err);
+  }
 
   const priceRows: PriceHistoryRow[] = [];
   const marketRows: MarketDataUpsertRow[] = [];
@@ -141,16 +150,28 @@ export async function refreshInstruments(
   const pending: string[] = [];
 
   for (const { ticker, rsi_eligible, suffix, currency } of instruments) {
+    if (rsi_eligible && loadFailure !== null) {
+      tickers.push({ ticker, status: 'error', error: loadFailure });
+      continue;
+    }
     try {
       const storedCloses = stored.get(ticker);
       // A ticker with too little stored history cannot seed RSI from a short
       // window, so it gets the long window once and fills its own history.
       const lookbackDays =
-        fullWindow || (rsi_eligible && (storedCloses?.size ?? 0) < MIN_CLOSES_FOR_RSI) ? LONG_LOOKBACK_DAYS : SHORT_LOOKBACK_DAYS;
+        fullWindow || (rsi_eligible && (storedCloses?.size ?? 0) < MIN_CLOSES_FOR_RSI)
+          ? LONG_LOOKBACK_DAYS
+          : SHORT_LOOKBACK_DAYS;
 
       // `ticker + suffix` is the Yahoo query symbol only — every DB write
       // below stays keyed on the bare `ticker` (see market-data.ts).
-      const { closes, currency: fetchedCurrency } = await fetchWithRetry(ticker + suffix, lookbackDays, budget, retryAttempts, timeoutMs);
+      const { closes, currency: fetchedCurrency } = await fetchWithRetry(
+        ticker + suffix,
+        lookbackDays,
+        budget,
+        retryAttempts,
+        timeoutMs,
+      );
       if (closes.length === 0) {
         // Unreachable in practice — the window always spans trading days —
         // but fetchDailyCloses's contract allows an empty result (see
@@ -176,7 +197,9 @@ export async function refreshInstruments(
       const correction = buildCurrencyCorrection(env.DB, ticker, currency, fetchedCurrency);
       if (correction) {
         corrections.push(correction);
-        correctionLogs.push(`market-data-pipeline: corrected currency for ${ticker}: ${currency} -> ${fetchedCurrency}`);
+        correctionLogs.push(
+          `market-data-pipeline: corrected currency for ${ticker}: ${currency} -> ${fetchedCurrency}`,
+        );
       }
       pending.push(ticker);
     } catch (err) {

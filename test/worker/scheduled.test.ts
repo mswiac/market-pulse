@@ -1,4 +1,8 @@
-import { createExecutionContext, createScheduledController, waitOnExecutionContext } from 'cloudflare:test';
+import {
+  createExecutionContext,
+  createScheduledController,
+  waitOnExecutionContext,
+} from 'cloudflare:test';
 import { env } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // Unlike other test files (which call exports.default.fetch(...) from
@@ -12,7 +16,13 @@ import worker from '../../src/worker/index';
 // (see src/worker/index.ts) — the result tests below call runFetchPhase
 // directly instead of going through worker.scheduled(...).
 import { refreshInstruments } from '../../src/worker/lib/market-refresh';
-import { EVALUATE_CRON, handleCron, PL_FETCH_CRON, runFetchPhase, US_FETCH_CRON } from '../../src/worker/scheduled';
+import {
+  EVALUATE_CRON,
+  handleCron,
+  PL_FETCH_CRON,
+  runFetchPhase,
+  US_FETCH_CRON,
+} from '../../src/worker/scheduled';
 import { buildHistory, loadRecentPriceRows } from '../../src/worker/lib/price-history';
 import { calculateRSI } from '../../src/worker/lib/rsi';
 import wranglerToml from '../../wrangler.toml?raw';
@@ -76,7 +86,15 @@ async function seedAlert(ticker: string, armed = 1): Promise<void> {
   await env.DB.prepare(
     'INSERT INTO alerts (user_id, ticker, alert_type, threshold, notification_email, direction, armed) VALUES (?, ?, ?, ?, ?, ?, ?)',
   )
-    .bind(seededUserId, ticker, 'PRICE', 1_000_000 + Math.floor(Math.random() * 1_000_000), 'verified@example.com', 'up', armed)
+    .bind(
+      seededUserId,
+      ticker,
+      'PRICE',
+      1_000_000 + Math.floor(Math.random() * 1_000_000),
+      'verified@example.com',
+      'up',
+      armed,
+    )
     .run();
 }
 
@@ -99,7 +117,9 @@ beforeEach(async () => {
     env.DB.prepare('DELETE FROM alerts'),
   ]);
   const email = `cron-${crypto.randomUUID()}@example.com`;
-  const user = await env.DB.prepare('INSERT INTO users (email, password_hash) VALUES (?, ?)').bind(email, 'irrelevant-hash').run();
+  const user = await env.DB.prepare('INSERT INTO users (email, password_hash) VALUES (?, ?)')
+    .bind(email, 'irrelevant-hash')
+    .run();
   seededUserId = user.meta.last_row_id as number;
   await seedAlert('^VIX');
   await seedAlert('^NDX');
@@ -124,13 +144,17 @@ describe('scheduled handler', () => {
       vi
         .fn()
         .mockImplementation(() =>
-          Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS))),
+          Promise.resolve(
+            jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS)),
+          ),
         ),
     );
 
     await runScheduled();
 
-    const marketData = await env.DB.prepare('SELECT * FROM market_data ORDER BY ticker').all<MarketDataRow>();
+    const marketData = await env.DB.prepare(
+      'SELECT * FROM market_data ORDER BY ticker',
+    ).all<MarketDataRow>();
     expect(marketData.results).toHaveLength(2);
 
     const vix = marketData.results.find((r) => r.ticker === '^VIX');
@@ -173,7 +197,9 @@ describe('scheduled handler', () => {
 
     await runScheduled();
 
-    const marketData = await env.DB.prepare('SELECT * FROM market_data ORDER BY ticker').all<MarketDataRow>();
+    const marketData = await env.DB.prepare(
+      'SELECT * FROM market_data ORDER BY ticker',
+    ).all<MarketDataRow>();
     expect(marketData.results).toHaveLength(1);
     expect(marketData.results[0]?.ticker).toBe('^NDX');
   });
@@ -182,7 +208,9 @@ describe('scheduled handler', () => {
     const fetchMock = vi
       .fn()
       .mockImplementation(() =>
-        Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS))),
+        Promise.resolve(
+          jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS)),
+        ),
       );
     vi.stubGlobal('fetch', fetchMock);
     await runScheduled();
@@ -192,7 +220,9 @@ describe('scheduled handler', () => {
     const revisedHighs = RISING_HIGHS.map((h) => h + 5);
     const revisedLows = RISING_LOWS.map((l) => l - 5);
     fetchMock.mockImplementation(() =>
-      Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, revisedHighs, revisedLows))),
+      Promise.resolve(
+        jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, revisedHighs, revisedLows)),
+      ),
     );
     await runScheduled();
 
@@ -203,7 +233,9 @@ describe('scheduled handler', () => {
       .first<{ count: number }>();
     expect(priceHistory?.count).toBe(15);
 
-    const latestRow = await env.DB.prepare('SELECT high, low FROM price_history WHERE ticker = ? ORDER BY date DESC LIMIT 1')
+    const latestRow = await env.DB.prepare(
+      'SELECT high, low FROM price_history WHERE ticker = ? ORDER BY date DESC LIMIT 1',
+    )
       .bind('^NDX')
       .first<{ high: number; low: number }>();
     expect(latestRow?.high).toBe(revisedHighs[revisedHighs.length - 1]);
@@ -255,7 +287,9 @@ describe('scheduled handler', () => {
     const fetchMock = vi
       .fn()
       .mockImplementation(() =>
-        Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS))),
+        Promise.resolve(
+          jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS)),
+        ),
       );
     vi.stubGlobal('fetch', fetchMock);
 
@@ -264,16 +298,22 @@ describe('scheduled handler', () => {
     const calledUrls = fetchMock.mock.calls.map((call) => call[0] as string);
     expect(calledUrls.some((url) => url.includes(encodeURIComponent('TEST.WA')))).toBe(true);
 
-    const marketDataRow = await env.DB.prepare('SELECT * FROM market_data WHERE ticker = ?').bind('TEST').first<MarketDataRow>();
+    const marketDataRow = await env.DB.prepare('SELECT * FROM market_data WHERE ticker = ?')
+      .bind('TEST')
+      .first<MarketDataRow>();
     expect(marketDataRow).not.toBeNull();
 
-    const priceHistoryCount = await env.DB.prepare('SELECT COUNT(*) as count FROM price_history WHERE ticker = ?')
+    const priceHistoryCount = await env.DB.prepare(
+      'SELECT COUNT(*) as count FROM price_history WHERE ticker = ?',
+    )
       .bind('TEST')
       .first<{ count: number }>();
     expect(priceHistoryCount?.count).toBe(15);
 
     // Never wrote a row keyed on the provider symbol itself.
-    const wrongTicker = await env.DB.prepare('SELECT 1 FROM price_history WHERE ticker = ?').bind('TEST.WA').first();
+    const wrongTicker = await env.DB.prepare('SELECT 1 FROM price_history WHERE ticker = ?')
+      .bind('TEST.WA')
+      .first();
     expect(wrongTicker).toBeNull();
   });
 
@@ -285,40 +325,58 @@ describe('scheduled handler', () => {
       vi
         .fn()
         .mockImplementation(() =>
-          Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS))),
+          Promise.resolve(
+            jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS)),
+          ),
         ),
     );
 
     await runScheduled();
 
-    const barePriceHistoryRow = await env.DB.prepare('SELECT 1 FROM price_history WHERE ticker = ?').bind('^NDX').first();
-    const suffixedPriceHistoryRow = await env.DB.prepare('SELECT 1 FROM price_history WHERE ticker = ?').bind('TEST').first();
+    const barePriceHistoryRow = await env.DB.prepare('SELECT 1 FROM price_history WHERE ticker = ?')
+      .bind('^NDX')
+      .first();
+    const suffixedPriceHistoryRow = await env.DB.prepare(
+      'SELECT 1 FROM price_history WHERE ticker = ?',
+    )
+      .bind('TEST')
+      .first();
     expect(barePriceHistoryRow).not.toBeNull();
     expect(suffixedPriceHistoryRow).not.toBeNull();
 
-    const bareMarketDataRow = await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?').bind('^NDX').first();
-    const suffixedMarketDataRow = await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?').bind('TEST').first();
+    const bareMarketDataRow = await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?')
+      .bind('^NDX')
+      .first();
+    const suffixedMarketDataRow = await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?')
+      .bind('TEST')
+      .first();
     expect(bareMarketDataRow).not.toBeNull();
     expect(suffixedMarketDataRow).not.toBeNull();
 
     // Never a row keyed on the provider symbol itself, checked alongside the bare rows above.
-    const wrongKeyRow = await env.DB.prepare('SELECT 1 FROM price_history WHERE ticker = ?').bind('TEST.WA').first();
+    const wrongKeyRow = await env.DB.prepare('SELECT 1 FROM price_history WHERE ticker = ?')
+      .bind('TEST.WA')
+      .first();
     expect(wrongKeyRow).toBeNull();
   });
 
-  it('requests a short lookback window ending tomorrow (UTC midnight), so today\'s own close is included', async () => {
+  it("requests a short lookback window ending tomorrow (UTC midnight), so today's own close is included", async () => {
     // Yahoo's period2 bound is the START of that UTC day, while a daily bar
     // is stamped later in the day — period2 must be tomorrow's midnight for
     // today's bar to fall inside the range at all. Confirmed empirically
     // against the live Yahoo endpoint.
     const fetchMock = vi
       .fn()
-      .mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))));
+      .mockImplementation(() =>
+        Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))),
+      );
     vi.stubGlobal('fetch', fetchMock);
 
     await runScheduled();
 
-    const vixCall = fetchMock.mock.calls.find((call) => (call[0] as string).includes(encodeURIComponent('^VIX')));
+    const vixCall = fetchMock.mock.calls.find((call) =>
+      (call[0] as string).includes(encodeURIComponent('^VIX')),
+    );
     const calledUrl = new URL(vixCall?.[0] as string);
     const period1 = Number(calledUrl.searchParams.get('period1'));
     const period2 = Number(calledUrl.searchParams.get('period2'));
@@ -344,7 +402,9 @@ describe('scheduled handler', () => {
 
     await runScheduled();
 
-    const vixCalls = fetchMock.mock.calls.filter((call) => (call[0] as string).includes(encodeURIComponent('^VIX')));
+    const vixCalls = fetchMock.mock.calls.filter((call) =>
+      (call[0] as string).includes(encodeURIComponent('^VIX')),
+    );
     expect(vixCalls).toHaveLength(3);
   });
 
@@ -355,7 +415,10 @@ describe('scheduled handler', () => {
       fn();
       return 0;
     });
-    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(500, {}))));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(500, {}))),
+    );
 
     const summary = await runFetchPhase(env);
 
@@ -371,25 +434,40 @@ describe('scheduled handler', () => {
       'fetch',
       vi.fn().mockImplementation((url: string) => {
         if (url.includes(encodeURIComponent('TEST.WA'))) {
-          return Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS, 'PLN')));
+          return Promise.resolve(
+            jsonResponse(
+              200,
+              yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS, 'PLN'),
+            ),
+          );
         }
-        return Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS)));
+        return Promise.resolve(
+          jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS)),
+        );
       }),
     );
 
     await runScheduled();
 
-    const row = await env.DB.prepare('SELECT currency FROM instruments WHERE ticker = ?').bind('TEST').first<{ currency: string }>();
+    const row = await env.DB.prepare('SELECT currency FROM instruments WHERE ticker = ?')
+      .bind('TEST')
+      .first<{ currency: string }>();
     expect(row?.currency).toBe('PLN');
   });
 });
 
 describe('runFetchPhase result', () => {
   it('fetches instruments without an alert only in the all scope', async () => {
-    await env.DB.prepare("INSERT INTO instruments (ticker, name, type, rsi_eligible, provider) VALUES ('NOALERT', 'No alert', 'us_stock', 0, 'yahoo')").run();
+    await env.DB.prepare(
+      "INSERT INTO instruments (ticker, name, type, rsi_eligible, provider) VALUES ('NOALERT', 'No alert', 'us_stock', 0, 'yahoo')",
+    ).run();
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES)))),
+      vi
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))),
+        ),
     );
 
     try {
@@ -397,7 +475,9 @@ describe('runFetchPhase result', () => {
       expect(alertScoped.tickers.map((t) => t.ticker)).not.toContain('NOALERT');
 
       const everything = await runFetchPhase(env, ['us_stock', 'index'], 'all');
-      expect(everything.tickers.map((t) => t.ticker)).toEqual(expect.arrayContaining(['NOALERT', '^VIX', '^NDX']));
+      expect(everything.tickers.map((t) => t.ticker)).toEqual(
+        expect.arrayContaining(['NOALERT', '^VIX', '^NDX']),
+      );
     } finally {
       await env.DB.prepare("DELETE FROM instruments WHERE ticker = 'NOALERT'").run();
     }
@@ -409,7 +489,9 @@ describe('runFetchPhase result', () => {
       vi
         .fn()
         .mockImplementation(() =>
-          Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS))),
+          Promise.resolve(
+            jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS)),
+          ),
         ),
     );
 
@@ -479,21 +561,31 @@ describe('alert-scoped, history-backed fetch phase', () => {
   it('does not fetch an instrument that has no alert', async () => {
     await insertSuffixInstrument();
     await env.DB.prepare("DELETE FROM alerts WHERE ticker = 'TEST'").run();
-    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))));
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))),
+      );
     vi.stubGlobal('fetch', fetchMock);
 
     await runScheduled();
 
     const calledUrls = fetchMock.mock.calls.map((call) => call[0] as string);
     expect(calledUrls.some((url) => url.includes(encodeURIComponent('TEST.WA')))).toBe(false);
-    const row = await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?').bind('TEST').first();
+    const row = await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?')
+      .bind('TEST')
+      .first();
     expect(row).toBeNull();
   });
 
   it('still fetches an instrument whose only alert is disarmed, so it can re-arm', async () => {
     await insertSuffixInstrument();
     await env.DB.prepare("UPDATE alerts SET armed = 0 WHERE ticker = 'TEST'").run();
-    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))));
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))),
+      );
     vi.stubGlobal('fetch', fetchMock);
 
     await runScheduled();
@@ -507,17 +599,22 @@ describe('alert-scoped, history-backed fetch phase', () => {
     const storedCloses = Array.from({ length: 15 }, (_, i) => 100 + (i % 3 === 0 ? -2 : 3) + i);
     await env.DB.batch(
       storedCloses.map((close, i) =>
-        env.DB.prepare('INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, NULL, NULL)').bind(
-          '^NDX',
-          isoDate(utcDaysAgo(16 - i)),
-          close,
-        ),
+        env.DB.prepare(
+          'INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, NULL, NULL)',
+        ).bind('^NDX', isoDate(utcDaysAgo(16 - i)), close),
       ),
     );
     const freshClose = 140;
-    const fetchMock = vi.fn().mockImplementation(() =>
-      Promise.resolve(jsonResponse(200, yahooBody([utcDaysAgo(1)], [freshClose], [freshClose + 1], [freshClose - 1]))),
-    );
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(
+          jsonResponse(
+            200,
+            yahooBody([utcDaysAgo(1)], [freshClose], [freshClose + 1], [freshClose - 1]),
+          ),
+        ),
+      );
     vi.stubGlobal('fetch', fetchMock);
 
     await runScheduled();
@@ -528,25 +625,29 @@ describe('alert-scoped, history-backed fetch phase', () => {
     expect(row?.price).toBe(freshClose);
     expect(row?.rsi).toBeCloseTo(calculateRSI([...storedCloses, freshClose]) as number, 10);
 
-    const ndxCall = fetchMock.mock.calls.find((call) => (call[0] as string).includes(encodeURIComponent('^NDX')));
+    const ndxCall = fetchMock.mock.calls.find((call) =>
+      (call[0] as string).includes(encodeURIComponent('^NDX')),
+    );
     const url = new URL(ndxCall?.[0] as string);
-    expect(Number(url.searchParams.get('period2')) - Number(url.searchParams.get('period1'))).toBe(8 * DAY);
+    expect(Number(url.searchParams.get('period2')) - Number(url.searchParams.get('period1'))).toBe(
+      8 * DAY,
+    );
   });
 
   it('orders stored and fetched closes by date before computing RSI when the fetch fills a gap', async () => {
     const closeByDaysAgo = new Map<number, number>();
-    [20, 19, 18, 17, 16, 15, 7, 6, 5, 4, 3, 2].forEach((d, i) => closeByDaysAgo.set(d, 100 + ((i * 7) % 11)));
+    [20, 19, 18, 17, 16, 15, 7, 6, 5, 4, 3, 2].forEach((d, i) =>
+      closeByDaysAgo.set(d, 100 + ((i * 7) % 11)),
+    );
     const gapDays = [14, 13, 12, 11];
     gapDays.forEach((d, i) => closeByDaysAgo.set(d, 90 + ((i * 5) % 9)));
     await env.DB.batch(
       [...closeByDaysAgo]
         .filter(([d]) => !gapDays.includes(d))
         .map(([d, close]) =>
-          env.DB.prepare('INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, NULL, NULL)').bind(
-            '^NDX',
-            isoDate(utcDaysAgo(d)),
-            close,
-          ),
+          env.DB.prepare(
+            'INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, NULL, NULL)',
+          ).bind('^NDX', isoDate(utcDaysAgo(d)), close),
         ),
     );
     const fetchMock = vi.fn().mockImplementation((url: string) =>
@@ -566,7 +667,9 @@ describe('alert-scoped, history-backed fetch phase', () => {
 
     await runScheduled();
 
-    const row = await env.DB.prepare('SELECT rsi FROM market_data WHERE ticker = ?').bind('^NDX').first<{ rsi: number }>();
+    const row = await env.DB.prepare('SELECT rsi FROM market_data WHERE ticker = ?')
+      .bind('^NDX')
+      .first<{ rsi: number }>();
     const chronological = [...closeByDaysAgo].sort(([a], [b]) => b - a).map(([, close]) => close);
     expect(row?.rsi).toBeCloseTo(calculateRSI(chronological) as number, 10);
   });
@@ -587,13 +690,13 @@ describe('alert-scoped, history-backed fetch phase', () => {
   async function seedStoredLongSeries(closes: number[]): Promise<void> {
     // closes[0..179] are stored (181..2 days ago); closes[180] is fetched as yesterday's bar.
     await env.DB.batch(
-      closes.slice(0, 180).map((close, i) =>
-        env.DB.prepare('INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, NULL, NULL)').bind(
-          '^NDX',
-          isoDate(utcDaysAgo(181 - i)),
-          close,
+      closes
+        .slice(0, 180)
+        .map((close, i) =>
+          env.DB.prepare(
+            'INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, NULL, NULL)',
+          ).bind('^NDX', isoDate(utcDaysAgo(181 - i)), close),
         ),
-      ),
     );
   }
 
@@ -602,18 +705,29 @@ describe('alert-scoped, history-backed fetch phase', () => {
     await seedStoredLongSeries(closes);
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody([utcDaysAgo(1)], [closes[180]])))),
+      vi
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve(jsonResponse(200, yahooBody([utcDaysAgo(1)], [closes[180]]))),
+        ),
     );
 
     await runScheduled();
 
-    const row = await env.DB.prepare('SELECT rsi FROM market_data WHERE ticker = ?').bind('^NDX').first<{ rsi: number }>();
+    const row = await env.DB.prepare('SELECT rsi FROM market_data WHERE ticker = ?')
+      .bind('^NDX')
+      .first<{ rsi: number }>();
     // Independent Python reference over closes[1..180] (Wilder RSI(14)).
     expect(row?.rsi).toBeCloseTo(65.24347749591092, 8);
     // The pre-fix value over the last 23 closes only.
-    expect(Math.abs((row?.rsi as number) - (calculateRSI(closes.slice(-23)) as number))).toBeGreaterThan(10);
+    expect(
+      Math.abs((row?.rsi as number) - (calculateRSI(closes.slice(-23)) as number)),
+    ).toBeGreaterThan(10);
 
-    const history = buildHistory([...(await loadRecentPriceRows(env.DB, ['^NDX'])).get('^NDX')!], true);
+    const history = buildHistory(
+      [...(await loadRecentPriceRows(env.DB, ['^NDX'])).get('^NDX')!],
+      true,
+    );
     expect(history.at(-1)?.rsi).toBe(row?.rsi);
   });
 
@@ -626,39 +740,88 @@ describe('alert-scoped, history-backed fetch phase', () => {
       vi
         .fn()
         .mockImplementation(() =>
-          Promise.resolve(jsonResponse(200, yahooBody([utcDaysAgo(2), utcDaysAgo(1)], [revised, closes[180]]))),
+          Promise.resolve(
+            jsonResponse(200, yahooBody([utcDaysAgo(2), utcDaysAgo(1)], [revised, closes[180]])),
+          ),
         ),
     );
 
     await runScheduled();
 
-    const row = await env.DB.prepare('SELECT rsi FROM market_data WHERE ticker = ?').bind('^NDX').first<{ rsi: number }>();
+    const row = await env.DB.prepare('SELECT rsi FROM market_data WHERE ticker = ?')
+      .bind('^NDX')
+      .first<{ rsi: number }>();
     const expected = calculateRSI([...closes.slice(1, 179), revised, closes[180]]) as number;
     expect(row?.rsi).toBeCloseTo(expected, 8);
   });
 
+  it('computes the same converged RSI for a fullWindow refresh (alert create/edit) as the cron does', async () => {
+    const closes = longSeries();
+    await seedStoredLongSeries(closes);
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(jsonResponse(200, yahooBody([utcDaysAgo(1)], [closes[180]]))),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await refreshInstruments(
+      env,
+      [{ ticker: '^NDX', rsi_eligible: 1, currency: 'USD', suffix: '' }],
+      { fullWindow: true },
+    );
+
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(Number(url.searchParams.get('period2')) - Number(url.searchParams.get('period1'))).toBe(
+      31 * DAY,
+    );
+    const row = await env.DB.prepare('SELECT rsi FROM market_data WHERE ticker = ?')
+      .bind('^NDX')
+      .first<{ rsi: number }>();
+    expect(row?.rsi).toBeCloseTo(65.24347749591092, 8);
+  });
+
   it('falls back to the long window for an RSI-eligible ticker with thin stored history', async () => {
-    await env.DB.prepare('INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, NULL, NULL)')
+    await env.DB.prepare(
+      'INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, NULL, NULL)',
+    )
       .bind('^NDX', isoDate(utcDaysAgo(5)), 100)
       .run();
-    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))));
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))),
+      );
     vi.stubGlobal('fetch', fetchMock);
 
     await runScheduled();
 
-    const ndxCall = fetchMock.mock.calls.find((call) => (call[0] as string).includes(encodeURIComponent('^NDX')));
+    const ndxCall = fetchMock.mock.calls.find((call) =>
+      (call[0] as string).includes(encodeURIComponent('^NDX')),
+    );
     const url = new URL(ndxCall?.[0] as string);
-    expect(Number(url.searchParams.get('period2')) - Number(url.searchParams.get('period1'))).toBe(31 * DAY);
+    expect(Number(url.searchParams.get('period2')) - Number(url.searchParams.get('period1'))).toBe(
+      31 * DAY,
+    );
   });
 
   it('writes every row when a run produces more rows than fit in one statement', async () => {
     const timestamps = Array.from({ length: 40 }, (_, i) => utcDaysAgo(40 - i));
     const closes = timestamps.map((_, i) => 100 + i);
-    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(timestamps, closes)))));
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve(jsonResponse(200, yahooBody(timestamps, closes))),
+        ),
+    );
 
     await runScheduled();
 
-    const count = await env.DB.prepare('SELECT COUNT(*) as count FROM price_history WHERE ticker = ?')
+    const count = await env.DB.prepare(
+      'SELECT COUNT(*) as count FROM price_history WHERE ticker = ?',
+    )
       .bind('^NDX')
       .first<{ count: number }>();
     expect(count?.count).toBe(40);
@@ -689,9 +852,15 @@ describe('alert-scoped, history-backed fetch phase', () => {
     expect(summary.tickers.every((t) => t.status === 'error')).toBe(true);
     expect(summary.tickers.some((t) => t.error?.includes('budget exhausted'))).toBe(true);
     // The ticker that was cut off mid-retry keeps the provider's own error.
-    expect(summary.tickers.some((t) => t.error?.includes('budget exhausted') && t.error.includes('last error:'))).toBe(true);
+    expect(
+      summary.tickers.some(
+        (t) => t.error?.includes('budget exhausted') && t.error.includes('last error:'),
+      ),
+    ).toBe(true);
     // A ticker that never got an attempt has nothing to report beyond the budget itself.
-    expect(summary.tickers.some((t) => t.error === 'Error: fetch attempt budget exhausted for this run')).toBe(true);
+    expect(
+      summary.tickers.some((t) => t.error === 'Error: fetch attempt budget exhausted for this run'),
+    ).toBe(true);
   });
 });
 
@@ -699,7 +868,13 @@ describe('fetch phase failure handling', () => {
   it('marks every fetched ticker as error when the bulk write is rejected, storing nothing', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS)))),
+      vi
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve(
+            jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS)),
+          ),
+        ),
     );
     const batchSpy = vi.spyOn(env.DB, 'batch').mockRejectedValueOnce(new Error('batch boom'));
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -720,38 +895,55 @@ describe('fetch phase failure handling', () => {
     }
   });
 
-  it('falls back to the long Yahoo window when stored history cannot be read', async () => {
-    // 15 stored closes would normally allow the short window.
-    await env.DB.batch(
-      Array.from({ length: 15 }, (_, i) =>
-        env.DB.prepare('INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, NULL, NULL)').bind(
-          '^NDX',
-          isoDate(utcDaysAgo(16 - i)),
-          100 + i,
-        ),
-      ),
-    );
-    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))));
+  it('reports RSI tickers as errors and writes nothing for them when stored history cannot be read', async () => {
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, rsi, updated_at) VALUES (?, ?, ?, ?)',
+    )
+      .bind('^NDX', 100, 42, 1)
+      .run();
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))),
+      );
     vi.stubGlobal('fetch', fetchMock);
     const originalPrepare = env.DB.prepare.bind(env.DB);
     const prepareSpy = vi.spyOn(env.DB, 'prepare').mockImplementation((sql: string) => {
-      if (sql.includes('FROM price_history') && sql.includes('IN (')) throw new Error('history read failed');
+      if (sql.includes('ROW_NUMBER')) throw new Error('history read failed');
       return originalPrepare(sql);
     });
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     try {
-      await runFetchPhase(env);
+      const summary = await runFetchPhase(env);
 
-      const ndxCall = fetchMock.mock.calls.find((call) => (call[0] as string).includes(encodeURIComponent('^NDX')));
-      const url = new URL(ndxCall?.[0] as string);
-      expect(Number(url.searchParams.get('period2')) - Number(url.searchParams.get('period1'))).toBe(31 * DAY);
-      const row = await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?').bind('^NDX').first();
-      expect(row).not.toBeNull();
+      expect(summary.tickers.find((t) => t.ticker === '^NDX')).toMatchObject({
+        status: 'error',
+        error: expect.stringContaining('history read failed'),
+      });
+      expect(summary.tickers.find((t) => t.ticker === '^VIX')).toEqual({
+        ticker: '^VIX',
+        status: 'ok',
+      });
     } finally {
       prepareSpy.mockRestore();
       consoleErrorSpy.mockRestore();
     }
+
+    // A short-window RSI must never replace the stored one, and the failed
+    // ticker is not even fetched.
+    const ndx = await env.DB.prepare(
+      'SELECT price, rsi, updated_at FROM market_data WHERE ticker = ?',
+    )
+      .bind('^NDX')
+      .first();
+    expect(ndx).toEqual({ price: 100, rsi: 42, updated_at: 1 });
+    expect(
+      await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?').bind('^VIX').first(),
+    ).not.toBeNull();
+    expect(
+      fetchMock.mock.calls.some((call) => (call[0] as string).includes(encodeURIComponent('^NDX'))),
+    ).toBe(false);
   });
 });
 
@@ -760,16 +952,18 @@ describe('currency correction logging', () => {
     await insertSuffixInstrument('USD');
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockImplementation((url: string) =>
-        Promise.resolve(
-          jsonResponse(
-            200,
-            url.includes(encodeURIComponent('TEST.WA'))
-              ? yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS, 'PLN')
-              : yahooBody(TIMESTAMPS, RISING_CLOSES),
+      vi
+        .fn()
+        .mockImplementation((url: string) =>
+          Promise.resolve(
+            jsonResponse(
+              200,
+              url.includes(encodeURIComponent('TEST.WA'))
+                ? yahooBody(TIMESTAMPS, RISING_CLOSES, RISING_HIGHS, RISING_LOWS, 'PLN')
+                : yahooBody(TIMESTAMPS, RISING_CLOSES),
+            ),
           ),
         ),
-      ),
     );
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -781,7 +975,9 @@ describe('currency correction logging', () => {
 
       batchSpy.mockRestore();
       await runFetchPhase(env);
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('corrected currency for TEST: USD -> PLN'));
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('corrected currency for TEST: USD -> PLN'),
+      );
     } finally {
       batchSpy.mockRestore();
       logSpy.mockRestore();
@@ -811,8 +1007,12 @@ describe('refreshInstruments timeout', () => {
         { retryAttempts: 1, timeoutMs: 20 },
       );
 
-      expect(result.tickers).toEqual([{ ticker: '^VIX', status: 'error', error: expect.any(String) }]);
-      const row = await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?').bind('^VIX').first();
+      expect(result.tickers).toEqual([
+        { ticker: '^VIX', status: 'error', error: expect.any(String) },
+      ]);
+      const row = await env.DB.prepare('SELECT 1 FROM market_data WHERE ticker = ?')
+        .bind('^VIX')
+        .first();
       expect(row).toBeNull();
     } finally {
       consoleErrorSpy.mockRestore();
@@ -822,7 +1022,9 @@ describe('refreshInstruments timeout', () => {
 
 describe('cron expressions', () => {
   it('match the schedules declared in wrangler.toml', () => {
-    const declared = [...(/crons\s*=\s*\[([^\]]*)\]/.exec(wranglerToml)?.[1] ?? '').matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+    const declared = [
+      ...(/crons\s*=\s*\[([^\]]*)\]/.exec(wranglerToml)?.[1] ?? '').matchAll(/"([^"]+)"/g),
+    ].map((m) => m[1]);
 
     expect(declared).toEqual([PL_FETCH_CRON, US_FETCH_CRON, EVALUATE_CRON]);
   });
@@ -830,22 +1032,36 @@ describe('cron expressions', () => {
 
 describe('cron routing', () => {
   it('runs only the fetch phase for a fetch expression', async () => {
-    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))));
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))),
+      );
     vi.stubGlobal('fetch', fetchMock);
 
     await handleCron(US_FETCH_CRON, env);
 
-    expect(fetchMock.mock.calls.some((call) => (call[0] as string).includes('finance/chart'))).toBe(true);
-    expect(fetchMock.mock.calls.some((call) => (call[0] as string).includes('api.resend.com'))).toBe(false);
+    expect(fetchMock.mock.calls.some((call) => (call[0] as string).includes('finance/chart'))).toBe(
+      true,
+    );
+    expect(
+      fetchMock.mock.calls.some((call) => (call[0] as string).includes('api.resend.com')),
+    ).toBe(false);
   });
 
   it('fetches only the instrument types each fetch trigger owns', async () => {
     await insertSuffixInstrument();
     const fetchedSymbols = async (cron: string) => {
-      const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))));
+      const fetchMock = vi
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES))),
+        );
       vi.stubGlobal('fetch', fetchMock);
       await handleCron(cron, env);
-      return fetchMock.mock.calls.map((call) => decodeURIComponent(call[0] as string)).filter((url) => url.includes('finance/chart'));
+      return fetchMock.mock.calls
+        .map((call) => decodeURIComponent(call[0] as string))
+        .filter((url) => url.includes('finance/chart'));
     };
 
     const plUrls = await fetchedSymbols(PL_FETCH_CRON);
@@ -886,12 +1102,15 @@ describe('cron routing', () => {
 describe('cron failure notice', () => {
   const resendCalls = (fetchMock: ReturnType<typeof vi.fn>) =>
     fetchMock.mock.calls.filter((call) => (call[0] as string).includes('api.resend.com'));
-  const noticeBody = (fetchMock: ReturnType<typeof vi.fn>) => JSON.parse((resendCalls(fetchMock)[0][1] as RequestInit).body as string)[0];
+  const noticeBody = (fetchMock: ReturnType<typeof vi.fn>) =>
+    JSON.parse((resendCalls(fetchMock)[0][1] as RequestInit).body as string)[0];
 
   function stubYahooAndResend(failVix: boolean) {
     const fetchMock = vi.fn().mockImplementation((url: string) => {
-      if (url.includes('api.resend.com')) return Promise.resolve(jsonResponse(200, { data: [{ id: 'x' }] }));
-      if (failVix && url.includes(encodeURIComponent('^VIX'))) return Promise.resolve(jsonResponse(500, {}));
+      if (url.includes('api.resend.com'))
+        return Promise.resolve(jsonResponse(200, { data: [{ id: 'x' }] }));
+      if (failVix && url.includes(encodeURIComponent('^VIX')))
+        return Promise.resolve(jsonResponse(500, {}));
       return Promise.resolve(jsonResponse(200, yahooBody(TIMESTAMPS, RISING_CLOSES)));
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -938,7 +1157,9 @@ describe('cron failure notice', () => {
 
   it('reports stale market data from the evaluation phase', async () => {
     const fetchMock = stubYahooAndResend(false);
-    await env.DB.prepare('INSERT INTO market_data (ticker, price, updated_at) VALUES (?, ?, unixepoch() - ?)')
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, updated_at) VALUES (?, ?, unixepoch() - ?)',
+    )
       .bind('^VIX', 10, 20 * 60 * 60)
       .run();
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -978,7 +1199,11 @@ describe('cron failure notice', () => {
     )
       .bind(userId, '^VIX', 'PRICE', 20, 'verified@example.com', 'up', 0)
       .run();
-    await env.DB.prepare('INSERT INTO market_data (ticker, price, updated_at) VALUES (?, ?, unixepoch())').bind('^VIX', 10).run();
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, updated_at) VALUES (?, ?, unixepoch())',
+    )
+      .bind('^VIX', 10)
+      .run();
     const originalPrepare = env.DB.prepare.bind(env.DB);
     const prepareSpy = vi.spyOn(env.DB, 'prepare').mockImplementation((sql: string) => {
       if (sql.startsWith('UPDATE alerts')) throw new Error('unexpected boom');
@@ -994,7 +1219,9 @@ describe('cron failure notice', () => {
   });
 
   it('reports a failed alert email by alert id and ticker', async () => {
-    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(403, { message: 'denied' })));
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(jsonResponse(403, { message: 'denied' })));
     vi.stubGlobal('fetch', fetchMock);
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const inserted = await env.DB.prepare(
@@ -1002,11 +1229,17 @@ describe('cron failure notice', () => {
     )
       .bind(seededUserId, '^VIX', 'PRICE', 20, 'verified@example.com', 'up', 1)
       .run();
-    await env.DB.prepare('INSERT INTO market_data (ticker, price, updated_at) VALUES (?, ?, unixepoch())').bind('^VIX', 25).run();
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, updated_at) VALUES (?, ?, unixepoch())',
+    )
+      .bind('^VIX', 25)
+      .run();
 
     try {
       await handleCron(EVALUATE_CRON, env);
-      const bodies = resendCalls(fetchMock).map((call) => JSON.parse((call[1] as RequestInit).body as string)[0]);
+      const bodies = resendCalls(fetchMock).map(
+        (call) => JSON.parse((call[1] as RequestInit).body as string)[0],
+      );
       const notice = bodies.find((m) => m.subject.includes('alert evaluation'));
       expect(notice.text).toContain(`alert ${inserted.meta.last_row_id} ^VIX: denied`);
     } finally {
@@ -1018,10 +1251,14 @@ describe('cron failure notice', () => {
     const fetchMock = stubYahooAndResend(false);
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     // Stale ^VIX forces a notice; the healthy ^NDX alert fires and its email is delivered.
-    await env.DB.prepare('INSERT INTO market_data (ticker, price, updated_at) VALUES (?, ?, unixepoch() - ?)')
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, updated_at) VALUES (?, ?, unixepoch() - ?)',
+    )
       .bind('^VIX', 10, 20 * 60 * 60)
       .run();
-    await env.DB.prepare('INSERT INTO market_data (ticker, price, high, low, updated_at) VALUES (?, ?, ?, ?, unixepoch())')
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, high, low, updated_at) VALUES (?, ?, ?, ?, unixepoch())',
+    )
       .bind('^NDX', 25, 25, 25)
       .run();
     const sent = await env.DB.prepare(
@@ -1033,7 +1270,9 @@ describe('cron failure notice', () => {
     try {
       await handleCron(EVALUATE_CRON, env);
 
-      const bodies = resendCalls(fetchMock).map((call) => JSON.parse((call[1] as RequestInit).body as string)[0]);
+      const bodies = resendCalls(fetchMock).map(
+        (call) => JSON.parse((call[1] as RequestInit).body as string)[0],
+      );
       const notice = bodies.find((m) => m.subject.includes('alert evaluation'));
       expect(bodies).toHaveLength(2);
       expect(notice.text).toContain('^VIX: market data is 20h old');
@@ -1053,7 +1292,9 @@ describe('cron failure notice', () => {
     )
       .bind(seededUserId, '^VIX', 'PRICE', 20, 'verified@example.com', 'down', 1)
       .run();
-    await env.DB.prepare('INSERT INTO market_data (ticker, price, high, low, updated_at) VALUES (?, ?, ?, ?, unixepoch())')
+    await env.DB.prepare(
+      'INSERT INTO market_data (ticker, price, high, low, updated_at) VALUES (?, ?, ?, ?, unixepoch())',
+    )
       .bind('^VIX', 25, 'not-a-number', 5)
       .run();
 

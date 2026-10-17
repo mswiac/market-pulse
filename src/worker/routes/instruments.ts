@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../index';
 import type { InstrumentRow } from '../lib/instruments';
 import { sessionMiddleware } from '../lib/session';
-import { buildHistory, loadRecentPriceRows, RSI_INPUT_SESSIONS, type PriceRow } from '../lib/price-history';
+import { buildHistory, loadRecentPriceRows } from '../lib/price-history';
 
 type Variables = { userId: number };
 
@@ -14,10 +14,20 @@ instrumentsRoutes.get('/', async (c) => {
   const type = c.req.query('type');
 
   const { results } = type
-    ? await c.env.DB.prepare('SELECT ticker, name, type, rsi_eligible AS rsiEligible, currency FROM instruments WHERE type = ?')
+    ? await c.env.DB.prepare(
+        'SELECT ticker, name, type, rsi_eligible AS rsiEligible, currency FROM instruments WHERE type = ?',
+      )
         .bind(type)
-        .all<{ ticker: string; name: string; type: string; rsiEligible: number; currency: string }>()
-    : await c.env.DB.prepare('SELECT ticker, name, type, rsi_eligible AS rsiEligible, currency FROM instruments').all<{
+        .all<{
+          ticker: string;
+          name: string;
+          type: string;
+          rsiEligible: number;
+          currency: string;
+        }>()
+    : await c.env.DB.prepare(
+        'SELECT ticker, name, type, rsi_eligible AS rsiEligible, currency FROM instruments',
+      ).all<{
         ticker: string;
         name: string;
         type: string;
@@ -62,7 +72,9 @@ instrumentsRoutes.get('/latest', async (c) => {
 instrumentsRoutes.get('/:ticker/history', async (c) => {
   const ticker = c.req.param('ticker');
 
-  const instrument = await c.env.DB.prepare('SELECT ticker, rsi_eligible, currency, suffix FROM instruments WHERE ticker = ?')
+  const instrument = await c.env.DB.prepare(
+    'SELECT ticker, rsi_eligible, currency, suffix FROM instruments WHERE ticker = ?',
+  )
     .bind(ticker)
     .first<InstrumentRow>();
 
@@ -70,14 +82,10 @@ instrumentsRoutes.get('/:ticker/history', async (c) => {
     return c.json({ error: 'unknown instrument' }, 404);
   }
 
-  const { results } = await c.env.DB.prepare(
-    'SELECT date, close, high, low FROM price_history WHERE ticker = ? ORDER BY date DESC LIMIT ?',
-  )
-    .bind(ticker, RSI_INPUT_SESSIONS)
-    .all<PriceRow>();
+  const rows = (await loadRecentPriceRows(c.env.DB, [ticker])).get(ticker) ?? [];
 
   const rsiEligible = !!instrument.rsi_eligible;
-  const history = buildHistory(results, rsiEligible);
+  const history = buildHistory(rows, rsiEligible);
 
   return c.json({ ticker, rsiEligible, currency: instrument.currency, history }, 200);
 });
