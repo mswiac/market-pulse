@@ -171,25 +171,25 @@ No schema change. Stored `market_data.rsi` values are corrected by the next refr
 
 #### Automated
 
-- [x] 1.1 Unit tests for latestRsi and buildHistory pass, including a 180-row independently computed reference
-- [x] 1.2 instruments.test.ts updated for the 180-row input and passing
-- [x] 1.3 Dashboard /latest RSI equals the newest /history entry on a long seeded series
-- [x] 1.4 Type checking passes
-- [x] 1.5 Linting passes
+- [x] 1.1 Unit tests for latestRsi and buildHistory pass, including a 180-row independently computed reference — 9ae1f49
+- [x] 1.2 instruments.test.ts updated for the 180-row input and passing — 9ae1f49
+- [x] 1.3 Dashboard /latest RSI equals the newest /history entry on a long seeded series — 9ae1f49
+- [x] 1.4 Type checking passes — 9ae1f49
+- [x] 1.5 Linting passes — 9ae1f49
 
 #### Manual
 
-- [ ] 1.6 History page and dashboard show the same RSI for TSM, near 34.2
+- [x] 1.6 History page and dashboard show the same RSI for TSM, near 34.2
 
 ### Phase 2: Refresh and cron write the same RSI
 
 #### Automated
 
-- [ ] 2.1 Parity test: market_data.rsi equals the newest /history RSI and the dashboard RSI
-- [ ] 2.2 Regression test for the TSM-style case passes
-- [ ] 2.3 Existing scheduled, alerts and admin tests pass
-- [ ] 2.4 Type checking passes
-- [ ] 2.5 Linting passes
+- [x] 2.1 Parity test: market_data.rsi equals the newest /history RSI and the dashboard RSI
+- [x] 2.2 Regression test for the TSM-style case passes
+- [x] 2.3 Existing scheduled, alerts and admin tests pass
+- [x] 2.4 Type checking passes
+- [x] 2.5 Linting passes
 
 #### Manual
 
