@@ -4,6 +4,7 @@ import {
   buildHistory,
   HISTORY_DAYS,
   latestRsi,
+  loadLatestSnapshots,
   loadRecentPriceRows,
   RSI_INPUT_SESSIONS,
   rsiFromCloses,
@@ -155,5 +156,86 @@ describe('loadRecentPriceRows', () => {
   it('returns an empty map for an empty ticker list', async () => {
     await seed('^NDX', 5);
     expect((await loadRecentPriceRows(env.DB, [])).size).toBe(0);
+  });
+});
+
+describe('loadLatestSnapshots', () => {
+  beforeEach(async () => {
+    await env.DB.prepare('DELETE FROM price_history').run();
+  });
+
+  async function seedCloses(ticker: string, closes: number[], withHighLow = false): Promise<void> {
+    const start = new Date('2020-01-01T00:00:00Z');
+    await env.DB.batch(
+      closes.map((close, i) => {
+        const date = new Date(start);
+        date.setUTCDate(date.getUTCDate() + i);
+        return env.DB.prepare(
+          'INSERT INTO price_history (ticker, date, close, high, low) VALUES (?, ?, ?, ?, ?)',
+        ).bind(ticker, date.toISOString().slice(0, 10), close, withHighLow ? close + 1 : null, withHighLow ? close - 1 : null);
+      }),
+    );
+  }
+
+  async function buildHistoryNewest(ticker: string, eligible: boolean) {
+    const rows = (await loadRecentPriceRows(env.DB, [ticker])).get(ticker)!;
+    return buildHistory(rows, eligible).at(-1)!;
+  }
+
+  it('equals the newest buildHistory entry for an RSI-eligible ticker', async () => {
+    await seedCloses('^NDX', CLOSES_180, true);
+
+    const snapshot = (await loadLatestSnapshots(env.DB, new Set(['^NDX']))).get('^NDX')!;
+
+    expect(snapshot).toEqual(await buildHistoryNewest('^NDX', true));
+    expect(snapshot.rsi).toBeCloseTo(RSI_AT_LAST, 10);
+  });
+
+  it('uses only the newest RSI_INPUT_SESSIONS closes, like the other readers', async () => {
+    await seedCloses('^NDX', [500, 700, ...CLOSES_180]);
+
+    const snapshot = (await loadLatestSnapshots(env.DB, new Set(['^NDX']))).get('^NDX')!;
+
+    expect(snapshot.rsi).toBeCloseTo(RSI_AT_LAST, 10);
+  });
+
+  it('leaves rsi null for a ticker outside the eligible set but still returns its newest row', async () => {
+    await seedCloses('^VIX', CLOSES_180, true);
+
+    const snapshot = (await loadLatestSnapshots(env.DB, new Set())).get('^VIX')!;
+
+    expect(snapshot).toEqual(await buildHistoryNewest('^VIX', false));
+    expect(snapshot.rsi).toBeNull();
+    expect(snapshot.close).toBe(CLOSES_180.at(-1));
+  });
+
+  it('returns rsi null when there are too few closes to seed it', async () => {
+    await seedCloses('^NDX', CLOSES_180.slice(0, 10));
+
+    const snapshot = (await loadLatestSnapshots(env.DB, new Set(['^NDX']))).get('^NDX')!;
+
+    expect(snapshot.rsi).toBeNull();
+    expect(snapshot.close).toBe(CLOSES_180[9]);
+  });
+
+  it('keeps tickers apart across mixed eligibility and omits a ticker without rows', async () => {
+    // RSI is scale-invariant, so the series must differ in shape, not just level.
+    const shifted = CLOSES_180.map((close, i) => close + (i % 7) * 3);
+    // Rows come back ordered by ticker: eligible, ineligible, eligible.
+    await seedCloses('AAA', CLOSES_180);
+    await seedCloses('BBB', CLOSES_180.slice().reverse());
+    await seedCloses('CCC', shifted);
+
+    const snapshots = await loadLatestSnapshots(env.DB, new Set(['AAA', 'CCC', 'NOROWS']));
+
+    expect([...snapshots.keys()]).toEqual(['AAA', 'BBB', 'CCC']);
+    expect(snapshots.get('AAA')!.rsi).toBe(latestRsi(CLOSES_180));
+    expect(snapshots.get('BBB')!.rsi).toBeNull();
+    expect(snapshots.get('CCC')!.rsi).toBe(latestRsi(shifted));
+    expect(latestRsi(CLOSES_180)).not.toBe(latestRsi(shifted));
+  });
+
+  it('returns an empty map when price_history is empty', async () => {
+    expect((await loadLatestSnapshots(env.DB, new Set(['^NDX']))).size).toBe(0);
   });
 });
