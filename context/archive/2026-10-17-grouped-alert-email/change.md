@@ -1,10 +1,10 @@
 ---
 change_id: grouped-alert-email
 title: Send one email per group of alerts that fire together
-status: impl_reviewed
+status: archived
 created: 2026-10-17
 updated: 2026-10-17
-archived_at: null
+archived_at: 2026-10-17T20:11:14Z
 ---
 
 ## Notes
