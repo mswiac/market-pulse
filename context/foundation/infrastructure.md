@@ -127,7 +127,7 @@ Six months after deployment the project grows: 140 GPW stocks + 30 stocks from o
    database_id = "<YOUR_DATABASE_ID>"
 
    [triggers]
-   crons = ["0 18 * * 1-5"]
+   crons = ["0 18 * * MON-FRI"]
    ```
 
 4. **Add Resend secrets:**
