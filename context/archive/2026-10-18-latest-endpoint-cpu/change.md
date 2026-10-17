@@ -1,10 +1,10 @@
 ---
 change_id: latest-endpoint-cpu
 title: Reduce CPU time of GET /api/instruments/latest
-status: impl_reviewed
+status: archived
 created: 2026-10-18
 updated: 2026-10-18
-archived_at: null
+archived_at: 2026-10-17T23:22:00Z
 ---
 
 ## Notes
