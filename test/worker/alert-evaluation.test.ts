@@ -220,12 +220,12 @@ describe('evaluateAlerts', () => {
     expect((await getAlert(alertId)).armed).toBe(0);
   });
 
-  it('uses a fixed 10-point margin for RSI alerts instead of 10% of threshold', async () => {
+  it('uses a fixed 5-point margin for RSI alerts instead of 10% of threshold', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('rsi-fixed-margin@example.com');
     // A 10%-of-threshold margin here would be 0.7 (threshold 7) — a fixed
-    // 10-point margin means re-arm requires rsi <= threshold - 10 = -3, i.e.
-    // never, for this low a threshold. 5 isn't nearly enough to re-arm.
+    // 5-point margin means re-arm requires rsi <= threshold - 5 = 2, so
+    // 5 still isn't enough to re-arm, while a percentage margin would re-arm.
     const alertId = await seedAlert(userId, {
       ticker: '^NDX',
       alertType: 'RSI',
@@ -239,10 +239,10 @@ describe('evaluateAlerts', () => {
 
     await seedMarketData('^NDX', 4500, 5);
     await evaluateAlerts(env);
-    expect((await getAlert(alertId)).armed).toBe(0); // 5 > 7 - 10 = -3, not retreated far enough
+    expect((await getAlert(alertId)).armed).toBe(0); // 5 > 7 - 5 = 2, not retreated far enough
   });
 
-  it('re-arms an RSI alert once it retreats past the fixed 10-point margin', async () => {
+  it('re-arms an RSI alert once it retreats past the fixed 5-point margin', async () => {
     stubFetchAlwaysSucceeds();
     const userId = await seedUser('rsi-margin-rearm@example.com');
     const alertId = await seedAlert(userId, {
@@ -256,13 +256,13 @@ describe('evaluateAlerts', () => {
     await evaluateAlerts(env);
     expect((await getAlert(alertId)).armed).toBe(0);
 
-    // Margin is a fixed 10 points, so re-arm requires rsi <= 60. 65 isn't enough.
-    await seedMarketData('^NDX', 4500, 65);
+    // Margin is a fixed 5 points, so re-arm requires rsi <= 65. 68 isn't enough.
+    await seedMarketData('^NDX', 4500, 68);
     await evaluateAlerts(env);
     expect((await getAlert(alertId)).armed).toBe(0);
 
-    // 60 clears the fixed margin — re-arms.
-    await seedMarketData('^NDX', 4500, 60);
+    // 65 clears the fixed margin — re-arms.
+    await seedMarketData('^NDX', 4500, 65);
     await evaluateAlerts(env);
     expect((await getAlert(alertId)).armed).toBe(1);
   });

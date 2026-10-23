@@ -3,7 +3,7 @@ import { chunk } from './market-data';
 import { sendAlertEmailBatch, type SendEmailInput } from './resend';
 
 const PRICE_RE_ARM_MARGIN_FRACTION = 0.1;
-const RSI_RE_ARM_MARGIN_POINTS = 10;
+const RSI_RE_ARM_MARGIN_POINTS = 5;
 // Market data older than this is not evaluated. Evaluation runs in its own
 // cron invocation with no ordering guarantee against the fetch, so a failed
 // or late fetch must not make yesterday's quote fire (or re-arm) an alert.
