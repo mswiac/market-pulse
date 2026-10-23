@@ -121,7 +121,14 @@ export function resolveFiringValue(
 
 export interface AlertEvaluationSummary {
   alertsEvaluated: number;
-  emails: Array<{ alertId: number; ticker: string; status: 'sent' | 'failed'; error?: string }>;
+  emails: Array<{
+    alertId: number;
+    userId: number;
+    recipient: string;
+    ticker: string;
+    status: 'sent' | 'failed';
+    error?: string;
+  }>;
   errors: string[];
 }
 
@@ -309,15 +316,25 @@ export async function evaluateAlerts(env: Env): Promise<AlertEvaluationSummary> 
         // did not land — report it as failed, as a single failed write always has.
         emails.push({
           alertId: alert.id,
+          userId: alert.user_id,
+          recipient: alert.notification_email,
           ticker: alert.ticker,
           status: 'failed',
           error: String(writeError),
         });
       } else if (result.ok) {
-        emails.push({ alertId: alert.id, ticker: alert.ticker, status: 'sent' });
+        emails.push({
+          alertId: alert.id,
+          userId: alert.user_id,
+          recipient: alert.notification_email,
+          ticker: alert.ticker,
+          status: 'sent',
+        });
       } else {
         emails.push({
           alertId: alert.id,
+          userId: alert.user_id,
+          recipient: alert.notification_email,
           ticker: alert.ticker,
           status: 'failed',
           error: result.error,

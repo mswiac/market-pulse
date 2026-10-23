@@ -1,5 +1,6 @@
 import { env, exports } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AlertEvaluationSummary } from '../../src/worker/lib/alert-evaluation';
 
 const BASE_URL = 'https://example.com';
 const PASSWORD = 'correct horse battery staple';
@@ -1326,7 +1327,7 @@ const CRON_RUN_VERIFIED_EMAIL = 'verified@example.com'; // matches RESEND_VERIFI
 interface CronRunSummaryBody {
   tickers: Array<{ ticker: string; status: 'ok' | 'error'; error?: string }>;
   alertsEvaluated: number;
-  emails: Array<{ alertId: number; ticker: string; status: 'sent' | 'failed'; error?: string }>;
+  emails: AlertEvaluationSummary['emails'];
   errors: string[];
 }
 
@@ -1558,7 +1559,15 @@ describe('POST /api/admin/cron/run', () => {
 
     expect(response.status).toBe(200);
     const json = (await response.json()) as CronRunSummaryBody;
-    expect(json.emails).toEqual([{ alertId, ticker: '^VIX', status: 'sent' }]);
+    expect(json.emails).toEqual([
+      {
+        alertId,
+        userId: adminId,
+        recipient: CRON_RUN_VERIFIED_EMAIL,
+        ticker: '^VIX',
+        status: 'sent',
+      },
+    ]);
 
     const events = await env.DB.prepare('SELECT * FROM trigger_events WHERE alert_id = ?').bind(alertId).all();
     expect(events.results).toHaveLength(1);
@@ -1580,6 +1589,15 @@ describe('POST /api/admin/cron/run', () => {
 
     expect(response.status).toBe(207);
     const json = (await response.json()) as CronRunSummaryBody;
-    expect(json.emails).toEqual([{ alertId, ticker: '^VIX', status: 'failed', error: expect.any(String) }]);
+    expect(json.emails).toEqual([
+      {
+        alertId,
+        userId: adminId,
+        recipient: CRON_RUN_VERIFIED_EMAIL,
+        ticker: '^VIX',
+        status: 'failed',
+        error: expect.any(String),
+      },
+    ]);
   });
 });

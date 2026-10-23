@@ -411,13 +411,13 @@ describe('evaluateAlerts', () => {
     expect(JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)).toHaveLength(1);
     expect(summary.emails).toEqual(
       expect.arrayContaining([
-        {
+        expect.objectContaining({
           alertId: unverified,
           ticker: '^VIX',
           status: 'failed',
           error: 'recipient not verified in Resend sandbox',
-        },
-        { alertId: verified, ticker: '^NDX', status: 'sent' },
+        }),
+        expect.objectContaining({ alertId: verified, ticker: '^NDX', status: 'sent' }),
       ]),
     );
     expect((await getAlert(unverified)).armed).toBe(0);
@@ -535,7 +535,13 @@ describe('evaluateAlerts', () => {
       const summary = await evaluateAlerts(env);
 
       expect(summary.errors).toEqual([]);
-      expect(summary.emails).toEqual([{ alertId, ticker: '^VIX', status: 'sent' }]);
+      expect(summary.emails).toEqual([{
+        alertId,
+        userId,
+        recipient: VERIFIED_EMAIL,
+        ticker: '^VIX',
+        status: 'sent',
+      }]);
     } finally {
       dateNowSpy.mockRestore();
     }
@@ -1160,7 +1166,13 @@ describe('evaluateAlerts summary', () => {
     const summary = await evaluateAlerts(env);
 
     expect(summary.alertsEvaluated).toBe(2);
-    expect(summary.emails).toEqual([{ alertId: firingId, ticker: '^VIX', status: 'sent' }]);
+    expect(summary.emails).toEqual([{
+        alertId: firingId,
+        userId,
+        recipient: VERIFIED_EMAIL,
+        ticker: '^VIX',
+        status: 'sent',
+      }]);
     expect(summary.errors).toEqual([]);
   });
 
@@ -1181,6 +1193,8 @@ describe('evaluateAlerts summary', () => {
     expect(summary.emails).toEqual([
       {
         alertId,
+        userId,
+        recipient: 'someone-else@example.com',
         ticker: '^VIX',
         status: 'failed',
         error: 'recipient not verified in Resend sandbox',
@@ -1204,7 +1218,12 @@ describe('evaluateAlerts summary', () => {
     try {
       const summary = await evaluateAlerts(env);
       expect(summary.emails).toEqual([
-        { alertId, ticker: '^VIX', status: 'failed', error: expect.stringContaining('batch boom') },
+        expect.objectContaining({
+          alertId,
+          ticker: '^VIX',
+          status: 'failed',
+          error: expect.stringContaining('batch boom'),
+        }),
       ]);
       expect(summary.errors).toEqual([]);
     } finally {
@@ -1307,7 +1326,13 @@ describe('evaluateAlerts summary', () => {
       expect(summary.alertsEvaluated).toBe(2);
       expect(summary.errors).toHaveLength(1);
       expect(summary.errors[0]).toMatch(new RegExp(`^alert ${brokenId}: TypeError`));
-      expect(summary.emails).toEqual([{ alertId: healthyId, ticker: '^NDX', status: 'sent' }]);
+      expect(summary.emails).toEqual([{
+        alertId: healthyId,
+        userId,
+        recipient: VERIFIED_EMAIL,
+        ticker: '^NDX',
+        status: 'sent',
+      }]);
       expect((await getAlert(brokenId)).armed).toBe(1);
       expect((await getAlert(healthyId)).armed).toBe(0);
     } finally {

@@ -68,7 +68,9 @@ function fetchProblems({ tickers, loadError }: FetchPhaseResult): string[] {
 function evaluationProblems({ errors, emails }: AlertEvaluationSummary): string[] {
   return [
     ...errors,
-    ...emails.filter((e) => e.status === 'failed').map((e) => `alert ${e.alertId} ${e.ticker}: ${e.error}`),
+    ...emails
+      .filter((e) => e.status === 'failed')
+      .map((e) => `alert ${e.alertId} ${e.ticker} (user ${e.userId}, ${e.recipient}): ${e.error}`),
   ];
 }
 

@@ -1243,7 +1243,7 @@ describe('cron failure notice', () => {
     }
   });
 
-  it('reports a failed alert email by alert id and ticker', async () => {
+  it('reports a failed alert email by alert id, ticker, user and recipient', async () => {
     const fetchMock = vi
       .fn()
       .mockImplementation(() => Promise.resolve(jsonResponse(403, { message: 'denied' })));
@@ -1266,7 +1266,7 @@ describe('cron failure notice', () => {
         (call) => JSON.parse((call[1] as RequestInit).body as string)[0],
       );
       const notice = bodies.find((m) => m.subject.includes('alert evaluation'));
-      expect(notice.text).toContain(`alert ${inserted.meta.last_row_id} ^VIX: denied`);
+      expect(notice.text).toContain(`alert ${inserted.meta.last_row_id} ^VIX (user ${seededUserId}, verified@example.com): denied`);
     } finally {
       consoleErrorSpy.mockRestore();
     }
