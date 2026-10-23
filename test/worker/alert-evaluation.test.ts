@@ -535,7 +535,13 @@ describe('evaluateAlerts', () => {
       const summary = await evaluateAlerts(env);
 
       expect(summary.errors).toEqual([]);
-      expect(summary.emails).toEqual([expect.objectContaining({ alertId, ticker: '^VIX', status: 'sent' })]);
+      expect(summary.emails).toEqual([{
+        alertId,
+        userId,
+        recipient: VERIFIED_EMAIL,
+        ticker: '^VIX',
+        status: 'sent',
+      }]);
     } finally {
       dateNowSpy.mockRestore();
     }
@@ -1160,7 +1166,13 @@ describe('evaluateAlerts summary', () => {
     const summary = await evaluateAlerts(env);
 
     expect(summary.alertsEvaluated).toBe(2);
-    expect(summary.emails).toEqual([expect.objectContaining({ alertId: firingId, ticker: '^VIX', status: 'sent' })]);
+    expect(summary.emails).toEqual([{
+        alertId: firingId,
+        userId,
+        recipient: VERIFIED_EMAIL,
+        ticker: '^VIX',
+        status: 'sent',
+      }]);
     expect(summary.errors).toEqual([]);
   });
 
@@ -1314,7 +1326,13 @@ describe('evaluateAlerts summary', () => {
       expect(summary.alertsEvaluated).toBe(2);
       expect(summary.errors).toHaveLength(1);
       expect(summary.errors[0]).toMatch(new RegExp(`^alert ${brokenId}: TypeError`));
-      expect(summary.emails).toEqual([expect.objectContaining({ alertId: healthyId, ticker: '^NDX', status: 'sent' })]);
+      expect(summary.emails).toEqual([{
+        alertId: healthyId,
+        userId,
+        recipient: VERIFIED_EMAIL,
+        ticker: '^NDX',
+        status: 'sent',
+      }]);
       expect((await getAlert(brokenId)).armed).toBe(1);
       expect((await getAlert(healthyId)).armed).toBe(0);
     } finally {
