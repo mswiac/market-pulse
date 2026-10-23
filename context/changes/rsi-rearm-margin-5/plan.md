@@ -89,5 +89,5 @@ One constant and two tests.
 
 #### Automated
 
-- [x] 1.1 Worker tests pass: `npm run test:worker`
-- [x] 1.2 Type checking and lint pass: `npm run build`
+- [x] 1.1 Worker tests pass: `npm run test:worker` — 9f43a1f
+- [x] 1.2 Type checking and lint pass: `npm run build` — 9f43a1f
